@@ -5,8 +5,11 @@
 ### Planned
 - **Right-click to add term** — context menu action in the Trados Studio editor grid
   to add the selected source + target text as a new term to the active termbase
-- **Import** — bulk import terms from TBX (TermBase eXchange) and CSV/Excel
-- **Export** — export the full termbase (or a filtered subset) to TBX and CSV/Excel
+- **Import** — bulk import terms from TSV (matching Supervertaler's format exactly:
+  tab-separated, pipe-delimited synonyms, `[!forbidden]` syntax, UUID tracking);
+  TBX to be added in sync with Supervertaler when that is implemented
+- **Export** — export the full termbase (or a filtered subset) to the same TSV format,
+  so files are interchangeable between Supervertaler and Termview without conversion
 
 ---
 
