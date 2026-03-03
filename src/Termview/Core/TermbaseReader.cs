@@ -28,7 +28,7 @@ namespace Termview.Core
 
             try
             {
-                var connStr = $"Data Source={_dbPath};Version=3;Read Only=True;Journal Mode=WAL;";
+                var connStr = $"Data Source={_dbPath};Version=3;Read Only=True;";
                 _connection = new SQLiteConnection(connStr);
                 _connection.Open();
                 return true;
