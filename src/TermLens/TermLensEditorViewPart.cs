@@ -4,30 +4,30 @@ using Sdl.Desktop.IntegrationApi;
 using Sdl.Desktop.IntegrationApi.Extensions;
 using Sdl.Desktop.IntegrationApi.Interfaces;
 using Sdl.TranslationStudioAutomation.IntegrationApi;
-using Termview.Controls;
-using Termview.Settings;
+using TermLens.Controls;
+using TermLens.Settings;
 
-namespace Termview
+namespace TermLens
 {
     /// <summary>
-    /// Trados Studio editor ViewPart that docks the Termview panel below the editor.
+    /// Trados Studio editor ViewPart that docks the TermLens panel below the editor.
     /// Listens to segment changes and updates the terminology display accordingly.
     /// </summary>
     [ViewPart(
-        Id = "TermviewEditorViewPart",
-        Name = "Termview",
+        Id = "TermLensEditorViewPart",
+        Name = "TermLens",
         Description = "Inline terminology display \u2014 shows source text with translations underneath matched terms",
-        Icon = "TermviewIcon"
+        Icon = "TermLensIcon"
     )]
     [ViewPartLayout(typeof(EditorController), Dock = DockType.Bottom)]
-    public class TermviewEditorViewPart : AbstractViewPartController
+    public class TermLensEditorViewPart : AbstractViewPartController
     {
-        private static readonly Lazy<TermviewControl> _control =
-            new Lazy<TermviewControl>(() => new TermviewControl());
+        private static readonly Lazy<TermLensControl> _control =
+            new Lazy<TermLensControl>(() => new TermLensControl());
 
         private EditorController _editorController;
         private IStudioDocument _activeDocument;
-        private TermviewSettings _settings;
+        private TermLensSettings _settings;
 
         protected override IUIControl GetContentControl()
         {
@@ -37,7 +37,7 @@ namespace Termview
         protected override void Initialize()
         {
             // Load persisted settings
-            _settings = TermviewSettings.Load();
+            _settings = TermLensSettings.Load();
 
             _editorController = SdlTradosStudio.Application.GetController<EditorController>();
 
@@ -98,7 +98,7 @@ namespace Termview
         {
             SafeInvoke(() =>
             {
-                using (var form = new TermviewSettingsForm(_settings))
+                using (var form = new TermLensSettingsForm(_settings))
                 {
                     // Find a parent window handle for proper dialog parenting
                     var parent = _control.Value.FindForm();
@@ -176,7 +176,7 @@ namespace Termview
 
             try
             {
-                _activeDocument.Selection.Target.Replace(e.TargetTerm, "Termview");
+                _activeDocument.Selection.Target.Replace(e.TargetTerm, "TermLens");
             }
             catch (Exception)
             {

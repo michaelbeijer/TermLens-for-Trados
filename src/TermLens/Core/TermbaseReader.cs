@@ -1,18 +1,21 @@
 using System;
 using System.Collections.Generic;
-using System.Data.SQLite;
 using System.IO;
-using Termview.Models;
+using Microsoft.Data.Sqlite;
+using TermLens.Models;
 
-namespace Termview.Core
+namespace TermLens.Core
 {
     /// <summary>
     /// Reads termbases from Supervertaler's SQLite database (supervertaler.db).
-    /// This allows sharing the same termbases between Supervertaler and Termview.
+    /// This allows sharing the same termbases between Supervertaler and TermLens.
+    ///
+    /// Uses Microsoft.Data.Sqlite instead of System.Data.SQLite to avoid native
+    /// interop DLL hash mismatches in Trados Studio's plugin environment.
     /// </summary>
     public class TermbaseReader : IDisposable
     {
-        private SQLiteConnection _connection;
+        private SqliteConnection _connection;
         private readonly string _dbPath;
         private bool _disposed;
 
@@ -21,23 +24,38 @@ namespace Termview.Core
             _dbPath = dbPath ?? throw new ArgumentNullException(nameof(dbPath));
         }
 
+        /// <summary>
+        /// Last exception message from Open(), or null if Open() succeeded.
+        /// </summary>
+        public string LastError { get; private set; }
+
         public bool Open()
         {
+            LastError = null;
+
             if (!File.Exists(_dbPath))
+            {
+                LastError = $"File not found: {_dbPath}";
                 return false;
+            }
 
             try
             {
-                // Do not use "Read Only=True" — it prevents SQLite from accessing
-                // the SHM coordination file required when the DB is in WAL mode
-                // (e.g. while Supervertaler has it open). We only run SELECTs anyway.
-                var connStr = $"Data Source={_dbPath};Version=3;";
-                _connection = new SQLiteConnection(connStr);
+                // Mode=ReadOnly — we only run SELECTs; this also avoids WAL
+                // locking issues when Supervertaler has the DB open.
+                var connStr = new SqliteConnectionStringBuilder
+                {
+                    DataSource = _dbPath,
+                    Mode = SqliteOpenMode.ReadOnly
+                }.ToString();
+
+                _connection = new SqliteConnection(connStr);
                 _connection.Open();
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                LastError = ex.Message;
                 _connection?.Dispose();
                 _connection = null;
                 return false;
@@ -61,7 +79,7 @@ namespace Termview.Core
                 GROUP BY tb.id
                 ORDER BY tb.ranking ASC, tb.name ASC";
 
-            using (var cmd = new SQLiteCommand(sql, _connection))
+            using (var cmd = new SqliteCommand(sql, _connection))
             using (var reader = cmd.ExecuteReader())
             {
                 while (reader.Read())
@@ -72,7 +90,7 @@ namespace Termview.Core
                         Name = reader.IsDBNull(1) ? "" : reader.GetString(1),
                         SourceLang = reader.IsDBNull(2) ? "" : reader.GetString(2),
                         TargetLang = reader.IsDBNull(3) ? "" : reader.GetString(3),
-                        IsProjectTermbase = !reader.IsDBNull(4) && reader.GetBoolean(4),
+                        IsProjectTermbase = !reader.IsDBNull(4) && GetBool(reader, 4),
                         Ranking = reader.IsDBNull(5) ? 99 : reader.GetInt32(5),
                         TermCount = reader.GetInt32(6)
                     });
@@ -109,7 +127,7 @@ namespace Termview.Core
                   AND COALESCE(t.forbidden, 0) = 0
                 ORDER BY ranking ASC, t.source_term ASC";
 
-            using (var cmd = new SQLiteCommand(sql, _connection))
+            using (var cmd = new SqliteCommand(sql, _connection))
             {
                 cmd.Parameters.AddWithValue("@term", normalised);
 
@@ -153,7 +171,7 @@ namespace Termview.Core
                 WHERE COALESCE(t.forbidden, 0) = 0
                 ORDER BY ranking ASC";
 
-            using (var cmd = new SQLiteCommand(sql, _connection))
+            using (var cmd = new SqliteCommand(sql, _connection))
             using (var reader = cmd.ExecuteReader())
             {
                 while (reader.Read())
@@ -190,7 +208,7 @@ namespace Termview.Core
                 WHERE term_id = @termId AND language = 'target' AND forbidden = 0
                 ORDER BY display_order ASC";
 
-            using (var cmd = new SQLiteCommand(sql, _connection))
+            using (var cmd = new SqliteCommand(sql, _connection))
             {
                 cmd.Parameters.AddWithValue("@termId", termId);
                 using (var reader = cmd.ExecuteReader())
@@ -206,7 +224,22 @@ namespace Termview.Core
             return synonyms;
         }
 
-        private static TermEntry ReadTermEntry(SQLiteDataReader reader)
+        /// <summary>
+        /// Helper: SQLite stores booleans as integers (0/1). Microsoft.Data.Sqlite
+        /// is stricter than System.Data.SQLite about type conversions, so we read
+        /// the raw value and convert ourselves.
+        /// </summary>
+        private static bool GetBool(SqliteDataReader reader, int ordinal)
+        {
+            var val = reader.GetValue(ordinal);
+            if (val is bool b) return b;
+            if (val is long l) return l != 0;
+            if (val is int i) return i != 0;
+            if (val is string s) return s == "1" || s.Equals("true", StringComparison.OrdinalIgnoreCase);
+            return Convert.ToBoolean(val);
+        }
+
+        private static TermEntry ReadTermEntry(SqliteDataReader reader)
         {
             return new TermEntry
             {
@@ -219,10 +252,10 @@ namespace Termview.Core
                 Definition = reader.IsDBNull(6) ? "" : reader.GetString(6),
                 Domain = reader.IsDBNull(7) ? "" : reader.GetString(7),
                 Notes = reader.IsDBNull(8) ? "" : reader.GetString(8),
-                Forbidden = !reader.IsDBNull(9) && Convert.ToBoolean(reader.GetValue(9)),
-                CaseSensitive = !reader.IsDBNull(10) && Convert.ToBoolean(reader.GetValue(10)),
+                Forbidden = !reader.IsDBNull(9) && GetBool(reader, 9),
+                CaseSensitive = !reader.IsDBNull(10) && GetBool(reader, 10),
                 TermbaseName = reader.IsDBNull(11) ? "" : reader.GetString(11),
-                IsProjectTermbase = !reader.IsDBNull(12) && Convert.ToBoolean(reader.GetValue(12)),
+                IsProjectTermbase = !reader.IsDBNull(12) && GetBool(reader, 12),
                 Ranking = reader.IsDBNull(13) ? 99 : reader.GetInt32(13)
             };
         }

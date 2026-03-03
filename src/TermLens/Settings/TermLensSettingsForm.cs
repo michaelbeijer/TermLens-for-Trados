@@ -2,17 +2,17 @@ using System;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
-using Termview.Core;
+using TermLens.Core;
 
-namespace Termview.Settings
+namespace TermLens.Settings
 {
     /// <summary>
-    /// Settings dialog for the Termview plugin.
+    /// Settings dialog for the TermLens plugin.
     /// Allows the user to select a Supervertaler termbase (.db) file and configure options.
     /// </summary>
-    public class TermviewSettingsForm : Form
+    public class TermLensSettingsForm : Form
     {
-        private readonly TermviewSettings _settings;
+        private readonly TermLensSettings _settings;
 
         // Controls
         private TextBox _txtTermbasePath;
@@ -22,7 +22,7 @@ namespace Termview.Settings
         private Button _btnOK;
         private Button _btnCancel;
 
-        public TermviewSettingsForm(TermviewSettings settings)
+        public TermLensSettingsForm(TermLensSettings settings)
         {
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
             BuildUI();
@@ -31,7 +31,7 @@ namespace Termview.Settings
 
         private void BuildUI()
         {
-            Text = "Termview Settings";
+            Text = "TermLens Settings";
             Font = new Font("Segoe UI", 9f);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -180,7 +180,7 @@ namespace Termview.Settings
                 {
                     if (!reader.Open())
                     {
-                        _lblTermbaseInfo.Text = "Could not open database.";
+                        _lblTermbaseInfo.Text = $"Could not open: {reader.LastError}";
                         _lblTermbaseInfo.ForeColor = Color.FromArgb(180, 60, 60);
                         return;
                     }

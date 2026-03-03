@@ -4,18 +4,18 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
 
-namespace Termview.Settings
+namespace TermLens.Settings
 {
     /// <summary>
-    /// Persisted settings for the Termview plugin.
-    /// Stored at %LocalAppData%\Termview\settings.json.
+    /// Persisted settings for the TermLens plugin.
+    /// Stored at %LocalAppData%\TermLens\settings.json.
     /// </summary>
     [DataContract]
-    public class TermviewSettings
+    public class TermLensSettings
     {
         private static readonly string SettingsDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Termview");
+            "TermLens");
 
         private static readonly string SettingsFile = Path.Combine(SettingsDir, "settings.json");
 
@@ -28,23 +28,23 @@ namespace Termview.Settings
         /// <summary>
         /// Loads settings from disk. Returns default settings if the file doesn't exist or can't be read.
         /// </summary>
-        public static TermviewSettings Load()
+        public static TermLensSettings Load()
         {
             try
             {
                 if (!File.Exists(SettingsFile))
-                    return new TermviewSettings();
+                    return new TermLensSettings();
 
                 var json = File.ReadAllText(SettingsFile, Encoding.UTF8);
                 using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(json)))
                 {
-                    var serializer = new DataContractJsonSerializer(typeof(TermviewSettings));
-                    return (TermviewSettings)serializer.ReadObject(stream);
+                    var serializer = new DataContractJsonSerializer(typeof(TermLensSettings));
+                    return (TermLensSettings)serializer.ReadObject(stream);
                 }
             }
             catch
             {
-                return new TermviewSettings();
+                return new TermLensSettings();
             }
         }
 
@@ -63,7 +63,7 @@ namespace Termview.Settings
                     {
                         UseSimpleDictionaryFormat = true
                     };
-                    var serializer = new DataContractJsonSerializer(typeof(TermviewSettings), settings);
+                    var serializer = new DataContractJsonSerializer(typeof(TermLensSettings), settings);
                     serializer.WriteObject(stream, this);
 
                     // Pretty-print by re-parsing (DataContractJsonSerializer writes compact JSON)

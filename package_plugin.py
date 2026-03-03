@@ -1,5 +1,5 @@
 """
-Package Termview build output into an OPC-format .sdlplugin file.
+Package TermLens build output into an OPC-format .sdlplugin file.
 
 Trados Studio's PluginPackage.OpenPackage() uses System.IO.Packaging (OPC)
 to read plugin packages. This means the .sdlplugin file must include:
@@ -17,20 +17,38 @@ import zipfile
 
 # Files to include in the package (relative to build output dir)
 PLUGIN_FILES = [
-    "Termview.dll",
-    "Termview.plugin.xml",
-    "Termview.plugin.resources",
-    "System.Data.SQLite.dll",
-    "x64/SQLite.Interop.dll",
-    "x86/SQLite.Interop.dll",
+    # --- Core plugin ---
+    "TermLens.dll",
+    "TermLens.plugin.xml",
+    "TermLens.plugin.resources",
+    # --- Microsoft.Data.Sqlite + SQLitePCLRaw ---
+    "Microsoft.Data.Sqlite.dll",
+    "SQLitePCLRaw.core.dll",
+    "SQLitePCLRaw.batteries_v2.dll",
+    "SQLitePCLRaw.provider.dynamic_cdecl.dll",
+    # --- .NET Standard polyfills (Trados ships older versions) ---
+    "System.Memory.dll",
+    "System.Buffers.dll",
+    "System.Numerics.Vectors.dll",
+    "System.Runtime.CompilerServices.Unsafe.dll",
+    # --- Native SQLite library (per-architecture) ---
+    "runtimes/win-x64/native/e_sqlite3.dll",
+    "runtimes/win-x86/native/e_sqlite3.dll",
 ]
 
 # Extra files listed in the <Include> section of pluginpackage.manifest.xml
 # These are non-plugin DLLs that need to be deployed alongside the plugin
 INCLUDE_FILES = [
-    "System.Data.SQLite.dll",
-    "x64/SQLite.Interop.dll",
-    "x86/SQLite.Interop.dll",
+    "Microsoft.Data.Sqlite.dll",
+    "SQLitePCLRaw.core.dll",
+    "SQLitePCLRaw.batteries_v2.dll",
+    "SQLitePCLRaw.provider.dynamic_cdecl.dll",
+    "System.Memory.dll",
+    "System.Buffers.dll",
+    "System.Numerics.Vectors.dll",
+    "System.Runtime.CompilerServices.Unsafe.dll",
+    "runtimes/win-x64/native/e_sqlite3.dll",
+    "runtimes/win-x86/native/e_sqlite3.dll",
 ]
 
 
@@ -67,7 +85,7 @@ def build_content_types_xml(files):
 
     # The .plugin.xml file needs an Override because .xml is already mapped to text/xml
     override_parts.append(
-        '<Override PartName="/Termview.plugin.xml" ContentType="application/octet-stream" />'
+        '<Override PartName="/TermLens.plugin.xml" ContentType="application/octet-stream" />'
     )
 
     defaults = "".join(parts)
@@ -116,7 +134,7 @@ def build_manifest_xml():
     include_lines = "\n".join(f"    <File>{f}</File>" for f in INCLUDE_FILES)
     return f"""<?xml version="1.0" encoding="utf-8"?>
 <PluginPackage xmlns="http://www.sdl.com/Plugins/PluginPackage/1.0">
-  <PlugInName>Termview</PlugInName>
+  <PlugInName>TermLens</PlugInName>
   <Version>1.0.0.0</Version>
   <Description>Inline terminology display for Trados Studio by Supervertaler.</Description>
   <Author>Michael Beijer</Author>

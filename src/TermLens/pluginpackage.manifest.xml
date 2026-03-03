@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PluginPackage xmlns="http://www.sdl.com/Plugins/PluginPackage/1.0">
+  <PlugInName>TermLens</PlugInName>
+  <Version>1.0.0.0</Version>
+  <Description>Inline terminology display for Trados Studio by Supervertaler.</Description>
+  <Author>Michael Beijer</Author>
+  <RequiredProduct name="TradosStudio" minversion="18.0" maxversion="18.9" />
+  <Include>
+    <File>Microsoft.Data.Sqlite.dll</File>
+    <File>SQLitePCLRaw.core.dll</File>
+    <File>SQLitePCLRaw.batteries_v2.dll</File>
+    <File>SQLitePCLRaw.provider.dynamic_cdecl.dll</File>
+    <File>System.Memory.dll</File>
+    <File>System.Buffers.dll</File>
+    <File>System.Numerics.Vectors.dll</File>
+    <File>System.Runtime.CompilerServices.Unsafe.dll</File>
+    <File>runtimes/win-x64/native/e_sqlite3.dll</File>
+    <File>runtimes/win-x86/native/e_sqlite3.dll</File>
+  </Include>
+</PluginPackage>

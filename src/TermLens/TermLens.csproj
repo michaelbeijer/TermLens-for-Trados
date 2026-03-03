@@ -3,8 +3,8 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
-    <RootNamespace>Termview</RootNamespace>
-    <AssemblyName>Termview</AssemblyName>
+    <RootNamespace>TermLens</RootNamespace>
+    <AssemblyName>TermLens</AssemblyName>
     <Version>1.0.0</Version>
     <Authors>Michael Beijer</Authors>
     <Company>Supervertaler</Company>
@@ -13,7 +13,7 @@
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <SignAssembly>true</SignAssembly>
-    <AssemblyOriginatorKeyFile>Termview.snk</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile>TermLens.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <!-- Trados Studio 2024 (Studio18) DLL references from local installation -->
@@ -53,8 +53,13 @@
   </ItemGroup>
 
   <!-- SQLite for reading Supervertaler termbases -->
+  <!-- Using Microsoft.Data.Sqlite instead of System.Data.SQLite to avoid
+       native interop DLL hash mismatches in Trados Studio's plugin environment.
+       Microsoft.Data.Sqlite uses SQLitePCLRaw with "e_sqlite3.dll" (not
+       "SQLite.Interop.dll"), completely sidestepping the version-fingerprint
+       entry-point conflicts. -->
   <ItemGroup>
-    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.118" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.0" />
   </ItemGroup>
 
   <!-- Plugin package manifest and extension manifest -->
@@ -62,21 +67,21 @@
     <None Include="pluginpackage.manifest.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="Termview.plugin.xml">
+    <None Include="TermLens.plugin.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
-  <!-- Plugin resources — rename to Termview.plugin.resources for Trados plugin framework -->
+  <!-- Plugin resources — rename to TermLens.plugin.resources for Trados plugin framework -->
   <ItemGroup>
     <EmbeddedResource Update="PluginResources.resx">
-      <ManifestResourceName>Termview.plugin</ManifestResourceName>
+      <ManifestResourceName>TermLens.plugin</ManifestResourceName>
     </EmbeddedResource>
   </ItemGroup>
 
   <!-- Copy compiled .plugin.resources sidecar to output (needed by Trados plugin framework) -->
   <Target Name="CopyPluginResources" AfterTargets="Build">
-    <Copy SourceFiles="$(IntermediateOutputPath)Termview.plugin.resources"
+    <Copy SourceFiles="$(IntermediateOutputPath)TermLens.plugin.resources"
           DestinationFolder="$(OutputPath)"
           SkipUnchangedFiles="true" />
   </Target>

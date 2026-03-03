@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Termview.Models;
+using TermLens.Models;
 
-namespace Termview.Core
+namespace TermLens.Core
 {
     /// <summary>
     /// Tokenizes source segment text and matches terms against a termbase index.

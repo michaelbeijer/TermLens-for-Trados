@@ -1,8 +1,8 @@
-# Termview
+# TermLens
 
 A Trados Studio plugin that displays terminology matches inline within the source segment text — the same approach used in [Supervertaler](https://supervertaler.com).
 
-Instead of showing matched terms in a separate list, Termview renders the full source segment word-by-word with translations displayed directly underneath each matched term. This gives translators immediate, in-context terminology awareness without breaking their reading flow.
+Instead of showing matched terms in a separate list, TermLens renders the full source segment word-by-word with translations displayed directly underneath each matched term. This gives translators immediate, in-context terminology awareness without breaking their reading flow.
 
 ## Features
 
@@ -20,11 +20,11 @@ Instead of showing matched terms in a separate list, Termview renders the full s
 ## Building
 
 1. Install the [Trados Studio SDK](https://developers.rws.com/) and Visual Studio 2022
-2. Open `Termview.sln`
+2. Open `TermLens.sln`
 3. Restore NuGet packages
 4. Build the solution
 
-The output `.sdlplugin` package will be in `src/Termview/bin/Release/`.
+The output `.sdlplugin` package will be in `src/TermLens/bin/Release/`.
 
 ## Installation
 

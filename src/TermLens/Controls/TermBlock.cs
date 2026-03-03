@@ -4,9 +4,9 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
-using Termview.Models;
+using TermLens.Models;
 
-namespace Termview.Controls
+namespace TermLens.Controls
 {
     /// <summary>
     /// Displays a single source word/phrase with its translation(s) underneath.

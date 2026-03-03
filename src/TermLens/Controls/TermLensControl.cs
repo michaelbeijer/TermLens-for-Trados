@@ -4,17 +4,17 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using Sdl.Desktop.IntegrationApi.Interfaces;
-using Termview.Core;
-using Termview.Models;
+using TermLens.Core;
+using TermLens.Models;
 
-namespace Termview.Controls
+namespace TermLens.Controls
 {
     /// <summary>
-    /// Main Termview panel control. Renders the source segment as a flowing
+    /// Main TermLens panel control. Renders the source segment as a flowing
     /// word-by-word display with terminology translations underneath matched terms.
-    /// Port of Supervertaler's TermviewWidget.
+    /// Port of Supervertaler's TermLensWidget.
     /// </summary>
-    public class TermviewControl : UserControl, IUIControl
+    public class TermLensControl : UserControl, IUIControl
     {
         private readonly FlowLayoutPanel _flowPanel;
         private readonly Label _statusLabel;
@@ -35,7 +35,7 @@ namespace Termview.Controls
         /// </summary>
         public event EventHandler SettingsRequested;
 
-        public TermviewControl()
+        public TermLensControl()
         {
             SuspendLayout();
 
@@ -52,7 +52,7 @@ namespace Termview.Controls
 
             _headerLabel = new Label
             {
-                Text = "Termview",
+                Text = "TermLens",
                 Dock = DockStyle.Left,
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),

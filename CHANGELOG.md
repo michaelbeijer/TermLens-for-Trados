@@ -9,11 +9,11 @@
   tab-separated, pipe-delimited synonyms, `[!forbidden]` syntax, UUID tracking);
   TBX to be added in sync with Supervertaler when that is implemented
 - **Export** — export the full termbase (or a filtered subset) to the same TSV format,
-  so files are interchangeable between Supervertaler and Termview without conversion
+  so files are interchangeable between Supervertaler and TermLens without conversion
 
 ---
 
-All notable changes to Termview will be documented here.
+All notable changes to TermLens will be documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Version numbers follow [Semantic Versioning](https://semver.org/).
 
@@ -35,8 +35,8 @@ First public release.
   cursor position in the target segment
 - **Termbase settings** — gear button (⚙) in the panel header opens a settings
   dialog for selecting a Supervertaler termbase (`.db`) file; settings are saved to
-  `%LocalAppData%\Termview\settings.json` and the termbase is auto-loaded on startup
-- **Auto-detect** — if no termbase is configured, Termview automatically checks the
+  `%LocalAppData%\TermLens\settings.json` and the termbase is auto-loaded on startup
+- **Auto-detect** — if no termbase is configured, TermLens automatically checks the
   default Supervertaler data directories (`~/Supervertaler_Data/resources/` and
   `%LocalAppData%\Supervertaler/resources/`)
 - **Live termbase preview** — the settings dialog shows the termbase name, total
