@@ -48,12 +48,14 @@ As you navigate between segments in the Trados Studio editor, the TermLens panel
 
 ## Installation
 
-Download the `.sdlplugin` file and copy it to:
+TermLens ships as a standard `TermLens.sdlplugin` file — just double-click it and Trados Studio installs it automatically. No manual file copying required.
+
+Alternatively, you can copy the `.sdlplugin` file manually to:
 ```
 %LocalAppData%\Trados\Trados Studio\18\Plugins\Packages\
 ```
 
-Then restart Trados Studio. TermLens will appear as a panel above the editor when you open a document.
+Restart Trados Studio and TermLens will appear as a panel above the editor when you open a document.
 
 ## Building from source
 
