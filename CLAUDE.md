@@ -1,14 +1,38 @@
 # Supervertaler for Trados – Claude Context
 
 ## What this project is
-Supervertaler for Trados is a Trados Studio 2024 (v18) plugin that brings key Supervertaler features into the Trados ecosystem. Currently it provides the **TermLens** glossary panel (live inline terminology display); AI features (batch translation, prompt library, chat assistant) are planned.
+Supervertaler for Trados is a Trados Studio 2024 (v18) plugin that brings key Supervertaler features into the Trados ecosystem. It uses a **tabbed ViewPart** with separate tabs for each feature:
 
+- **TermLens** — live inline terminology display (glossary panel) — fully implemented
+- **AI Assistant** — project-aware chat interface — placeholder, not yet implemented
+- **Batch Translate** — AI-powered segment translation — placeholder, not yet implemented
+
+### Tech stack
 - **Language**: C# / .NET Framework 4.8, SDK-style .csproj
 - **Namespace**: `Supervertaler.Trados` (sub-namespaces: `.Controls`, `.Core`, `.Models`, `.Settings`)
 - **Build**: `bash build.sh` from repo root (dotnet build → package_plugin.py → deploy)
 - **Deploy target**: `%LOCALAPPDATA%\Trados\Trados Studio\18\Plugins\Packages\Supervertaler.Trados.sdlplugin`
 - **Strong-name key**: `src/Supervertaler.Trados/Supervertaler.Trados.snk` — PublicKeyToken: `6afde1272ae2306a`
   (Trados's `DefaultPluginTypeLoader` refuses unsigned assemblies — this is non-negotiable)
+
+---
+
+## UI architecture
+
+The ViewPart ("Supervertaler for Trados") uses a three-layer structure:
+
+```
+TermLensEditorViewPart (AbstractViewPartController)
+  └── MainPanelControl (UserControl, IUIControl) — tabbed container
+        ├── Tab "TermLens" → TermLensControl (glossary panel with header, flow panel)
+        ├── Tab "AI Assistant" → placeholder
+        └── Tab "Batch Translate" → placeholder
+```
+
+- `TermLensEditorViewPart` owns the lifecycle, settings, and event routing
+- `MainPanelControl` is a thin wrapper holding the `TabControl`
+- `TermLensControl` is the existing glossary panel (header with A+/A−/gear buttons, FlowLayoutPanel with TermBlock/WordLabel controls)
+- Both `_control` (TermLensControl) and `_mainPanel` (MainPanelControl) are lazy singletons; all existing `_control.Value` references work unchanged
 
 ---
 
@@ -32,15 +56,16 @@ ships older versions of several .NET Standard polyfills.
 
 | File | Purpose |
 |------|---------|
-| `src/Supervertaler.Trados/TermLensEditorViewPart.cs` | Main ViewPart controller — Initialize(), segment events, settings wiring |
-| `src/Supervertaler.Trados/AppInitializer.cs` | Runs at Trados startup; pre-loads `e_sqlite3.dll`, registers `AssemblyResolve` for our DLLs |
-| `src/Supervertaler.Trados/Core/TermbaseReader.cs` | SQLite reader — Open(), SearchTerm(), LoadAllTerms(), GetTargetSynonyms() |
+| `src/Supervertaler.Trados/TermLensEditorViewPart.cs` | Main ViewPart controller — Initialize(), segment events, settings, Alt+digit chords |
+| `src/Supervertaler.Trados/Controls/MainPanelControl.cs` | Tabbed container (IUIControl) — hosts TermLens tab and future AI tabs |
+| `src/Supervertaler.Trados/Controls/TermLensControl.cs` | TermLens glossary panel — header bar, FlowLayoutPanel with term blocks |
+| `src/Supervertaler.Trados/Controls/TermBlock.cs` | Individual term chip (custom-painted) + WordLabel for unmatched words |
+| `src/Supervertaler.Trados/AppInitializer.cs` | Runs at Trados startup; pre-loads `e_sqlite3.dll`, registers `AssemblyResolve` |
+| `src/Supervertaler.Trados/Core/TermbaseReader.cs` | SQLite reader — Open(), LoadAllTerms(), GetTargetSynonyms(), UpdateTerm() |
 | `src/Supervertaler.Trados/Core/TermMatcher.cs` | In-memory term matching against source segment tokens |
-| `src/Supervertaler.Trados/Controls/TermLensControl.cs` | WinForms panel — term blocks, gear button, SettingsRequested event |
-| `src/Supervertaler.Trados/Controls/TermBlock.cs` | Individual term chip rendered in the panel |
-| `src/Supervertaler.Trados/Settings/TermLensSettings.cs` | JSON settings persisted to `%LocalAppData%\Supervertaler.Trados\settings.json` |
-| `src/Supervertaler.Trados/Settings/TermLensSettingsForm.cs` | Settings dialog — file picker, termbase info label (shows LastError) |
-| `src/Supervertaler.Trados/Supervertaler.Trados.plugin.xml` | Extension manifest (UTF-16 LE — write via Python to preserve encoding) |
+| `src/Supervertaler.Trados/Settings/TermLensSettings.cs` | JSON settings at `%LocalAppData%\Supervertaler.Trados\settings.json` |
+| `src/Supervertaler.Trados/Settings/TermLensSettingsForm.cs` | Settings dialog — termbase picker, glossary management, import/export |
+| `src/Supervertaler.Trados/Supervertaler.Trados.plugin.xml` | Extension manifest (UTF-16 LE — edit via Python to preserve encoding) |
 | `build.sh` | Build → package → deploy script; aborts if Trados is running |
 | `package_plugin.py` | Creates OPC-format `.sdlplugin` (NOT plain ZIP — needs `[Content_Types].xml`, `_rels/`) |
 
@@ -56,9 +81,9 @@ ships older versions of several .NET Standard polyfills.
 
 ## Naming conventions
 
-- **Plugin name**: "Supervertaler for Trados" (visible in Trados plugin manager)
-- **Glossary panel name**: "TermLens" (visible in Trados View menu — kept as the feature name)
-- **Action IDs**: Prefixed with `TermLens_` for glossary-related actions (e.g. `TermLens_AddTerm`)
+- **Plugin name**: "Supervertaler for Trados" (visible in Trados docking header and plugin manager)
+- **Glossary panel name**: "TermLens" (tab label inside the ViewPart — kept as the feature name)
+- **Action IDs**: Prefixed with `TermLens_` for glossary-related actions (e.g. `TermLens_AddTerm`, `TermLens_TermPicker`); do NOT rename these — users may have custom shortcut overrides
 - **Class names**: TermLens-prefixed classes (`TermLensEditorViewPart`, `TermLensControl`, etc.) are the glossary feature; future AI classes will use different naming
 - **Settings auto-migrate** from old `%LocalAppData%\TermLens\` to `%LocalAppData%\Supervertaler.Trados\` on first run
 
@@ -73,7 +98,7 @@ ships older versions of several .NET Standard polyfills.
 
 ## Planned features
 
-- **AI batch translation** — translate segments using LLM providers (OpenAI, Anthropic, Google)
-- **Prompt manager / library** — manage system and custom prompts for AI translation
-- **AI chat assistant** — project-aware chat interface docked in Trados
+- **AI batch translation** — translate segments using LLM providers (OpenAI, Anthropic, Google); will need AI settings infrastructure (API keys, provider/model selection)
+- **Prompt manager / library** — manage system and custom prompts for AI translation; Supervertaler (Python) has `UnifiedPromptLibrary` with Markdown+YAML frontmatter to reference
+- **AI chat assistant** — project-aware chat interface in the AI Assistant tab
 - **TBX support** — to be added simultaneously in both Supervertaler and this plugin
