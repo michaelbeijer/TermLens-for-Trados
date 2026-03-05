@@ -1,5 +1,5 @@
 """
-Package TermLens build output into an OPC-format .sdlplugin file.
+Package Supervertaler.Trados build output into an OPC-format .sdlplugin file.
 
 Trados Studio's PluginPackage.OpenPackage() uses System.IO.Packaging (OPC)
 to read plugin packages. This means the .sdlplugin file must include:
@@ -18,9 +18,9 @@ import zipfile
 # Files to include in the package (relative to build output dir)
 PLUGIN_FILES = [
     # --- Core plugin ---
-    "TermLens.dll",
-    "TermLens.plugin.xml",
-    "TermLens.plugin.resources",
+    "Supervertaler.Trados.dll",
+    "Supervertaler.Trados.plugin.xml",
+    "Supervertaler.Trados.plugin.resources",
     # --- Microsoft.Data.Sqlite + SQLitePCLRaw ---
     "Microsoft.Data.Sqlite.dll",
     "SQLitePCLRaw.core.dll",
@@ -85,7 +85,7 @@ def build_content_types_xml(files):
 
     # The .plugin.xml file needs an Override because .xml is already mapped to text/xml
     override_parts.append(
-        '<Override PartName="/TermLens.plugin.xml" ContentType="application/octet-stream" />'
+        '<Override PartName="/Supervertaler.Trados.plugin.xml" ContentType="application/octet-stream" />'
     )
 
     defaults = "".join(parts)
@@ -134,9 +134,9 @@ def build_manifest_xml():
     include_lines = "\n".join(f"    <File>{f}</File>" for f in INCLUDE_FILES)
     return f"""<?xml version="1.0" encoding="utf-8"?>
 <PluginPackage xmlns="http://www.sdl.com/Plugins/PluginPackage/1.0">
-  <PlugInName>TermLens</PlugInName>
-  <Version>1.2.0.0</Version>
-  <Description>Inline terminology display for Trados Studio by Supervertaler.</Description>
+  <PlugInName>Supervertaler for Trados</PlugInName>
+  <Version>2.0.0.0</Version>
+  <Description>Terminology display and AI translation for Trados Studio by Supervertaler.</Description>
   <Author>Michael Beijer</Author>
   <RequiredProduct name="TradosStudio" minversion="18.0" maxversion="18.9" />
   <Include>

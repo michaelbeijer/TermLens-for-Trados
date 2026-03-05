@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
-using TermLens.Controls;
-using TermLens.Core;
-using TermLens.Models;
+using Supervertaler.Trados.Controls;
+using Supervertaler.Trados.Core;
+using Supervertaler.Trados.Models;
 
-namespace TermLens.Settings
+namespace Supervertaler.Trados.Settings
 {
     /// <summary>
     /// Settings dialog for the TermLens plugin.

@@ -3,7 +3,7 @@ using Sdl.Desktop.IntegrationApi;
 using Sdl.Desktop.IntegrationApi.Extensions;
 using Sdl.TranslationStudioAutomation.IntegrationApi;
 
-namespace TermLens
+namespace Supervertaler.Trados
 {
     /// <summary>
     /// Base class for Alt+digit term insertion shortcuts.

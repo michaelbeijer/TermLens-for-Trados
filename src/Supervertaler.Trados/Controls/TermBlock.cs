@@ -4,9 +4,9 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
-using TermLens.Models;
+using Supervertaler.Trados.Models;
 
-namespace TermLens.Controls
+namespace Supervertaler.Trados.Controls
 {
     /// <summary>
     /// Displays a single source word/phrase with its translation(s) underneath.
@@ -308,8 +308,9 @@ namespace TermLens.Controls
             Text = text;
             AutoSize = true;
             ForeColor = Color.FromArgb(100, 100, 100);
-            Padding = new Padding(2, 4, 2, 4);
-            Margin = new Padding(1, 0, 1, 0);
+            UseCompatibleTextRendering = true; // GDI+ rendering, same as TermBlock
+            Padding = new Padding(2, 3, 2, 0);
+            Margin = new Padding(2, 1, 2, 1);
         }
     }
 

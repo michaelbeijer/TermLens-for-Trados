@@ -5,20 +5,25 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
 
-namespace TermLens.Settings
+namespace Supervertaler.Trados.Settings
 {
     /// <summary>
-    /// Persisted settings for the TermLens plugin.
-    /// Stored at %LocalAppData%\TermLens\settings.json.
+    /// Persisted settings for the Supervertaler for Trados plugin.
+    /// Stored at %LocalAppData%\Supervertaler.Trados\settings.json.
     /// </summary>
     [DataContract]
     public class TermLensSettings
     {
         private static readonly string SettingsDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TermLens");
+            "Supervertaler.Trados");
 
         private static readonly string SettingsFile = Path.Combine(SettingsDir, "settings.json");
+
+        // Old settings path for auto-migration from TermLens
+        private static readonly string OldSettingsFile = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "TermLens", "settings.json");
 
         [DataMember(Name = "termbasePath")]
         public string TermbasePath { get; set; } = "";
@@ -95,6 +100,13 @@ namespace TermLens.Settings
         {
             try
             {
+                // Auto-migrate from old TermLens settings location
+                if (!File.Exists(SettingsFile) && File.Exists(OldSettingsFile))
+                {
+                    Directory.CreateDirectory(SettingsDir);
+                    File.Copy(OldSettingsFile, SettingsFile);
+                }
+
                 if (!File.Exists(SettingsFile))
                     return new TermLensSettings();
 

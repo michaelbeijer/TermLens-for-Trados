@@ -6,12 +6,12 @@ using Sdl.Desktop.IntegrationApi;
 using Sdl.Desktop.IntegrationApi.Extensions;
 using Sdl.Desktop.IntegrationApi.Interfaces;
 using Sdl.TranslationStudioAutomation.IntegrationApi;
-using TermLens.Controls;
-using TermLens.Core;
-using TermLens.Models;
-using TermLens.Settings;
+using Supervertaler.Trados.Controls;
+using Supervertaler.Trados.Core;
+using Supervertaler.Trados.Models;
+using Supervertaler.Trados.Settings;
 
-namespace TermLens
+namespace Supervertaler.Trados
 {
     /// <summary>
     /// Trados Studio editor ViewPart that docks the TermLens panel below the editor.
@@ -19,8 +19,8 @@ namespace TermLens
     /// </summary>
     [ViewPart(
         Id = "TermLensEditorViewPart",
-        Name = "TermLens",
-        Description = "Inline terminology display \u2014 shows source text with translations underneath matched terms",
+        Name = "Supervertaler for Trados",
+        Description = "Terminology display and AI translation for Trados Studio",
         Icon = "TermLensIcon"
     )]
     [ViewPartLayout(typeof(EditorController), Dock = DockType.Top, Pinned = true)]
@@ -28,6 +28,9 @@ namespace TermLens
     {
         private static readonly Lazy<TermLensControl> _control =
             new Lazy<TermLensControl>(() => new TermLensControl());
+
+        private static readonly Lazy<MainPanelControl> _mainPanel =
+            new Lazy<MainPanelControl>(() => new MainPanelControl(_control.Value));
 
         // Single instance — Trados creates exactly one ViewPart of each type.
         // Used by AddTermAction to trigger a reload after inserting a term.
@@ -43,7 +46,7 @@ namespace TermLens
 
         protected override IUIControl GetContentControl()
         {
-            return _control.Value;
+            return _mainPanel.Value;
         }
 
         protected override void Initialize()

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace TermLens.Models
+namespace Supervertaler.Trados.Models
 {
     /// <summary>
     /// A single term pair from a Supervertaler termbase.

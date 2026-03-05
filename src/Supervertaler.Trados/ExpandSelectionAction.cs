@@ -3,9 +3,9 @@ using System.Windows.Forms;
 using Sdl.Desktop.IntegrationApi;
 using Sdl.Desktop.IntegrationApi.Extensions;
 using Sdl.TranslationStudioAutomation.IntegrationApi;
-using TermLens.Core;
+using Supervertaler.Trados.Core;
 
-namespace TermLens
+namespace Supervertaler.Trados
 {
     /// <summary>
     /// Keyboard action: F2 expands the current partial text selection to full

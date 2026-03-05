@@ -1,28 +1,30 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Windows.Forms;
 using Sdl.Desktop.IntegrationApi;
 using Sdl.Desktop.IntegrationApi.Extensions;
 using Sdl.TranslationStudioAutomation.IntegrationApi;
 using Sdl.TranslationStudioAutomation.IntegrationApi.Presentation.DefaultLocations;
-using TermLens.Core;
-using TermLens.Settings;
+using Supervertaler.Trados.Core;
+using Supervertaler.Trados.Settings;
 
-namespace TermLens
+namespace Supervertaler.Trados
 {
     /// <summary>
-    /// Keyboard-only action: "Quick add Term to Project Glossary".
-    /// Responds to Alt+Up. Extracts selected source/target text and inserts
-    /// the term directly into the project glossary, bypassing the AddTermDialog.
+    /// Editor context menu action: "Quick add Term to TermLens".
+    /// Appears in the right-click context menu and responds to Ctrl+Alt+Shift+T.
+    /// Extracts selected source/target text and inserts the term directly,
+    /// bypassing the AddTermDialog for faster workflow.
     /// </summary>
-    [Action("TermLens_QuickAddProjectTerm", typeof(EditorController),
-        Name = "Quick add Term to project glossary",
-        Description = "Quickly add the selected source/target text to the project glossary (no dialog)")]
+    [Action("TermLens_QuickAddTerm", typeof(EditorController),
+        Name = "Quick Add Term to Glossary Set to 'Write'",
+        Description = "Quickly add the selected source/target text to all Write termbases (no dialog)")]
     [ActionLayout(
-        typeof(TranslationStudioDefaultContextMenus.EditorDocumentContextMenuLocation), 7,
+        typeof(TranslationStudioDefaultContextMenus.EditorDocumentContextMenuLocation), 6,
         DisplayType.Default, "", false)]
-    [Shortcut(Keys.Alt | Keys.Up)]
-    public class QuickAddProjectTermAction : AbstractAction
+    [Shortcut(Keys.Alt | Keys.Down)]
+    public class QuickAddTermAction : AbstractAction
     {
         protected override void Execute()
         {
@@ -39,14 +41,14 @@ namespace TermLens
 
                 var settings = TermLensSettings.Load();
 
-                // Validate project glossary is configured
-                if (settings.ProjectTermbaseId < 0)
+                // Validate at least one write termbase is configured
+                if (settings.WriteTermbaseIds == null || settings.WriteTermbaseIds.Count == 0)
                 {
                     MessageBox.Show(
-                        "No project glossary is configured.\n\n" +
-                        "Open TermLens settings (gear icon) and check the \u201cProject\u201d column " +
-                        "for the glossary that should receive project-specific terms.",
-                        "TermLens \u2014 Quick Add to Project",
+                        "No write termbase is configured.\n\n" +
+                        "Open TermLens settings (gear icon) and check the \u201cWrite\u201d column " +
+                        "for the termbases where new terms should be added.",
+                        "TermLens \u2014 Quick Add Term",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
@@ -56,46 +58,36 @@ namespace TermLens
                 {
                     MessageBox.Show(
                         "Termbase file not found. Please check the TermLens settings.",
-                        "TermLens \u2014 Quick Add to Project",
+                        "TermLens \u2014 Quick Add Term",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
                 // Get text from source and target segments
-                string sourceText = "";
-                string targetText = "";
+                string fullSource = doc.ActiveSegmentPair?.Source?.ToString() ?? "";
+                string fullTarget = doc.ActiveSegmentPair?.Target?.ToString() ?? "";
+                string sourceText = fullSource;
+                string targetText = fullTarget;
 
                 try
                 {
-                    // Try to get selected text first, fall back to full segment
-                    if (doc.ActiveSegmentPair?.Source != null)
-                        sourceText = doc.ActiveSegmentPair.Source.ToString() ?? "";
-                    if (doc.ActiveSegmentPair?.Target != null)
-                        targetText = doc.ActiveSegmentPair.Target.ToString() ?? "";
-
-                    // If there is an active selection, prefer it
+                    // If there is an active selection, expand it to full word boundaries
                     var selection = doc.Selection;
                     if (selection != null)
                     {
                         try
                         {
-                            if (selection.Source != null)
-                            {
-                                var srcSel = selection.Source.ToString();
-                                if (!string.IsNullOrWhiteSpace(srcSel))
-                                    sourceText = srcSel;
-                            }
+                            var srcSel = selection.Source?.ToString();
+                            if (!string.IsNullOrWhiteSpace(srcSel))
+                                sourceText = SelectionExpander.ExpandToWordBoundaries(fullSource, srcSel);
                         }
                         catch { /* Selection may not be available */ }
 
                         try
                         {
-                            if (selection.Target != null)
-                            {
-                                var tgtSel = selection.Target.ToString();
-                                if (!string.IsNullOrWhiteSpace(tgtSel))
-                                    targetText = tgtSel;
-                            }
+                            var tgtSel = selection.Target?.ToString();
+                            if (!string.IsNullOrWhiteSpace(tgtSel))
+                                targetText = SelectionExpander.ExpandToWordBoundaries(fullTarget, tgtSel);
                         }
                         catch { /* Selection may not be available */ }
                     }
@@ -103,10 +95,8 @@ namespace TermLens
                 catch
                 {
                     // Fall back to full segment text
-                    if (doc.ActiveSegmentPair?.Source != null)
-                        sourceText = doc.ActiveSegmentPair.Source.ToString() ?? "";
-                    if (doc.ActiveSegmentPair?.Target != null)
-                        targetText = doc.ActiveSegmentPair.Target.ToString() ?? "";
+                    sourceText = fullSource;
+                    targetText = fullTarget;
                 }
 
                 sourceText = sourceText.Trim();
@@ -119,42 +109,54 @@ namespace TermLens
                         "Both source and target text are required.\n\n" +
                         "Make sure you have an active segment with text in both " +
                         "the source and target columns.",
-                        "TermLens \u2014 Quick Add to Project",
+                        "TermLens \u2014 Quick Add Term",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                // Get project termbase metadata
-                Models.TermbaseInfo projectTermbase = null;
+                // Get write termbase metadata for all configured write targets
+                var writeTermbases = new List<Models.TermbaseInfo>();
                 using (var reader = new TermbaseReader(settings.TermbasePath))
                 {
                     if (reader.Open())
-                        projectTermbase = reader.GetTermbaseById(settings.ProjectTermbaseId);
+                    {
+                        foreach (var id in settings.WriteTermbaseIds)
+                        {
+                            var tb = reader.GetTermbaseById(id);
+                            if (tb != null) writeTermbases.Add(tb);
+                        }
+                    }
                 }
 
-                if (projectTermbase == null)
+                if (writeTermbases.Count == 0)
                 {
                     MessageBox.Show(
-                        "The configured project glossary was not found in the database.\n" +
+                        "The configured write termbases were not found in the database.\n" +
                         "Please check the TermLens settings.",
-                        "TermLens \u2014 Quick Add to Project",
+                        "TermLens \u2014 Quick Add Term",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                // Insert the term directly — no dialog
+                // Insert the term into all write termbases — no dialog
                 try
                 {
-                    var newId = TermbaseReader.InsertTerm(
-                        settings.TermbasePath,
-                        settings.ProjectTermbaseId,
-                        sourceText,
-                        targetText,
-                        projectTermbase.SourceLang,
-                        projectTermbase.TargetLang,
-                        ""); // No definition for quick-add
+                    bool anyInserted = false;
+                    foreach (var tb in writeTermbases)
+                    {
+                        var newId = TermbaseReader.InsertTerm(
+                            settings.TermbasePath,
+                            tb.Id,
+                            sourceText,
+                            targetText,
+                            tb.SourceLang,
+                            tb.TargetLang,
+                            ""); // No definition for quick-add
 
-                    if (newId > 0)
+                        if (newId > 0) anyInserted = true;
+                    }
+
+                    if (anyInserted)
                     {
                         // Reload term index so the new term appears immediately
                         TermLensEditorViewPart.NotifyTermAdded();
@@ -165,7 +167,7 @@ namespace TermLens
                     MessageBox.Show(
                         $"Failed to add term: {ex.Message}\n\n" +
                         "The database may be locked by another application.",
-                        "TermLens \u2014 Quick Add to Project",
+                        "TermLens \u2014 Quick Add Term",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }

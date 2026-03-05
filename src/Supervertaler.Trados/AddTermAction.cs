@@ -6,12 +6,12 @@ using Sdl.Desktop.IntegrationApi;
 using Sdl.Desktop.IntegrationApi.Extensions;
 using Sdl.TranslationStudioAutomation.IntegrationApi;
 using Sdl.TranslationStudioAutomation.IntegrationApi.Presentation.DefaultLocations;
-using TermLens.Controls;
-using TermLens.Core;
-using TermLens.Models;
-using TermLens.Settings;
+using Supervertaler.Trados.Controls;
+using Supervertaler.Trados.Core;
+using Supervertaler.Trados.Models;
+using Supervertaler.Trados.Settings;
 
-namespace TermLens
+namespace Supervertaler.Trados
 {
     /// <summary>
     /// Editor context menu action: "Add Term to TermLens".

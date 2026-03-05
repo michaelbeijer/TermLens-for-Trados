@@ -1,6 +1,6 @@
 using System;
 
-namespace TermLens.Core
+namespace Supervertaler.Trados.Core
 {
     /// <summary>
     /// Expands a partial text selection to full word boundaries.

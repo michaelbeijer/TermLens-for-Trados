@@ -3,14 +3,31 @@
 ## [Unreleased]
 
 ### Planned
-- **TBX support** — to be added simultaneously in both Supervertaler and TermLens
-  when the format is finalized
+- **AI batch translation** — translate segments using LLM providers (OpenAI, Anthropic, Google)
+- **Prompt manager / library** — manage system and custom prompts for AI translation
+- **AI chat assistant** — project-aware chat interface docked in Trados
+- **TBX support** — to be added simultaneously in both Supervertaler and this plugin
 
 ---
 
-All notable changes to TermLens will be documented here.
+All notable changes to Supervertaler for Trados (formerly TermLens) will be documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Version numbers follow [Semantic Versioning](https://semver.org/).
+
+---
+
+## [2.0.0] — 2026-03-05
+
+### Changed
+- **Renamed from TermLens to Supervertaler for Trados** — the plugin is now part of the
+  Supervertaler product family; the TermLens glossary panel retains its name as a feature
+  within the larger plugin
+- **New assembly name** — `Supervertaler.Trados.dll` (was `TermLens.dll`); namespace changed
+  from `TermLens` to `Supervertaler.Trados`
+- **New plugin identity** — Trados treats this as a new plugin; users upgrading from TermLens
+  should uninstall the old plugin first
+- **Settings auto-migration** — settings are automatically copied from the old
+  `%LocalAppData%\TermLens\` location to `%LocalAppData%\Supervertaler.Trados\` on first run
 
 ---
 

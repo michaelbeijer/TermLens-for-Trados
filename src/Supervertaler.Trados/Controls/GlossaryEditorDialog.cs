@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
-using TermLens.Core;
-using TermLens.Models;
-using TermLens.Settings;
+using Supervertaler.Trados.Core;
+using Supervertaler.Trados.Models;
+using Supervertaler.Trados.Settings;
 
-namespace TermLens.Controls
+namespace Supervertaler.Trados.Controls
 {
     /// <summary>
     /// Dialog for browsing, editing, adding, and deleting terms in a single glossary.

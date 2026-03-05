@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Microsoft.Data.Sqlite;
-using TermLens.Models;
+using Supervertaler.Trados.Models;
 
-namespace TermLens.Core
+namespace Supervertaler.Trados.Core
 {
     /// <summary>
     /// Reads termbases from Supervertaler's SQLite database (supervertaler.db).

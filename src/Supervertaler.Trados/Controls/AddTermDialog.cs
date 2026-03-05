@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
-using TermLens.Models;
+using Supervertaler.Trados.Models;
 
-namespace TermLens.Controls
+namespace Supervertaler.Trados.Controls
 {
     /// <summary>
     /// Confirmation dialog for adding a new term to one or more write termbases.

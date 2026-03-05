@@ -4,10 +4,10 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using Sdl.Desktop.IntegrationApi.Interfaces;
-using TermLens.Core;
-using TermLens.Models;
+using Supervertaler.Trados.Core;
+using Supervertaler.Trados.Models;
 
-namespace TermLens.Controls
+namespace Supervertaler.Trados.Controls
 {
     /// <summary>
     /// Main TermLens panel control. Renders the source segment as a flowing
@@ -303,7 +303,6 @@ namespace TermLens.Controls
                     var label = new WordLabel(token.Text)
                     {
                         Font = Font,
-                        Margin = new Padding(2, 4, 2, 4)
                     };
                     _flowPanel.Controls.Add(label);
                 }

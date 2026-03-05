@@ -1,12 +1,13 @@
-# TermLens – Claude Context
+# Supervertaler for Trados – Claude Context
 
 ## What this project is
-TermLens is a Trados Studio 2024 (v18) editor ViewPart plugin that displays terminology matches inline in the source segment — essentially a live glossary lookup panel docked below the editor. It reads Supervertaler's own SQLite termbase format (`supervertaler.db`) so both tools share the same glossaries.
+Supervertaler for Trados is a Trados Studio 2024 (v18) plugin that brings key Supervertaler features into the Trados ecosystem. Currently it provides the **TermLens** glossary panel (live inline terminology display); AI features (batch translation, prompt library, chat assistant) are planned.
 
 - **Language**: C# / .NET Framework 4.8, SDK-style .csproj
+- **Namespace**: `Supervertaler.Trados` (sub-namespaces: `.Controls`, `.Core`, `.Models`, `.Settings`)
 - **Build**: `bash build.sh` from repo root (dotnet build → package_plugin.py → deploy)
-- **Deploy target**: `%LOCALAPPDATA%\Trados\Trados Studio\18\Plugins\Packages\TermLens.sdlplugin`
-- **Strong-name key**: `src/TermLens/TermLens.snk` — PublicKeyToken: `6afde1272ae2306a`
+- **Deploy target**: `%LOCALAPPDATA%\Trados\Trados Studio\18\Plugins\Packages\Supervertaler.Trados.sdlplugin`
+- **Strong-name key**: `src/Supervertaler.Trados/Supervertaler.Trados.snk` — PublicKeyToken: `6afde1272ae2306a`
   (Trados's `DefaultPluginTypeLoader` refuses unsigned assemblies — this is non-negotiable)
 
 ---
@@ -31,15 +32,15 @@ ships older versions of several .NET Standard polyfills.
 
 | File | Purpose |
 |------|---------|
-| `src/TermLens/TermLensEditorViewPart.cs` | Main ViewPart controller — Initialize(), segment events, settings wiring |
-| `src/TermLens/AppInitializer.cs` | Runs at Trados startup; pre-loads `e_sqlite3.dll`, registers `AssemblyResolve` for our DLLs |
-| `src/TermLens/Core/TermbaseReader.cs` | SQLite reader — Open(), SearchTerm(), LoadAllTerms(), GetTargetSynonyms() |
-| `src/TermLens/Core/TermMatcher.cs` | In-memory term matching against source segment tokens |
-| `src/TermLens/Controls/TermLensControl.cs` | WinForms panel — term blocks, gear button, SettingsRequested event |
-| `src/TermLens/Controls/TermBlock.cs` | Individual term chip rendered in the panel |
-| `src/TermLens/Settings/TermLensSettings.cs` | JSON settings persisted to `%LocalAppData%\TermLens\settings.json` |
-| `src/TermLens/Settings/TermLensSettingsForm.cs` | Settings dialog — file picker, termbase info label (shows LastError) |
-| `src/TermLens/TermLens.plugin.xml` | Extension manifest (UTF-16 LE — write via Python to preserve encoding) |
+| `src/Supervertaler.Trados/TermLensEditorViewPart.cs` | Main ViewPart controller — Initialize(), segment events, settings wiring |
+| `src/Supervertaler.Trados/AppInitializer.cs` | Runs at Trados startup; pre-loads `e_sqlite3.dll`, registers `AssemblyResolve` for our DLLs |
+| `src/Supervertaler.Trados/Core/TermbaseReader.cs` | SQLite reader — Open(), SearchTerm(), LoadAllTerms(), GetTargetSynonyms() |
+| `src/Supervertaler.Trados/Core/TermMatcher.cs` | In-memory term matching against source segment tokens |
+| `src/Supervertaler.Trados/Controls/TermLensControl.cs` | WinForms panel — term blocks, gear button, SettingsRequested event |
+| `src/Supervertaler.Trados/Controls/TermBlock.cs` | Individual term chip rendered in the panel |
+| `src/Supervertaler.Trados/Settings/TermLensSettings.cs` | JSON settings persisted to `%LocalAppData%\Supervertaler.Trados\settings.json` |
+| `src/Supervertaler.Trados/Settings/TermLensSettingsForm.cs` | Settings dialog — file picker, termbase info label (shows LastError) |
+| `src/Supervertaler.Trados/Supervertaler.Trados.plugin.xml` | Extension manifest (UTF-16 LE — write via Python to preserve encoding) |
 | `build.sh` | Build → package → deploy script; aborts if Trados is running |
 | `package_plugin.py` | Creates OPC-format `.sdlplugin` (NOT plain ZIP — needs `[Content_Types].xml`, `_rels/`) |
 
@@ -47,9 +48,19 @@ ships older versions of several .NET Standard polyfills.
 
 ## Build / deploy rules
 
-- **Trados must be fully closed** before running `bash build.sh` — it locks plugin files and skips re-extraction if `Unpacked/TermLens/` is non-empty. `build.sh` detects this via `tasklist.exe` and aborts.
-- `build.sh` wipes `%LOCALAPPDATA%\Trados\...\Plugins\Unpacked\TermLens\` before deploying so Trados re-extracts cleanly on next start.
+- **Trados must be fully closed** before running `bash build.sh` — it locks plugin files and skips re-extraction if `Unpacked/Supervertaler.Trados/` is non-empty. `build.sh` detects this via `tasklist.exe` and aborts.
+- `build.sh` wipes `%LOCALAPPDATA%\Trados\...\Plugins\Unpacked\Supervertaler.Trados\` before deploying so Trados re-extracts cleanly on next start.
 - `.sdlplugin` is OPC (Open Packaging Convention), like `.docx`. Requires `[Content_Types].xml` and `_rels/` entries — plain ZIP will silently fail to load.
+
+---
+
+## Naming conventions
+
+- **Plugin name**: "Supervertaler for Trados" (visible in Trados plugin manager)
+- **Glossary panel name**: "TermLens" (visible in Trados View menu — kept as the feature name)
+- **Action IDs**: Prefixed with `TermLens_` for glossary-related actions (e.g. `TermLens_AddTerm`)
+- **Class names**: TermLens-prefixed classes (`TermLensEditorViewPart`, `TermLensControl`, etc.) are the glossary feature; future AI classes will use different naming
+- **Settings auto-migrate** from old `%LocalAppData%\TermLens\` to `%LocalAppData%\Supervertaler.Trados\` on first run
 
 ---
 
@@ -60,9 +71,9 @@ ships older versions of several .NET Standard polyfills.
 
 ---
 
-## Planned features (not yet started)
+## Planned features
 
-- **Right-click to add term** — context menu in Trados editor grid to add selected source + target text as a new term; needs `[Action]` class, `AddTermDialog`, and write methods in `TermbaseReader`
-- **Import from TSV** — must match Supervertaler's exact TSV format (tab-separated, pipe-delimited synonyms, `[!forbidden]` syntax, UUID tracking)
-- **Export to TSV** — same format, so files are interchangeable between Supervertaler and TermLens
-- **TBX support** — to be added simultaneously in both Supervertaler and TermLens when the time comes
+- **AI batch translation** — translate segments using LLM providers (OpenAI, Anthropic, Google)
+- **Prompt manager / library** — manage system and custom prompts for AI translation
+- **AI chat assistant** — project-aware chat interface docked in Trados
+- **TBX support** — to be added simultaneously in both Supervertaler and this plugin

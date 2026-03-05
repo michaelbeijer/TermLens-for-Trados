@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
-using TermLens.Models;
-using TermLens.Settings;
+using Supervertaler.Trados.Models;
+using Supervertaler.Trados.Settings;
 
-namespace TermLens.Controls
+namespace Supervertaler.Trados.Controls
 {
     /// <summary>
     /// Modal dialog that lists all matched terms for the current segment.

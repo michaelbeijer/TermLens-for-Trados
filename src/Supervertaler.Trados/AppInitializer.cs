@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using Sdl.Desktop.IntegrationApi;
 using Sdl.Desktop.IntegrationApi.Extensions;
 
-namespace TermLens
+namespace Supervertaler.Trados
 {
     /// <summary>
     /// Runs before any ViewPart is instantiated.
