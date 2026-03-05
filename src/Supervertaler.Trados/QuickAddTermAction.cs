@@ -138,28 +138,42 @@ namespace Supervertaler.Trados
                     return;
                 }
 
-                // Insert the term into all write termbases — no dialog
+                // Insert the term into all write termbases in a single transaction
                 try
                 {
-                    bool anyInserted = false;
-                    foreach (var tb in writeTermbases)
-                    {
-                        var newId = TermbaseReader.InsertTerm(
-                            settings.TermbasePath,
-                            tb.Id,
-                            sourceText,
-                            targetText,
-                            tb.SourceLang,
-                            tb.TargetLang,
-                            ""); // No definition for quick-add
+                    var batchResults = TermbaseReader.InsertTermBatch(
+                        settings.TermbasePath, sourceText, targetText, "", writeTermbases);
 
-                        if (newId > 0) anyInserted = true;
-                    }
-
-                    if (anyInserted)
+                    if (batchResults.Count > 0)
                     {
-                        // Reload term index so the new term appears immediately
-                        TermLensEditorViewPart.NotifyTermAdded();
+                        // Build TermEntry objects from known data + returned IDs
+                        var insertedEntries = new List<Models.TermEntry>();
+                        foreach (var (termbaseId, newId) in batchResults)
+                        {
+                            var tb = writeTermbases.Find(t => t.Id == termbaseId);
+                            if (tb == null) continue;
+                            insertedEntries.Add(new Models.TermEntry
+                            {
+                                Id = newId,
+                                SourceTerm = sourceText,
+                                TargetTerm = targetText,
+                                SourceLang = tb.SourceLang,
+                                TargetLang = tb.TargetLang,
+                                TermbaseId = tb.Id,
+                                TermbaseName = tb.Name,
+                                IsProjectTermbase = tb.IsProjectTermbase,
+                                Ranking = tb.Ranking,
+                                Definition = "",
+                                Domain = "",
+                                Notes = "",
+                                Forbidden = false,
+                                CaseSensitive = false,
+                                TargetSynonyms = new List<string>()
+                            });
+                        }
+
+                        // Incremental index update — no full DB reload
+                        TermLensEditorViewPart.NotifyTermInserted(insertedEntries);
                     }
                 }
                 catch (Exception ex)

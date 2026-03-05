@@ -419,6 +419,61 @@ namespace Supervertaler.Trados.Core
         }
 
         /// <summary>
+        /// Inserts a term into multiple termbases using a single ReadWrite connection
+        /// and a single transaction. Much faster than calling InsertTerm() per termbase.
+        /// </summary>
+        /// <returns>List of (termbaseId, newRowId) pairs for successful inserts.</returns>
+        public static List<(long termbaseId, long newId)> InsertTermBatch(
+            string dbPath, string sourceTerm, string targetTerm,
+            string definition, List<TermbaseInfo> termbases)
+        {
+            var results = new List<(long, long)>();
+
+            var connStr = new SqliteConnectionStringBuilder
+            {
+                DataSource = dbPath,
+                Mode = SqliteOpenMode.ReadWrite
+            }.ToString();
+
+            using (var conn = new SqliteConnection(connStr))
+            {
+                conn.Open();
+                using (var txn = conn.BeginTransaction())
+                {
+                    const string sql = @"
+                        INSERT INTO termbase_terms
+                            (source_term, target_term, termbase_id, source_lang, target_lang,
+                             definition, domain, notes, forbidden, case_sensitive)
+                        VALUES
+                            (@source, @target, @tbId, @srcLang, @tgtLang,
+                             @def, '', '', 0, 0);
+                        SELECT last_insert_rowid();";
+
+                    foreach (var tb in termbases)
+                    {
+                        using (var cmd = new SqliteCommand(sql, conn, txn))
+                        {
+                            cmd.Parameters.AddWithValue("@source", sourceTerm.Trim());
+                            cmd.Parameters.AddWithValue("@target", targetTerm.Trim());
+                            cmd.Parameters.AddWithValue("@tbId", tb.Id);
+                            cmd.Parameters.AddWithValue("@srcLang", tb.SourceLang);
+                            cmd.Parameters.AddWithValue("@tgtLang", tb.TargetLang);
+                            cmd.Parameters.AddWithValue("@def", definition ?? "");
+
+                            var result = cmd.ExecuteScalar();
+                            var newId = result != null ? Convert.ToInt64(result) : -1;
+                            if (newId > 0)
+                                results.Add((tb.Id, newId));
+                        }
+                    }
+                    txn.Commit();
+                }
+            }
+
+            return results;
+        }
+
+        /// <summary>
         /// Updates an existing term's source, target, definition, domain, and notes
         /// using a short-lived ReadWrite connection (same pattern as InsertTerm).
         /// </summary>

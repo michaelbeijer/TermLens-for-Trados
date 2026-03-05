@@ -273,7 +273,30 @@ namespace Supervertaler.Trados
                                 dlg.Definition);
 
                             if (updated)
-                                NotifyTermAdded();
+                            {
+                                // Incremental update: remove old entry, add updated one
+                                _control.Value.RemoveTermFromIndex(e.Entry.Id);
+                                var updatedEntry = new TermEntry
+                                {
+                                    Id = e.Entry.Id,
+                                    SourceTerm = dlg.SourceTerm,
+                                    TargetTerm = dlg.TargetTerm,
+                                    SourceLang = e.Entry.SourceLang,
+                                    TargetLang = e.Entry.TargetLang,
+                                    TermbaseId = e.Entry.TermbaseId,
+                                    TermbaseName = e.Entry.TermbaseName,
+                                    IsProjectTermbase = e.Entry.IsProjectTermbase,
+                                    Ranking = e.Entry.Ranking,
+                                    Definition = dlg.Definition ?? "",
+                                    Domain = e.Entry.Domain,
+                                    Notes = e.Entry.Notes,
+                                    Forbidden = e.Entry.Forbidden,
+                                    CaseSensitive = e.Entry.CaseSensitive,
+                                    TargetSynonyms = e.Entry.TargetSynonyms
+                                };
+                                _control.Value.AddTermToIndex(updatedEntry);
+                                UpdateFromActiveSegment();
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -311,7 +334,7 @@ namespace Supervertaler.Trados
                         e.Entry.Id);
 
                     if (deleted)
-                        NotifyTermAdded();
+                        NotifyTermDeleted(e.Entry.Id);
                 }
                 catch (Exception ex)
                 {
@@ -336,6 +359,35 @@ namespace Supervertaler.Trados
             // Re-read settings in case WriteTermbaseId or disabled list changed
             instance._settings = TermLensSettings.Load();
             instance.LoadTermbase(forceReload: true);
+            instance.UpdateFromActiveSegment();
+        }
+
+        /// <summary>
+        /// Called after a term is inserted via quick-add. Incrementally updates the
+        /// in-memory index and refreshes the segment display, without reloading the
+        /// entire database. Much faster than NotifyTermAdded() for single inserts.
+        /// </summary>
+        public static void NotifyTermInserted(List<Models.TermEntry> newEntries)
+        {
+            var instance = _currentInstance;
+            if (instance == null) return;
+
+            foreach (var entry in newEntries)
+                _control.Value.AddTermToIndex(entry);
+
+            instance.UpdateFromActiveSegment();
+        }
+
+        /// <summary>
+        /// Called after a term is deleted. Removes it from the in-memory index
+        /// and refreshes the segment display, without reloading the database.
+        /// </summary>
+        public static void NotifyTermDeleted(long termId)
+        {
+            var instance = _currentInstance;
+            if (instance == null) return;
+
+            _control.Value.RemoveTermFromIndex(termId);
             instance.UpdateFromActiveSegment();
         }
 

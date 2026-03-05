@@ -36,6 +36,56 @@ namespace Supervertaler.Trados.Core
         }
 
         /// <summary>
+        /// Adds a single entry to the in-memory index without rebuilding.
+        /// Mirrors the indexing logic from TermbaseReader.LoadAllTerms():
+        /// indexes by lowercase source term and by stripped-punctuation variant.
+        /// </summary>
+        public void AddEntry(TermEntry entry)
+        {
+            if (_termIndex == null || entry == null || string.IsNullOrWhiteSpace(entry.SourceTerm))
+                return;
+
+            var key = entry.SourceTerm.Trim().ToLowerInvariant();
+            var stripped = key.TrimEnd('.', '!', '?', ',', ';', ':');
+
+            if (!_termIndex.TryGetValue(key, out var list))
+            {
+                list = new List<TermEntry>();
+                _termIndex[key] = list;
+            }
+            list.Add(entry);
+
+            if (stripped != key && stripped.Length > 0)
+            {
+                if (!_termIndex.TryGetValue(stripped, out var strippedList))
+                {
+                    strippedList = new List<TermEntry>();
+                    _termIndex[stripped] = strippedList;
+                }
+                strippedList.Add(entry);
+            }
+        }
+
+        /// <summary>
+        /// Removes all entries with the given term ID from the in-memory index.
+        /// Used after deleting a term to avoid a full reload.
+        /// </summary>
+        public void RemoveEntry(long termId)
+        {
+            if (_termIndex == null) return;
+
+            var keysToClean = new List<string>();
+            foreach (var kvp in _termIndex)
+            {
+                kvp.Value.RemoveAll(e => e.Id == termId);
+                if (kvp.Value.Count == 0)
+                    keysToClean.Add(kvp.Key);
+            }
+            foreach (var key in keysToClean)
+                _termIndex.Remove(key);
+        }
+
+        /// <summary>
         /// Tokenizes source text into a list of SegmentTokens with term matches populated.
         /// This is the main entry point — equivalent to Supervertaler's update_with_matches().
         /// </summary>

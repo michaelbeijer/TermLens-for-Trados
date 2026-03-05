@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Windows.Forms;
 using Sdl.Desktop.IntegrationApi;
@@ -156,8 +157,27 @@ namespace Supervertaler.Trados
 
                     if (newId > 0)
                     {
-                        // Reload term index so the new term appears immediately
-                        TermLensEditorViewPart.NotifyTermAdded();
+                        // Incremental index update — no full DB reload
+                        var entry = new Models.TermEntry
+                        {
+                            Id = newId,
+                            SourceTerm = sourceText,
+                            TargetTerm = targetText,
+                            SourceLang = projectTermbase.SourceLang,
+                            TargetLang = projectTermbase.TargetLang,
+                            TermbaseId = projectTermbase.Id,
+                            TermbaseName = projectTermbase.Name,
+                            IsProjectTermbase = projectTermbase.IsProjectTermbase,
+                            Ranking = projectTermbase.Ranking,
+                            Definition = "",
+                            Domain = "",
+                            Notes = "",
+                            Forbidden = false,
+                            CaseSensitive = false,
+                            TargetSynonyms = new List<string>()
+                        };
+                        TermLensEditorViewPart.NotifyTermInserted(
+                            new List<Models.TermEntry> { entry });
                     }
                 }
                 catch (Exception ex)

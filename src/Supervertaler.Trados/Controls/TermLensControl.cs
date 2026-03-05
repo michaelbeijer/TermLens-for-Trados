@@ -232,6 +232,24 @@ namespace Supervertaler.Trados.Controls
         }
 
         /// <summary>
+        /// Adds a single term entry to the in-memory index without reloading the database.
+        /// Call this after InsertTerm() for an incremental update.
+        /// </summary>
+        public void AddTermToIndex(TermEntry entry)
+        {
+            _matcher.AddEntry(entry);
+        }
+
+        /// <summary>
+        /// Removes a term from the in-memory index by its ID.
+        /// Call this after DeleteTerm() for an incremental update.
+        /// </summary>
+        public void RemoveTermFromIndex(long termId)
+        {
+            _matcher.RemoveEntry(termId);
+        }
+
+        /// <summary>
         /// Updates the display with a new source segment.
         /// Call this when the active segment changes in Trados Studio.
         /// </summary>

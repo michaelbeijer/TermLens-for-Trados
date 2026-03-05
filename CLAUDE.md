@@ -61,8 +61,8 @@ ships older versions of several .NET Standard polyfills.
 | `src/Supervertaler.Trados/Controls/TermLensControl.cs` | TermLens glossary panel — header bar, FlowLayoutPanel with term blocks |
 | `src/Supervertaler.Trados/Controls/TermBlock.cs` | Individual term chip (custom-painted) + WordLabel for unmatched words |
 | `src/Supervertaler.Trados/AppInitializer.cs` | Runs at Trados startup; pre-loads `e_sqlite3.dll`, registers `AssemblyResolve` |
-| `src/Supervertaler.Trados/Core/TermbaseReader.cs` | SQLite reader — Open(), LoadAllTerms(), GetTargetSynonyms(), UpdateTerm() |
-| `src/Supervertaler.Trados/Core/TermMatcher.cs` | In-memory term matching against source segment tokens |
+| `src/Supervertaler.Trados/Core/TermbaseReader.cs` | SQLite reader — Open(), LoadAllTerms(), InsertTerm(), InsertTermBatch(), UpdateTerm() |
+| `src/Supervertaler.Trados/Core/TermMatcher.cs` | In-memory term matching + incremental AddEntry()/RemoveEntry() |
 | `src/Supervertaler.Trados/Settings/TermLensSettings.cs` | JSON settings at `%LocalAppData%\Supervertaler.Trados\settings.json` |
 | `src/Supervertaler.Trados/Settings/TermLensSettingsForm.cs` | Settings dialog — termbase picker, glossary management, import/export |
 | `src/Supervertaler.Trados/Supervertaler.Trados.plugin.xml` | Extension manifest (UTF-16 LE — edit via Python to preserve encoding) |
@@ -93,6 +93,40 @@ ships older versions of several .NET Standard polyfills.
 
 - `supervertaler.db` uses WAL mode (Write-Ahead Log). Leftover `.db-wal` / `.db-shm` files after non-clean Supervertaler shutdown are harmless — SQLite replays the WAL on next open.
 - Connection string uses `SqliteConnectionStringBuilder` with `Mode = SqliteOpenMode.ReadOnly` — safe for concurrent access while Supervertaler has the DB open.
+
+---
+
+## Term add/edit/delete: incremental index updates
+
+The quick-add actions (Alt+Down, Alt+Up) and right-click edit/delete use **incremental in-memory index updates** instead of reloading the entire database:
+
+- **`TermMatcher.AddEntry(TermEntry)`** — inserts one entry into `_termIndex` under both the lowercase key and stripped-punctuation variant. O(1).
+- **`TermMatcher.RemoveEntry(long termId)`** — removes entries by ID from all keys.
+- **`TermbaseReader.InsertTermBatch()`** — inserts into multiple write termbases in a single SQLite connection + transaction, instead of one connection per termbase.
+- **`NotifyTermInserted(List<TermEntry>)`** — adds entries to the index and refreshes the UI. No settings reload, no DB reload.
+- **`NotifyTermDeleted(long termId)`** — removes from index and refreshes.
+- **`NotifyTermAdded()`** — the old full-reload path. Still used by the settings dialog when the user toggles glossaries.
+
+The edit handler (right-click → Edit) does a remove + add of the updated entry.
+
+On app startup or settings change, `LoadTermbase(forceReload: true)` still does a full DB load to ensure consistency.
+
+---
+
+## License
+
+Source-available license (not MIT). Source code viewable/forkable for personal use, but binary redistribution (.sdlplugin) restricted to copyright holder. Pre-built binaries available at supervertaler.com.
+
+---
+
+## Monetization
+
+- Source code is open on GitHub (source-available license)
+- Pre-built .sdlplugin binaries sold via monthly/annual subscription
+- Technical support included with subscription
+- Payment platform: TBD (Lemon Squeezy or similar — handles EU VAT)
+- License key validation planned: key entered in plugin settings, validated against payment platform API
+- Free tier: TermLens glossary features. Paid tier: AI features (Batch Translate, AI Assistant)
 
 ---
 

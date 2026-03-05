@@ -16,6 +16,18 @@ Version numbers follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2.0.1] — 2026-03-05
+
+### Changed
+- **Faster quick-add term workflow** — Alt+Down and Alt+Up now use incremental
+  in-memory index updates instead of reloading the entire termbase database;
+  batch inserts use a single SQLite transaction instead of one connection per
+  glossary; right-click edit and delete also use the incremental path
+- **License changed to source-available** — source code remains viewable and
+  forkable for personal use; binary redistribution restricted to copyright holder
+
+---
+
 ## [2.0.0] — 2026-03-05
 
 ### Added
