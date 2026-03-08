@@ -369,6 +369,11 @@ namespace Supervertaler.Trados.Controls
                 ForeColor = labelColor,
                 Checked = true
             };
+            var tmTip = new ToolTip { AutoPopDelay = 10000, InitialDelay = 300 };
+            tmTip.SetToolTip(_chkIncludeTmMatches,
+                "When enabled, Translation Memory fuzzy matches for the active segment\r\n" +
+                "are included in the AI prompt. This gives the AI reference translations\r\n" +
+                "from your TM to improve consistency and accuracy.");
             Controls.Add(_chkIncludeTmMatches);
 
             _lblAiTermbases = new Label
