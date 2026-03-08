@@ -101,7 +101,7 @@ namespace Supervertaler.Trados.Core
                     AppendPar(sb, ref firstBlock);
                     sb.Append("{\\b").Append(H3Size).Append(" ");
                     AppendInlineRtf(sb, line.Substring(4).Trim());
-                    sb.Append("}").Append(BodySize).Append(@"\par ");
+                    sb.Append("}").Append(BodySize);
                     continue;
                 }
                 if (line.StartsWith("## "))
@@ -109,7 +109,7 @@ namespace Supervertaler.Trados.Core
                     AppendPar(sb, ref firstBlock);
                     sb.Append("{\\b").Append(H2Size).Append(" ");
                     AppendInlineRtf(sb, line.Substring(3).Trim());
-                    sb.Append("}").Append(BodySize).Append(@"\par ");
+                    sb.Append("}").Append(BodySize);
                     continue;
                 }
                 if (line.StartsWith("# "))
@@ -117,7 +117,7 @@ namespace Supervertaler.Trados.Core
                     AppendPar(sb, ref firstBlock);
                     sb.Append("{\\b").Append(H1Size).Append(" ");
                     AppendInlineRtf(sb, line.Substring(2).Trim());
-                    sb.Append("}").Append(BodySize).Append(@"\par ");
+                    sb.Append("}").Append(BodySize);
                     continue;
                 }
 
@@ -129,7 +129,7 @@ namespace Supervertaler.Trados.Core
                     var content = trimmed.Substring(2);
                     sb.Append(@"{\li360\fi-180 \u8226?  ");
                     AppendInlineRtf(sb, content.Trim());
-                    sb.Append(@"\par}");
+                    sb.Append("}");
                     continue;
                 }
 
@@ -141,7 +141,7 @@ namespace Supervertaler.Trados.Core
                     sb.Append(@"{\li360\fi-180 ");
                     sb.Append(numberedMatch.Groups[1].Value).Append(". ");
                     AppendInlineRtf(sb, numberedMatch.Groups[2].Value.Trim());
-                    sb.Append(@"\par}");
+                    sb.Append("}");
                     continue;
                 }
 
@@ -150,14 +150,12 @@ namespace Supervertaler.Trados.Core
                 {
                     AppendPar(sb, ref firstBlock);
                     sb.Append(@"{\cf2 \u8212?\u8212?\u8212?\u8212?\u8212?\u8212?\u8212?\u8212?}");
-                    sb.Append(@"\par ");
                     continue;
                 }
 
                 // ─── Normal paragraph ───────────────────────────────
                 AppendPar(sb, ref firstBlock);
                 AppendInlineRtf(sb, line);
-                sb.Append(@"\par ");
             }
 
             // Flush any pending blocks
@@ -327,7 +325,7 @@ namespace Supervertaler.Trados.Core
                     sb.Append(@"\line ");
             }
 
-            sb.Append("}").Append(BodySize).Append(@"\cf1\par ");
+            sb.Append("}").Append(BodySize).Append(@"\cf1 ");
             lines.Clear();
         }
 
@@ -396,7 +394,7 @@ namespace Supervertaler.Trados.Core
                     sb.Append(@"\line ");
             }
 
-            sb.Append("}").Append(BodySize).Append(@"\cf1\par ");
+            sb.Append("}").Append(BodySize).Append(@"\cf1 ");
             lines.Clear();
         }
 

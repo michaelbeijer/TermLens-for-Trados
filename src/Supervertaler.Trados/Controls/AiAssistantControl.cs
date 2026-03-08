@@ -49,6 +49,14 @@ namespace Supervertaler.Trados.Controls
         private const int MaxImages = 5;
         private const int MaxImageBytes = 10 * 1024 * 1024; // 10 MB
 
+        // Input panel resize handle
+        private Panel _resizeHandle;
+        private bool _resizeDragging;
+        private int _resizeDragStartY;
+        private int _resizeDragStartHeight;
+        private const int InputPanelMinHeight = 90;
+        private const int InputPanelMaxHeight = 400;
+
         /// <summary>Raised when the user presses Enter or clicks Send.</summary>
         public event EventHandler<ChatSendEventArgs> SendRequested;
 
@@ -192,14 +200,54 @@ namespace Supervertaler.Trados.Controls
                 BackColor = Color.FromArgb(250, 250, 250)
             };
 
-            // Thin separator line above input
-            var inputSep = new Panel
+            // Drag handle at top of input panel — allows vertical resizing
+            _resizeHandle = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 1,
-                BackColor = Color.FromArgb(220, 220, 220)
+                Height = 5,
+                Cursor = Cursors.SizeNS,
+                BackColor = Color.FromArgb(235, 235, 235)
             };
-            _inputPanel.Controls.Add(inputSep);
+
+            // Visual grip: thin line centred in the handle
+            var gripLine = new Panel
+            {
+                Height = 1,
+                BackColor = Color.FromArgb(190, 190, 190),
+                Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top
+            };
+            _resizeHandle.Controls.Add(gripLine);
+            _resizeHandle.Layout += (s, e) =>
+            {
+                gripLine.Location = new Point((_resizeHandle.Width / 2) - 30, 2);
+                gripLine.Width = 60;
+            };
+
+            _resizeHandle.MouseDown += (s, e) =>
+            {
+                if (e.Button != MouseButtons.Left) return;
+                _resizeDragging = true;
+                _resizeDragStartY = _resizeHandle.PointToScreen(e.Location).Y;
+                _resizeDragStartHeight = _inputPanel.Height;
+                _resizeHandle.Capture = true;
+            };
+            _resizeHandle.MouseMove += (s, e) =>
+            {
+                if (!_resizeDragging) return;
+                var currentY = _resizeHandle.PointToScreen(e.Location).Y;
+                var delta = _resizeDragStartY - currentY; // positive = dragging up = taller
+                var newHeight = Math.Max(InputPanelMinHeight,
+                    Math.Min(InputPanelMaxHeight, _resizeDragStartHeight + delta));
+                _inputPanel.Height = newHeight;
+                LayoutInputPanel();
+            };
+            _resizeHandle.MouseUp += (s, e) =>
+            {
+                _resizeDragging = false;
+                _resizeHandle.Capture = false;
+            };
+
+            _inputPanel.Controls.Add(_resizeHandle);
 
             _btnSend = new Button
             {
@@ -327,6 +375,7 @@ namespace Supervertaler.Trados.Controls
             inputTips.SetToolTip(_btnClear, "Clear conversation history");
             inputTips.SetToolTip(_btnAttach, "Attach image (paste with Ctrl+V, or drag and drop)");
             inputTips.SetToolTip(_txtInput, "Type your message. Shift+Enter for new line.");
+            inputTips.SetToolTip(_resizeHandle, "Drag to resize input area");
 
             // ─── Thinking indicator ───────────────────────────────
             _lblThinking = new Label

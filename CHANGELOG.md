@@ -10,6 +10,23 @@ Version numbers follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [3.3.1] — 2026-03-08
+
+### Added
+- **Resizable chat input** — drag the top edge of the chat input area upward to make it
+  taller when composing multi-line messages with Shift+Enter; drag down to shrink it back
+
+### Fixed
+- **Settings dialog too wide** — the Supervertaler Settings window could become excessively
+  wide and extend off-screen; now capped at 800px maximum width, and persisted size is
+  validated on restore
+- **Chat spacing** — removed remaining double-spacing in AI responses caused by duplicate
+  paragraph marks in table rendering
+- **Termbases list in AI Settings** — the CheckedListBox no longer stretches the dialog
+  horizontally; long termbase names scroll within the list via horizontal scrollbar
+
+---
+
 ## [3.3.0] — 2026-03-08
 
 ### Added

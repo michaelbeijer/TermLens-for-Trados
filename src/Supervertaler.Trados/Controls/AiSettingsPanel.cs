@@ -383,8 +383,8 @@ namespace Supervertaler.Trados.Controls
             _clbAiTermbases = new CheckedListBox
             {
                 Location = new Point(16, 0), // positioned dynamically
-                Size = new Size(360, 200),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Size = new Size(360, 350),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left,  // no Right — fixed width, horizontal scrollbar handles overflow
                 CheckOnClick = true,
                 BorderStyle = BorderStyle.FixedSingle,
                 IntegralHeight = false,
@@ -409,7 +409,11 @@ namespace Supervertaler.Trados.Controls
             RepositionAiContextSection();
 
             // Layout adjustments that depend on parent width
-            Resize += (s, e) => LayoutApiKeyRow();
+            Resize += (s, e) =>
+            {
+                LayoutApiKeyRow();
+                LayoutTermbasesList();
+            };
             LayoutApiKeyRow();
         }
 
@@ -449,6 +453,14 @@ namespace Supervertaler.Trados.Controls
             if (_txtApiKey == null || _btnShowKey == null) return;
             _btnShowKey.Location = new Point(Width - 16 - _btnShowKey.Width, _txtApiKey.Top);
             _txtApiKey.Width = _btnShowKey.Left - _txtApiKey.Left - 6;
+        }
+
+        private void LayoutTermbasesList()
+        {
+            if (_clbAiTermbases == null) return;
+            // Fit the list to the panel width (minus margins), clamped to a reasonable range
+            var w = Math.Max(200, Width - 32);
+            _clbAiTermbases.Width = w;
         }
 
         // ─── Settings Population ─────────────────────────────────────
@@ -504,6 +516,19 @@ namespace Supervertaler.Trados.Controls
                 var label = $"{tb.Name} ({tb.TermCount:N0} terms)";
                 var isChecked = !disabled.Contains(tb.Id);
                 _clbAiTermbases.Items.Add(label, isChecked);
+            }
+
+            // Compute HorizontalExtent so the scrollbar covers the widest item
+            using (var g = _clbAiTermbases.CreateGraphics())
+            {
+                int maxWidth = 0;
+                foreach (var item in _clbAiTermbases.Items)
+                {
+                    var w = (int)g.MeasureString(item.ToString(), _clbAiTermbases.Font).Width;
+                    if (w > maxWidth) maxWidth = w;
+                }
+                // Add space for the checkbox (~20px) and a small right margin
+                _clbAiTermbases.HorizontalExtent = maxWidth + 24;
             }
         }
 

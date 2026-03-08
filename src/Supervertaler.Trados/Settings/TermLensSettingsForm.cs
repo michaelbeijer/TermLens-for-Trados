@@ -57,9 +57,15 @@ namespace Supervertaler.Trados.Settings
             if (defaultTab >= 0 && defaultTab < _tabControl.TabPages.Count)
                 _tabControl.SelectedIndex = defaultTab;
 
-            // Restore persisted form size
+            // Restore persisted form size (capped to reasonable bounds)
             if (_settings.SettingsFormWidth > 0 && _settings.SettingsFormHeight > 0)
-                Size = new Size(_settings.SettingsFormWidth, _settings.SettingsFormHeight);
+            {
+                var maxW = Math.Min(800, Screen.PrimaryScreen.WorkingArea.Width);
+                var maxH = Screen.PrimaryScreen.WorkingArea.Height;
+                var w = Math.Max(MinimumSize.Width, Math.Min(_settings.SettingsFormWidth, maxW));
+                var h = Math.Max(MinimumSize.Height, Math.Min(_settings.SettingsFormHeight, maxH));
+                Size = new Size(w, h);
+            }
         }
 
         private void BuildUI()
@@ -72,6 +78,7 @@ namespace Supervertaler.Trados.Settings
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(560, 480);
             MinimumSize = new Size(480, 440);
+            MaximumSize = new Size(800, Screen.PrimaryScreen.WorkingArea.Height);
             BackColor = Color.White;
 
             // === OK / Cancel — anchored to bottom of form, outside tabs ===
