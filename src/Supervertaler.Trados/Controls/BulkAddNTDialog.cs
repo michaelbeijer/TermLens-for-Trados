@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
+using Supervertaler.Trados.Core;
 
 namespace Supervertaler.Trados.Controls
 {
@@ -134,6 +135,16 @@ namespace Supervertaler.Trados.Controls
             if (Terms.Count == 0) return;
             DialogResult = DialogResult.OK;
             Close();
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == Keys.F1)
+            {
+                HelpSystem.OpenHelp(HelpSystem.Topics.AddTermDialog);
+                return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
         }
     }
 }

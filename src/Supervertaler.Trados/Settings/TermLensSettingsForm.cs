@@ -75,6 +75,8 @@ namespace Supervertaler.Trados.Settings
             FormBorderStyle = FormBorderStyle.Sizable;
             MaximizeBox = false;
             MinimizeBox = false;
+            HelpButton = true;
+            HelpButtonClicked += OnHelpButtonClicked;
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(560, 480);
             MinimumSize = new Size(480, 440);
@@ -964,6 +966,33 @@ namespace Supervertaler.Trados.Settings
             _settings.Save();
 
             base.OnFormClosing(e);
+        }
+
+        private string GetCurrentHelpTopic()
+        {
+            switch (_tabControl?.SelectedIndex)
+            {
+                case 0:  return HelpSystem.Topics.SettingsTermLens;
+                case 1:  return HelpSystem.Topics.SettingsAi;
+                case 2:  return HelpSystem.Topics.SettingsPrompts;
+                default: return HelpSystem.Topics.SettingsTermLens;
+            }
+        }
+
+        private void OnHelpButtonClicked(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            e.Cancel = true; // prevent the "What's This?" cursor
+            HelpSystem.OpenHelp(GetCurrentHelpTopic());
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == Keys.F1)
+            {
+                HelpSystem.OpenHelp(GetCurrentHelpTopic());
+                return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
         }
     }
 }

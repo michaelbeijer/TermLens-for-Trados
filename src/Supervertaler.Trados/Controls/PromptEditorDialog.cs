@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using Supervertaler.Trados.Core;
 using Supervertaler.Trados.Models;
 
 namespace Supervertaler.Trados.Controls
@@ -210,6 +211,16 @@ namespace Supervertaler.Trados.Controls
             _prompt.Description = _txtDescription.Text.Trim();
             _prompt.Domain = _txtDomain.Text.Trim();
             _prompt.Content = _txtContent.Text;
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == Keys.F1)
+            {
+                HelpSystem.OpenHelp(HelpSystem.Topics.SettingsPrompts);
+                return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
         }
     }
 }

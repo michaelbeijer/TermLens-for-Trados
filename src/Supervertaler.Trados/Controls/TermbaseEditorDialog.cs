@@ -933,6 +933,12 @@ namespace Supervertaler.Trados.Controls
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
+            if (keyData == Keys.F1)
+            {
+                HelpSystem.OpenHelp(HelpSystem.Topics.TermbaseEditor);
+                return true;
+            }
+
             // Ctrl+C copies the current cell value (not the whole row)
             if (keyData == (Keys.Control | Keys.C) && !_dgvTerms.IsCurrentCellInEditMode)
             {

@@ -10,6 +10,24 @@ Version numbers follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [3.3.2] — 2026-03-09
+
+### Added
+- **Context-sensitive help** — the `?` button on TermLens and Supervertaler Assistant
+  panels now opens a dropdown menu with a direct link to the relevant online help page
+  and an "About" option; F1 opens contextual help from every dialog (settings, Add Term,
+  Term Picker, Termbase Editor, Prompt Editor, Bulk Add NT)
+- **HelpSystem** — new `Core/HelpSystem.cs` provides a centralized topic registry and
+  URL launcher for all help pages
+
+### Changed
+- **Help URL slug** — documentation URLs updated from `gitbook.io/superdocs` to
+  `gitbook.io/help` for a cleaner, more intuitive path
+- **About dialog access** — the `?` button now shows a dropdown instead of directly
+  opening About; About is still accessible via the dropdown menu
+
+---
+
 ## [3.3.1] — 2026-03-08
 
 ### Added

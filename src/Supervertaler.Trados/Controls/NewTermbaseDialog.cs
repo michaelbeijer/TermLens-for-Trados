@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using Supervertaler.Trados.Core;
 
 namespace Supervertaler.Trados.Controls
 {
@@ -137,6 +138,16 @@ namespace Supervertaler.Trados.Controls
                 !string.IsNullOrWhiteSpace(_txtName.Text) &&
                 !string.IsNullOrWhiteSpace(_txtSourceLang.Text) &&
                 !string.IsNullOrWhiteSpace(_txtTargetLang.Text);
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == Keys.F1)
+            {
+                HelpSystem.OpenHelp(HelpSystem.Topics.TermbaseEditor);
+                return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
         }
     }
 }

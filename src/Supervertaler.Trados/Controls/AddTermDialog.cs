@@ -234,5 +234,15 @@ namespace Supervertaler.Trados.Controls
             // Pre-fill non-translatable state
             _chkNonTranslatable.Checked = existingEntry.IsNonTranslatable;
         }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == Keys.F1)
+            {
+                HelpSystem.OpenHelp(HelpSystem.Topics.AddTermDialog);
+                return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
     }
 }

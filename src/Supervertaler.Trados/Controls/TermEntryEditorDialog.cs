@@ -487,6 +487,12 @@ namespace Supervertaler.Trados.Controls
         /// </summary>
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
+            if (keyData == Keys.F1)
+            {
+                HelpSystem.OpenHelp(HelpSystem.Topics.AddTermDialog);
+                return true;
+            }
+
             if (keyData == Keys.Enter)
             {
                 if (_txtNewSourceSyn.Focused)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
+using Supervertaler.Trados.Core;
 using Supervertaler.Trados.Models;
 using Supervertaler.Trados.Settings;
 
@@ -430,6 +431,16 @@ namespace Supervertaler.Trados.Controls
             public bool IsSubItem { get; set; }
             public int ParentIndex { get; set; } // 1-based term index
             public string TargetTerm { get; set; }
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == Keys.F1)
+            {
+                HelpSystem.OpenHelp(HelpSystem.Topics.TermPickerDialog);
+                return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
         }
     }
 }

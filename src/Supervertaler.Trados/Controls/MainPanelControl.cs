@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Sdl.Desktop.IntegrationApi.Interfaces;
+using Supervertaler.Trados.Core;
 
 namespace Supervertaler.Trados.Controls
 {
@@ -68,7 +69,7 @@ namespace Supervertaler.Trados.Controls
             };
             _btnHelp.FlatAppearance.BorderSize = 0;
             _btnHelp.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 220, 220);
-            _btnHelp.Click += OnHelpClick;
+            _btnHelp.Click += OnHelpDropdown;
 
             Controls.Add(_btnSettings);
             Controls.Add(_btnHelp);
@@ -90,12 +91,28 @@ namespace Supervertaler.Trados.Controls
             _btnSettings.Location = new Point(_btnHelp.Left - _btnSettings.Width, 1);
         }
 
-        private void OnHelpClick(object sender, EventArgs e)
+        private void OnHelpDropdown(object sender, EventArgs e)
         {
-            using (var dlg = new AboutDialog())
+            var menu = new ContextMenuStrip();
+            menu.Items.Add("TermLens Help", null, (s, ev) =>
+                HelpSystem.OpenHelp(HelpSystem.Topics.TermLensPanel));
+            menu.Items.Add("-");  // separator
+            menu.Items.Add("About Supervertaler for Trados", null, (s, ev) =>
             {
-                dlg.ShowDialog(FindForm());
+                using (var dlg = new AboutDialog())
+                    dlg.ShowDialog(FindForm());
+            });
+            menu.Show(_btnHelp, new Point(0, _btnHelp.Height));
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == Keys.F1)
+            {
+                HelpSystem.OpenHelp(HelpSystem.Topics.TermLensPanel);
+                return true;
             }
+            return base.ProcessCmdKey(ref msg, keyData);
         }
 
     }

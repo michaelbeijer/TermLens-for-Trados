@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Reflection;
 using System.Windows.Forms;
+using Supervertaler.Trados.Core;
 
 namespace Supervertaler.Trados.Controls
 {
@@ -137,6 +138,7 @@ namespace Supervertaler.Trados.Controls
                 ("Ctrl+Alt+A",    "AI translate segment"),
                 ("Ctrl+Shift+G",  "Term Picker"),
                 ("Alt+1\u20269",  "Insert term from TermLens panel"),
+                ("F1",            "Context-sensitive help"),
             };
 
             var keyFont = new Font("Consolas", 8.5f);
@@ -179,7 +181,8 @@ namespace Supervertaler.Trados.Controls
 
             // Links
             AddLink("Website", "https://supervertaler.com", leftPad, ref y);
-            AddLink("Documentation", "https://supervertaler.gitbook.io/superdocs", leftPad, ref y);
+            AddLink("Plugin Help", null, leftPad, ref y, () => HelpSystem.OpenHelp(HelpSystem.Topics.Overview));
+            AddLink("Documentation", null, leftPad, ref y, () => HelpSystem.OpenDocsHome());
             AddLink("Support", "https://github.com/michaelbeijer/Supervertaler/issues", leftPad, ref y);
 
             // Close button
@@ -195,7 +198,7 @@ namespace Supervertaler.Trados.Controls
             CancelButton = btnClose;
         }
 
-        private void AddLink(string text, string url, int x, ref int y)
+        private void AddLink(string text, string url, int x, ref int y, Action customAction = null)
         {
             var link = new NoFocusCuesLinkLabel
             {
@@ -210,7 +213,10 @@ namespace Supervertaler.Trados.Controls
             {
                 try
                 {
-                    Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+                    if (customAction != null)
+                        customAction();
+                    else
+                        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
                 }
                 catch { /* No default browser configured */ }
             };
