@@ -10,6 +10,15 @@ Version numbers follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [3.3.3] — 2026-03-09
+
+### Added
+- **Help button on dialogs** — the Termbase Editor and Edit Term Entry dialogs now show a
+  `?` button in the title bar that opens the relevant online help page (matching the pattern
+  already used by the Supervertaler Settings dialog)
+
+---
+
 ## [3.3.2] — 2026-03-09
 
 ### Added

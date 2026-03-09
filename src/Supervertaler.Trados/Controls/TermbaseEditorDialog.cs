@@ -56,8 +56,10 @@ namespace Supervertaler.Trados.Controls
             Text = $"Termbase Editor \u2014 {_termbase.Name} ({LanguageUtils.ShortenLanguageName(_termbase.SourceLang)} \u2192 {LanguageUtils.ShortenLanguageName(_termbase.TargetLang)})";
             Font = new Font("Segoe UI", 9f);
             FormBorderStyle = FormBorderStyle.Sizable;
-            MaximizeBox = true;
+            MaximizeBox = false;
             MinimizeBox = false;
+            HelpButton = true;
+            HelpButtonClicked += OnHelpButtonClicked;
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(800, 500);
             MinimumSize = new Size(600, 350);
@@ -929,6 +931,12 @@ namespace Supervertaler.Trados.Controls
             }
 
             base.OnFormClosing(e);
+        }
+
+        private void OnHelpButtonClicked(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            e.Cancel = true;
+            HelpSystem.OpenHelp(HelpSystem.Topics.TermbaseEditor);
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)

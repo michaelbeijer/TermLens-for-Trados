@@ -146,6 +146,8 @@ namespace Supervertaler.Trados.Controls
             FormBorderStyle = FormBorderStyle.Sizable;
             MaximizeBox = false;
             MinimizeBox = false;
+            HelpButton = true;
+            HelpButtonClicked += OnHelpButtonClicked;
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(580, 548);
             MinimumSize = new Size(500, 470);
@@ -481,6 +483,12 @@ namespace Supervertaler.Trados.Controls
         }
 
         // ─── Key handling ─────────────────────────────────────────────
+
+        private void OnHelpButtonClicked(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            e.Cancel = true;
+            HelpSystem.OpenHelp(HelpSystem.Topics.AddTermDialog);
+        }
 
         /// <summary>
         /// Intercepts Enter in the synonym textboxes so AcceptButton (Save) doesn't steal it.
