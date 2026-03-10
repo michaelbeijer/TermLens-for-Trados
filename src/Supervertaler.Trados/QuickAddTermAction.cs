@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using Sdl.Desktop.IntegrationApi;
 using Sdl.Desktop.IntegrationApi.Extensions;
 using Sdl.TranslationStudioAutomation.IntegrationApi;
 using Sdl.TranslationStudioAutomation.IntegrationApi.Presentation.DefaultLocations;
+using Supervertaler.Trados.Controls;
 using Supervertaler.Trados.Core;
 using Supervertaler.Trados.Settings;
 
@@ -138,9 +140,59 @@ namespace Supervertaler.Trados
                     return;
                 }
 
-                // Insert the term into all write termbases in a single transaction
+                // Check for existing entries with matching source or target
                 try
                 {
+                    var mergeMatches = TermMergeChecker.FindMergeMatches(
+                        settings.TermbasePath, sourceText, targetText, writeTermbases);
+
+                    if (mergeMatches.Count > 0)
+                    {
+                        using (var mergeDlg = new MergePromptDialog(
+                            mergeMatches, sourceText, targetText))
+                        {
+                            var mergeResult = mergeDlg.ShowDialog();
+
+                            if (mergeResult == DialogResult.Cancel)
+                                return;
+
+                            if (mergeResult == DialogResult.Yes)
+                            {
+                                // Add as synonym to each matched entry
+                                foreach (var match in mergeMatches)
+                                {
+                                    if (match.MatchType == "source")
+                                        TermbaseReader.AddSynonym(
+                                            settings.TermbasePath, match.TermId,
+                                            targetText, "target");
+                                    else
+                                        TermbaseReader.AddSynonym(
+                                            settings.TermbasePath, match.TermId,
+                                            sourceText, "source");
+                                }
+
+                                // Insert normally into termbases that had no match
+                                var matchedTbIds = new HashSet<long>(
+                                    mergeMatches.Select(m => m.TermbaseId));
+                                var unmatchedTbs = writeTermbases
+                                    .Where(tb => !matchedTbIds.Contains(tb.Id)).ToList();
+
+                                if (unmatchedTbs.Count > 0)
+                                {
+                                    TermbaseReader.InsertTermBatch(
+                                        settings.TermbasePath, sourceText, targetText,
+                                        "", unmatchedTbs);
+                                }
+
+                                // Full reload to pick up synonym changes
+                                TermLensEditorViewPart.NotifyTermAdded();
+                                return;
+                            }
+                            // DialogResult.No = "Keep Both" — fall through to normal insert
+                        }
+                    }
+
+                    // Normal insert into all write termbases
                     var batchResults = TermbaseReader.InsertTermBatch(
                         settings.TermbasePath, sourceText, targetText, "", writeTermbases);
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using Sdl.Desktop.IntegrationApi;
 using Sdl.Desktop.IntegrationApi.Extensions;
@@ -139,6 +140,61 @@ namespace Supervertaler.Trados
 
                         try
                         {
+                            // Check for existing entries with matching source or target
+                            var mergeMatches = TermMergeChecker.FindMergeMatches(
+                                settings.TermbasePath, dlg.SourceTerm, dlg.TargetTerm,
+                                writeTermbases);
+
+                            if (mergeMatches.Count > 0)
+                            {
+                                using (var mergeDlg = new MergePromptDialog(
+                                    mergeMatches, dlg.SourceTerm, dlg.TargetTerm))
+                                {
+                                    var mergeResult = mergeDlg.ShowDialog();
+
+                                    if (mergeResult == DialogResult.Cancel)
+                                        return;
+
+                                    if (mergeResult == DialogResult.Yes)
+                                    {
+                                        // Add as synonym to each matched entry
+                                        foreach (var match in mergeMatches)
+                                        {
+                                            if (match.MatchType == "source")
+                                                TermbaseReader.AddSynonym(
+                                                    settings.TermbasePath, match.TermId,
+                                                    dlg.TargetTerm, "target");
+                                            else
+                                                TermbaseReader.AddSynonym(
+                                                    settings.TermbasePath, match.TermId,
+                                                    dlg.SourceTerm, "source");
+                                        }
+
+                                        // Insert normally into termbases without a match
+                                        var matchedTbIds = new HashSet<long>(
+                                            mergeMatches.Select(m => m.TermbaseId));
+                                        foreach (var tb in writeTermbases)
+                                        {
+                                            if (!matchedTbIds.Contains(tb.Id))
+                                            {
+                                                TermbaseReader.InsertTerm(
+                                                    settings.TermbasePath, tb.Id,
+                                                    dlg.SourceTerm, dlg.TargetTerm,
+                                                    tb.SourceLang, tb.TargetLang,
+                                                    dlg.Definition,
+                                                    isNonTranslatable: dlg.IsNonTranslatable);
+                                            }
+                                        }
+
+                                        // Full reload to pick up synonym changes
+                                        TermLensEditorViewPart.NotifyTermAdded();
+                                        return;
+                                    }
+                                    // DialogResult.No = "Keep Both" — fall through to normal insert
+                                }
+                            }
+
+                            // Normal insert into all write termbases
                             bool anyInserted = false;
                             foreach (var tb in writeTermbases)
                             {

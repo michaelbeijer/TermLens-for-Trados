@@ -1770,6 +1770,69 @@ namespace Supervertaler.Trados.Core
         }
 
         /// <summary>
+        /// Appends a single synonym to an existing term entry.
+        /// Unlike SaveSynonyms (which deletes all and reinserts), this only adds one row.
+        /// </summary>
+        public static void AddSynonym(string dbPath, long termId, string text, string language)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return;
+            if (language != "source" && language != "target")
+                throw new ArgumentException("Language must be 'source' or 'target'.", nameof(language));
+
+            var connStr = new SqliteConnectionStringBuilder
+            {
+                DataSource = dbPath,
+                Mode = SqliteOpenMode.ReadWrite
+            }.ToString();
+
+            using (var conn = new SqliteConnection(connStr))
+            {
+                conn.Open();
+                MigrateSchema(conn);
+
+                // Get the next display_order for this term + language
+                int nextOrder = 0;
+                using (var maxCmd = new SqliteCommand(@"
+                    SELECT COALESCE(MAX(display_order), -1) + 1
+                    FROM termbase_synonyms
+                    WHERE term_id = @termId AND language = @lang", conn))
+                {
+                    maxCmd.Parameters.AddWithValue("@termId", termId);
+                    maxCmd.Parameters.AddWithValue("@lang", language);
+                    var result = maxCmd.ExecuteScalar();
+                    if (result != null && result != DBNull.Value)
+                        nextOrder = Convert.ToInt32(result);
+                }
+
+                // Check if synonym already exists (case-insensitive)
+                using (var checkCmd = new SqliteCommand(@"
+                    SELECT COUNT(*) FROM termbase_synonyms
+                    WHERE term_id = @termId
+                      AND language = @lang
+                      AND LOWER(TRIM(synonym_text)) = LOWER(@text)", conn))
+                {
+                    checkCmd.Parameters.AddWithValue("@termId", termId);
+                    checkCmd.Parameters.AddWithValue("@lang", language);
+                    checkCmd.Parameters.AddWithValue("@text", text.Trim());
+                    var count = Convert.ToInt64(checkCmd.ExecuteScalar());
+                    if (count > 0) return; // Already exists — skip silently
+                }
+
+                using (var cmd = new SqliteCommand(@"
+                    INSERT INTO termbase_synonyms
+                        (term_id, synonym_text, language, display_order, forbidden)
+                    VALUES (@termId, @text, @lang, @order, 0)", conn))
+                {
+                    cmd.Parameters.AddWithValue("@termId", termId);
+                    cmd.Parameters.AddWithValue("@text", text.Trim());
+                    cmd.Parameters.AddWithValue("@lang", language);
+                    cmd.Parameters.AddWithValue("@order", nextOrder);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+        /// <summary>
         /// Saves all synonyms for a term using delete-all-then-reinsert pattern.
         /// Matches the desktop Supervertaler's save_synonyms() approach.
         /// </summary>

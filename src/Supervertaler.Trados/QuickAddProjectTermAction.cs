@@ -6,6 +6,7 @@ using Sdl.Desktop.IntegrationApi;
 using Sdl.Desktop.IntegrationApi.Extensions;
 using Sdl.TranslationStudioAutomation.IntegrationApi;
 using Sdl.TranslationStudioAutomation.IntegrationApi.Presentation.DefaultLocations;
+using Supervertaler.Trados.Controls;
 using Supervertaler.Trados.Core;
 using Supervertaler.Trados.Settings;
 
@@ -131,9 +132,47 @@ namespace Supervertaler.Trados
                     return;
                 }
 
-                // Insert the term directly — no dialog
+                // Check for existing entries with matching source or target
                 try
                 {
+                    var mergeMatches = TermMergeChecker.FindMergeMatches(
+                        settings.TermbasePath, sourceText, targetText,
+                        new List<Models.TermbaseInfo> { projectTermbase });
+
+                    if (mergeMatches.Count > 0)
+                    {
+                        using (var mergeDlg = new MergePromptDialog(
+                            mergeMatches, sourceText, targetText))
+                        {
+                            var mergeResult = mergeDlg.ShowDialog();
+
+                            if (mergeResult == DialogResult.Cancel)
+                                return;
+
+                            if (mergeResult == DialogResult.Yes)
+                            {
+                                // Add as synonym to the matched entry
+                                foreach (var match in mergeMatches)
+                                {
+                                    if (match.MatchType == "source")
+                                        TermbaseReader.AddSynonym(
+                                            settings.TermbasePath, match.TermId,
+                                            targetText, "target");
+                                    else
+                                        TermbaseReader.AddSynonym(
+                                            settings.TermbasePath, match.TermId,
+                                            sourceText, "source");
+                                }
+
+                                // Full reload to pick up synonym changes
+                                TermLensEditorViewPart.NotifyTermAdded();
+                                return;
+                            }
+                            // DialogResult.No = "Keep Both" — fall through to normal insert
+                        }
+                    }
+
+                    // Normal insert into project termbase
                     var newId = TermbaseReader.InsertTerm(
                         settings.TermbasePath,
                         settings.ProjectTermbaseId,
