@@ -266,7 +266,12 @@ namespace Supervertaler.Trados.Controls
                     }
                 }
 
-                using (var textBrush = new SolidBrush(Color.White))
+                // Black number = term has metadata (definition/domain/notes); white = no metadata
+                bool hasMetadata = _entries.Any(t =>
+                    !string.IsNullOrEmpty(t.Definition) ||
+                    !string.IsNullOrEmpty(t.Domain) ||
+                    !string.IsNullOrEmpty(t.Notes));
+                using (var textBrush = new SolidBrush(hasMetadata ? Color.Black : Color.White))
                 {
                     var textSize = g.MeasureString(badgeText, BadgeFont);
                     float tx = badgeX + (badgeW - textSize.Width) / 2 + 1;
@@ -302,6 +307,10 @@ namespace Supervertaler.Trados.Controls
 
                     if (!string.IsNullOrEmpty(entry.Definition))
                         lines.Add($"  Def: {entry.Definition}");
+                    if (!string.IsNullOrEmpty(entry.Domain))
+                        lines.Add($"  Domain: {entry.Domain}");
+                    if (!string.IsNullOrEmpty(entry.Notes))
+                        lines.Add($"  Notes: {entry.Notes}");
                 }
 
                 var tip = new ToolTip { AutoPopDelay = 10000 };

@@ -325,7 +325,7 @@ namespace Supervertaler.Trados.Controls
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left
             };
 
-            _txtInput = new TextBox
+            _txtInput = new ChatInputTextBox
             {
                 Multiline = true,
                 AcceptsReturn = true,   // allow Enter keys as input (we handle send vs newline in KeyDown)
@@ -334,12 +334,6 @@ namespace Supervertaler.Trados.Controls
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                 AllowDrop = true,
                 TabIndex = 0
-            };
-            // Mark Enter/Shift+Enter as input keys so Trados doesn't intercept them
-            _txtInput.PreviewKeyDown += (s, pe) =>
-            {
-                if (pe.KeyCode == Keys.Enter)
-                    pe.IsInputKey = true;
             };
             _txtInput.KeyDown += OnInputKeyDown;
             _txtInput.DragEnter += OnDragEnter;
@@ -908,6 +902,20 @@ namespace Supervertaler.Trados.Controls
         public void FocusInput()
         {
             _txtInput?.Focus();
+        }
+    }
+
+    /// <summary>
+    /// TextBox subclass that claims Enter and Shift+Enter as input keys at the
+    /// control level, preventing Trados Studio from intercepting them.
+    /// </summary>
+    internal class ChatInputTextBox : TextBox
+    {
+        protected override bool IsInputKey(Keys keyData)
+        {
+            if ((keyData & Keys.KeyCode) == Keys.Enter)
+                return true;
+            return base.IsInputKey(keyData);
         }
     }
 }
