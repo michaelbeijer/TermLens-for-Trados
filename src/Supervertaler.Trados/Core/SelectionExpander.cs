@@ -11,10 +11,11 @@ namespace Supervertaler.Trados.Core
     /// finds the partial selection within the full segment text and expands it
     /// outward to encompass complete words.
     ///
-    /// When the selection already matches a complete word (i.e. it sits at word
-    /// boundaries), no expansion is performed. This prevents "hechting" from
-    /// being incorrectly expanded to "hechtingsbevorderaars" when both the
-    /// compound and the standalone word appear in the same segment.
+    /// Selection priority (highest to lowest):
+    ///   1. Exact word-boundary match — selection is already a complete word
+    ///   2. Shortest expansion — when multiple words contain the selection,
+    ///      the shortest enclosing word wins (e.g. "echt" → "hechting" not
+    ///      "hechtingsbevorderaars")
     /// </summary>
     public static class SelectionExpander
     {
@@ -32,6 +33,13 @@ namespace Supervertaler.Trados.Core
         /// Example: fullText = "hechtingsbevorderaars ... de hechting kunnen"
         ///          partialSelection = "hechting"
         ///          result = "hechting"   (NOT "hechtingsbevorderaars")
+        ///
+        /// When the selection is embedded inside multiple words, the shortest
+        /// enclosing word is preferred.
+        ///
+        /// Example: fullText = "hechtingsbevorderaars ... de hechting kunnen"
+        ///          partialSelection = "echt"
+        ///          result = "hechting"   (8 chars, shorter than "hechtingsbevorderaars")
         /// </summary>
         /// <param name="fullText">The complete segment text.</param>
         /// <param name="partialSelection">The user's (possibly partial) selection.</param>
@@ -41,49 +49,27 @@ namespace Supervertaler.Trados.Core
             if (string.IsNullOrEmpty(fullText) || string.IsNullOrEmpty(partialSelection))
                 return (partialSelection ?? "").Trim();
 
-            // Search for all occurrences of the selection in the full text,
-            // preferring matches that sit at word boundaries over matches
-            // embedded inside longer words.
-            int bestIdx = -1;
-            bool bestAtBoundary = false;
+            // Try case-sensitive first, then case-insensitive
+            string result = FindBestExpansion(fullText, partialSelection, StringComparison.Ordinal);
+            if (result == null)
+                result = FindBestExpansion(fullText, partialSelection, StringComparison.OrdinalIgnoreCase);
 
-            bestIdx = FindBest(fullText, partialSelection, StringComparison.Ordinal, out bestAtBoundary);
-
-            // Case-insensitive fallback
-            if (bestIdx < 0)
-                bestIdx = FindBest(fullText, partialSelection, StringComparison.OrdinalIgnoreCase, out bestAtBoundary);
-
-            if (bestIdx < 0)
-                return partialSelection.Trim(); // not found — return trimmed as-is
-
-            // If the selection sits at word boundaries, return it without expansion
-            if (bestAtBoundary)
-                return TrimNonWordEdges(partialSelection);
-
-            // Otherwise expand outward to full word boundaries (original behavior
-            // for genuine cross-boundary selections like "ing pr" → "warning profiles")
-            int start = bestIdx;
-            while (start > 0 && !char.IsWhiteSpace(fullText[start - 1]))
-                start--;
-
-            int end = bestIdx + partialSelection.Length;
-            while (end < fullText.Length && !char.IsWhiteSpace(fullText[end]))
-                end++;
-
-            return TrimNonWordEdges(fullText.Substring(start, end - start));
+            return result ?? partialSelection.Trim();
         }
 
         /// <summary>
         /// Scans all occurrences of <paramref name="needle"/> inside
-        /// <paramref name="haystack"/> and returns the index of the best match.
-        /// A match at word boundaries is always preferred; if none exists the
-        /// first embedded match is returned as a fallback.
+        /// <paramref name="haystack"/>, expands each to word boundaries,
+        /// and returns the best result.
+        ///
+        /// Priority: (1) exact word-boundary match (no expansion needed),
+        /// (2) shortest expanded word among all candidates.
         /// </summary>
-        private static int FindBest(string haystack, string needle,
-            StringComparison comparison, out bool atBoundary)
+        private static string FindBestExpansion(string haystack, string needle,
+            StringComparison comparison)
         {
-            atBoundary = false;
-            int bestIdx = -1;
+            string bestExpansion = null;
+            int bestLength = int.MaxValue;
             int pos = 0;
 
             while (pos <= haystack.Length - needle.Length)
@@ -97,18 +83,33 @@ namespace Supervertaler.Trados.Core
 
                 if (atLeft && atRight)
                 {
-                    // Perfect word-boundary match — no need to search further
-                    atBoundary = true;
-                    return idx;
+                    // Perfect word-boundary match — return immediately
+                    return TrimNonWordEdges(needle);
                 }
 
-                if (bestIdx < 0)
-                    bestIdx = idx; // Remember first occurrence as fallback
+                // Expand outward to word boundaries
+                int start = idx;
+                while (start > 0 && !char.IsWhiteSpace(haystack[start - 1]))
+                    start--;
+
+                int end = endPos;
+                while (end < haystack.Length && !char.IsWhiteSpace(haystack[end]))
+                    end++;
+
+                string expanded = TrimNonWordEdges(haystack.Substring(start, end - start));
+
+                // Prefer the shortest expansion — the user most likely
+                // intended the simpler/base word, not a longer compound
+                if (expanded.Length < bestLength)
+                {
+                    bestLength = expanded.Length;
+                    bestExpansion = expanded;
+                }
 
                 pos = idx + 1;
             }
 
-            return bestIdx;
+            return bestExpansion;
         }
 
         /// <summary>
