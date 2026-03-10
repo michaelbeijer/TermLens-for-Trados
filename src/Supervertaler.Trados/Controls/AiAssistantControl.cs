@@ -906,11 +906,32 @@ namespace Supervertaler.Trados.Controls
     }
 
     /// <summary>
-    /// TextBox subclass that claims Enter and Shift+Enter as input keys at the
-    /// control level, preventing Trados Studio from intercepting them.
+    /// TextBox subclass that intercepts Enter and Shift+Enter at the earliest
+    /// point in the WinForms key processing pipeline (ProcessCmdKey), preventing
+    /// Trados Studio's form-level handler from stealing them.
+    ///
+    /// WinForms key processing order:
+    ///   1. ProcessCmdKey — walks focused control → parent chain (Trados form)
+    ///   2. IsInputKey    — only checked if ProcessCmdKey didn't consume the key
+    ///   3. KeyDown       — only fires if IsInputKey returned true
+    ///
+    /// Trados intercepts Enter in step 1 to navigate segments, so we must
+    /// consume it there and manually fire KeyDown for our handler.
     /// </summary>
     internal class ChatInputTextBox : TextBox
     {
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if ((keyData & Keys.KeyCode) == Keys.Enter)
+            {
+                // Consume the key here so Trados never sees it.
+                // Fire KeyDown so OnInputKeyDown handles send vs newline.
+                OnKeyDown(new KeyEventArgs(keyData));
+                return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
         protected override bool IsInputKey(Keys keyData)
         {
             if ((keyData & Keys.KeyCode) == Keys.Enter)
