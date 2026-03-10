@@ -151,7 +151,6 @@ namespace Supervertaler.Trados
             "System.Buffers",
             "System.Numerics.Vectors",
             "System.Runtime.CompilerServices.Unsafe",
-            "System.Resources.Extensions",
         };
 
         private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)

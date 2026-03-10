@@ -31,7 +31,7 @@ PLUGIN_FILES = [
     "System.Buffers.dll",
     "System.Numerics.Vectors.dll",
     "System.Runtime.CompilerServices.Unsafe.dll",
-    "System.Resources.Extensions.dll",
+
     # --- Native SQLite library (per-architecture) ---
     "runtimes/win-x64/native/e_sqlite3.dll",
     "runtimes/win-x86/native/e_sqlite3.dll",
@@ -49,7 +49,7 @@ INCLUDE_FILES = [
     "System.Buffers.dll",
     "System.Numerics.Vectors.dll",
     "System.Runtime.CompilerServices.Unsafe.dll",
-    "System.Resources.Extensions.dll",
+
     "runtimes/win-x64/native/e_sqlite3.dll",
     "runtimes/win-x86/native/e_sqlite3.dll",
     "runtimes/win-arm64/native/e_sqlite3.dll",

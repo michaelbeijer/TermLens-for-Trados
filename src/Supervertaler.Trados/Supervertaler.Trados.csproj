@@ -14,7 +14,6 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>Supervertaler.Trados.snk</AssemblyOriginatorKeyFile>
-    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
   </PropertyGroup>
 
   <!-- Trados Studio 2024 (Studio18) DLL references from local installation -->
@@ -78,7 +77,6 @@
        entry-point conflicts. -->
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.0" />
-    <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
   </ItemGroup>
 
   <!-- Plugin package manifest and extension manifest -->
