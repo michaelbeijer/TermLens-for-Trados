@@ -59,7 +59,9 @@ Terms beyond 45 have no keyboard shortcut. Use the **Term Picker** to insert the
 
 ### Term Picker (Ctrl+Shift+G)
 
-For segments with many matches, press **Ctrl+Shift+G** to open the **Term Picker** dialog. It shows all matched terms in a searchable list and lets you insert any term with a double-click or Enter.
+For segments with many matches, press **Ctrl+Shift+G** to open the **Term Picker** dialogue. It shows all matched terms in a searchable list and lets you insert any term with a double-click or Enter.
+
+<figure><img src=".gitbook/assets/Sv_Term-Picker.png" alt=""><figcaption></figcaption></figure>
 
 ## Right-Click Context Menu
 
