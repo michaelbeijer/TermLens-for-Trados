@@ -6,6 +6,7 @@
     <RootNamespace>Supervertaler.Trados</RootNamespace>
     <AssemblyName>Supervertaler.Trados</AssemblyName>
     <Version>4.0.0</Version>
+    <InformationalVersion>4.0.0-beta</InformationalVersion>
     <Authors>Michael Beijer</Authors>
     <Company>Supervertaler</Company>
     <Description>Supervertaler for Trados — terminology and AI translation for Trados Studio</Description>

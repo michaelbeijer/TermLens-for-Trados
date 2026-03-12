@@ -17,8 +17,12 @@ namespace Supervertaler.Trados.Controls
     {
         public AboutDialog()
         {
-            var version = Assembly.GetExecutingAssembly().GetName().Version;
-            var versionStr = $"{version.Major}.{version.Minor}.{version.Build}";
+            var asm = Assembly.GetExecutingAssembly();
+            var version = asm.GetName().Version;
+            var versionStr = asm.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+                is System.Reflection.AssemblyInformationalVersionAttribute[] attrs && attrs.Length > 0
+                ? attrs[0].InformationalVersion
+                : $"{version.Major}.{version.Minor}.{version.Build}";
 
             Text = "About Supervertaler for Trados";
             Font = new Font("Segoe UI", 9f);
@@ -272,7 +276,7 @@ namespace Supervertaler.Trados.Controls
             var securityLink = new NoFocusCuesLinkLabel
             {
                 Text = "Source code available for security audit",
-                Location = new Point(leftPad + 22, y),
+                Location = new Point(leftPad + 30, y),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 8.5f),
                 LinkColor = Color.FromArgb(80, 120, 80),
