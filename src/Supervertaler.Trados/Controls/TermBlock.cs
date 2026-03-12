@@ -266,17 +266,34 @@ namespace Supervertaler.Trados.Controls
                     }
                 }
 
-                // Black number = term has metadata (definition/domain/notes); white = no metadata
-                bool hasMetadata = _entries.Any(t =>
-                    !string.IsNullOrEmpty(t.Definition) ||
-                    !string.IsNullOrEmpty(t.Domain) ||
-                    !string.IsNullOrEmpty(t.Notes));
-                using (var textBrush = new SolidBrush(hasMetadata ? Color.Black : Color.White))
+                // Badge number — always white
+                using (var textBrush = new SolidBrush(Color.White))
                 {
                     var textSize = g.MeasureString(badgeText, BadgeFont);
                     float tx = badgeX + (badgeW - textSize.Width) / 2 + 1;
                     float ty = badgeY + (BadgeHeight - textSize.Height) / 2 + 1;
                     g.DrawString(badgeText, BadgeFont, textBrush, tx, ty);
+                }
+
+                // Amber corner dot when entry has metadata (definition/domain/notes)
+                bool hasMetadata = _entries.Any(t =>
+                    !string.IsNullOrEmpty(t.Definition) ||
+                    !string.IsNullOrEmpty(t.Domain) ||
+                    !string.IsNullOrEmpty(t.Notes));
+                if (hasMetadata)
+                {
+                    const int dotSize = 8;
+                    float dotX = targetRect.Right - dotSize / 2f;
+                    float dotY = targetRect.Top - dotSize / 2f;
+                    using (var dotBrush = new SolidBrush(Color.FromArgb(245, 158, 11))) // amber #F59E0B
+                    {
+                        g.FillEllipse(dotBrush, dotX, dotY, dotSize, dotSize);
+                    }
+                    // White border so the dot pops against any chip color
+                    using (var borderPen = new Pen(Color.White, 1.5f))
+                    {
+                        g.DrawEllipse(borderPen, dotX, dotY, dotSize, dotSize);
+                    }
                 }
             }
         }
