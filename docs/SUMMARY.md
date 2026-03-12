@@ -26,6 +26,7 @@
 * [TermLens Settings](settings/termlens.md)
 * [AI Settings](settings/ai-settings.md)
 * [Prompts](settings/prompts.md)
+* [Backup & Restore](settings/backup.md)
 
 ## Reference
 

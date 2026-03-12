@@ -1355,6 +1355,7 @@ namespace Supervertaler.Trados.Settings
                 case 0:  return HelpSystem.Topics.SettingsTermLens;
                 case 1:  return HelpSystem.Topics.SettingsAi;
                 case 2:  return HelpSystem.Topics.SettingsPrompts;
+                case 3:  return HelpSystem.Topics.Licensing;
                 case 4:  return HelpSystem.Topics.SettingsBackup;
                 default: return HelpSystem.Topics.SettingsTermLens;
             }
