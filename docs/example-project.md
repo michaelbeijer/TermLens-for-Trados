@@ -23,7 +23,7 @@ The example package contains:
 
 Download the example package zip from the [latest release on GitHub](https://github.com/Supervertaler/Supervertaler-for-Trados/releases).
 
-Look for **`Supervertaler_for_Trados_-_example_package_(.sdlppx).zip`** in the release assets.
+Look for **`Supervertaler-Example-Project.zip`** in the release assets.
 
 ### 2. Extract
 
