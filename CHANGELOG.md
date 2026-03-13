@@ -11,6 +11,8 @@
 - **UK English in documentation** — changed all instances of "license" (US) to "licence" (UK) in the online help pages
 
 ### Added
+- **Example Project link in help menus** — both the TermLens and Supervertaler Assistant help menus (? button) now include an "Example Project" link that opens the documentation page for the downloadable example project
+- **Example Project documentation** — new docs page with step-by-step instructions, screenshots, and the example package (patent translation with termbase, TM, and MultiTerm termbase)
 - **Help link reference** — new `HELP-LINKS.md` in the repo root documents every help link in the plugin with its online URL and which UI element triggers it
 
 ---
