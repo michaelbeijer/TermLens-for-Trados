@@ -100,14 +100,14 @@ namespace Supervertaler.Trados.Licensing
         public bool IsActivated => !string.IsNullOrWhiteSpace(InstanceId);
 
         /// <summary>
-        /// Whether the trial is still within the 14-day window.
+        /// Whether the trial is still within the 90-day window.
         /// </summary>
         public bool IsTrialActive
         {
             get
             {
                 if (TrialStartedAt == DateTime.MinValue) return false;
-                return (DateTime.UtcNow - TrialStartedAt).TotalDays < 14;
+                return (DateTime.UtcNow - TrialStartedAt).TotalDays < TrialDays;
             }
         }
 
@@ -119,10 +119,15 @@ namespace Supervertaler.Trados.Licensing
             get
             {
                 if (TrialStartedAt == DateTime.MinValue) return 0;
-                var remaining = 14 - (DateTime.UtcNow - TrialStartedAt).TotalDays;
+                var remaining = TrialDays - (DateTime.UtcNow - TrialStartedAt).TotalDays;
                 return remaining > 0 ? (int)Math.Ceiling(remaining) : 0;
             }
         }
+
+        /// <summary>
+        /// Trial duration in days. Must match LicenseManager.TrialDays.
+        /// </summary>
+        private const int TrialDays = 90;
 
         // ─── Persistence ────────────────────────────────────────────
 

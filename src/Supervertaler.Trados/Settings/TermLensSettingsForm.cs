@@ -959,6 +959,14 @@ namespace Supervertaler.Trados.Settings
                     row.DefaultCellStyle.SelectionBackColor = Color.FromArgb(200, 230, 201);
                 }
             }
+
+            // Keep the AI settings tab's termbase checklist in sync whenever
+            // the termbase list changes (new DB, add/remove termbase, etc.)
+            if (_aiSettingsPanel != null)
+            {
+                _aiSettingsPanel.SetAvailableTermbases(_termbases,
+                    _settings.AiSettings?.DisabledAiTermbaseIds);
+            }
         }
 
         private void OnCreateNewClick(object sender, EventArgs e)
@@ -1223,6 +1231,15 @@ namespace Supervertaler.Trados.Settings
             _promptManagerPanel.ApplyToSettings(_settings.AiSettings);
 
             _settings.Save();
+
+            // Also save per-project settings if a Trados project is active
+            var projectPath = TermLensEditorViewPart.GetCurrentProjectPath();
+            var projectName = TermLensEditorViewPart.GetCurrentProjectName();
+            if (!string.IsNullOrEmpty(projectPath))
+            {
+                ProjectSettings.Save(projectPath,
+                    _settings.ExtractProjectSettings(projectPath, projectName));
+            }
         }
 
         private void OnExportSettingsClick(object sender, EventArgs e)

@@ -206,6 +206,49 @@ namespace Supervertaler.Trados.Settings
             }
         }
 
+        // ─── Per-project overlay ─────────────────────────────────────
+
+        /// <summary>
+        /// Applies a project-specific settings overlay onto this global settings instance.
+        /// Only copies the per-project fields (termbase path, enabled/disabled IDs, etc.).
+        /// </summary>
+        public void ApplyProjectOverlay(ProjectSettings ps)
+        {
+            if (ps == null) return;
+
+            TermbasePath = ps.TermbasePath ?? "";
+            WriteTermbaseIds = ps.WriteTermbaseIds ?? new List<long>();
+            ProjectTermbaseId = ps.ProjectTermbaseId;
+            DisabledTermbaseIds = ps.DisabledTermbaseIds ?? new List<long>();
+            DisabledMultiTermIds = ps.DisabledMultiTermIds ?? new List<long>();
+
+            if (AiSettings != null && ps.DisabledAiTermbaseIds != null)
+                AiSettings.DisabledAiTermbaseIds = ps.DisabledAiTermbaseIds;
+        }
+
+        /// <summary>
+        /// Extracts the per-project fields from this settings instance into a
+        /// ProjectSettings object suitable for saving.
+        /// </summary>
+        public ProjectSettings ExtractProjectSettings(string projectPath = null, string projectName = null)
+        {
+            return new ProjectSettings
+            {
+                ProjectPath = projectPath ?? "",
+                ProjectName = projectName ?? "",
+                TermbasePath = TermbasePath ?? "",
+                WriteTermbaseIds = WriteTermbaseIds != null
+                    ? new List<long>(WriteTermbaseIds) : new List<long>(),
+                ProjectTermbaseId = ProjectTermbaseId,
+                DisabledTermbaseIds = DisabledTermbaseIds != null
+                    ? new List<long>(DisabledTermbaseIds) : new List<long>(),
+                DisabledMultiTermIds = DisabledMultiTermIds != null
+                    ? new List<long>(DisabledMultiTermIds) : new List<long>(),
+                DisabledAiTermbaseIds = AiSettings?.DisabledAiTermbaseIds != null
+                    ? new List<long>(AiSettings.DisabledAiTermbaseIds) : new List<long>(),
+            };
+        }
+
         /// <summary>
         /// Saves settings to disk.
         /// </summary>

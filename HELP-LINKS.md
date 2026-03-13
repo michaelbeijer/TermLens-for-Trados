@@ -30,6 +30,7 @@ These are the topic constants defined in `HelpSystem.Topics` and the documentati
 | `ExampleProject` | [/trados/getting-started/example-project](https://supervertaler.gitbook.io/trados/getting-started/example-project) | MainPanelControl (? menu), AiAssistantControl (? menu) |
 | `Licensing` | [/trados/getting-started/licensing](https://supervertaler.gitbook.io/trados/getting-started/licensing) | Settings dialog — Licence tab (index 3) |
 | `SettingsBackup` | [/trados/settings/backup](https://supervertaler.gitbook.io/trados/settings/backup) | Settings dialog — Backup tab (index 4) |
+| `ProjectSettings` | [/trados/settings/project-settings](https://supervertaler.gitbook.io/trados/settings/project-settings) | — (not yet used in UI) |
 | `KeyboardShortcuts` | [/trados/reference/keyboard-shortcuts](https://supervertaler.gitbook.io/trados/reference/keyboard-shortcuts) | — (not yet used in UI) |
 | `Troubleshooting` | [/trados/reference/troubleshooting](https://supervertaler.gitbook.io/trados/reference/troubleshooting) | — (not yet used in UI) |
 

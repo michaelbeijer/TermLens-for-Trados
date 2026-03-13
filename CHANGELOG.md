@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.3.0-beta] — 2026-03-13
+
+### Added
+- **Per-project settings** — switching between Trados projects now automatically saves and restores the Supervertaler database path, enabled/disabled termbases, write targets, project termbase, and AI context termbase filters; settings are stored per-project in `%LocalAppData%\Supervertaler.Trados\projects\` and applied automatically when the active document changes
+- **Per-project settings documentation** — new help page documenting how per-project settings work, what's saved per-project vs globally, and how the automatic switching behaves
+
+### Fixed
+- **Licence null-status crash** — when the Lemon Squeezy API returned a null or empty `status` field during activation, the licence was treated as invalid even though the key was activated; now treats null status as active when the licence has a valid instance ID
+- **Trial period mismatch** — `LicenseInfo.cs` used a hardcoded 14-day trial window while `LicenseManager.cs` used 90 days; unified both to the 90-day constant
+- **AI Settings termbase list stale after database switch** — switching Supervertaler databases in the TermLens settings tab didn't update the AI Settings tab's termbase checklist until the dialog was closed and reopened; the AI context panel now refreshes immediately when the termbase list changes
+
+---
+
 ## [4.2.2-beta] — 2026-03-13
 
 ### Fixed

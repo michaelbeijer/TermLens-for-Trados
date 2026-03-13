@@ -10,6 +10,7 @@ using Sdl.Desktop.IntegrationApi.Extensions;
 using Sdl.Desktop.IntegrationApi.Interfaces;
 using Sdl.FileTypeSupport.Framework.BilingualApi;
 using Sdl.TranslationStudioAutomation.IntegrationApi;
+using Sdl.ProjectAutomation.FileBased;
 using Supervertaler.Trados.Controls;
 using Supervertaler.Trados.Core;
 using Supervertaler.Trados.Licensing;
@@ -53,6 +54,10 @@ namespace Supervertaler.Trados
 
         // Prompt library (shared — used by settings dialog)
         private PromptLibrary _promptLibrary;
+
+        // Per-project settings — tracks the active project's .sdlproj path
+        private string _currentProjectPath;
+        private string _currentProjectName;
 
         // --- Alt+digit shortcut state machine ---
         private static int? _pendingDigit;
@@ -137,6 +142,9 @@ namespace Supervertaler.Trados
                 {
                     _activeDocument = _editorController.ActiveDocument;
                     _activeDocument.ActiveSegmentChanged += OnActiveSegmentChanged;
+
+                    // Apply per-project settings if available
+                    ApplyProjectSettingsFromDocument(_activeDocument);
                 }
             }
 
@@ -875,6 +883,9 @@ namespace Supervertaler.Trados
             {
                 _activeDocument.ActiveSegmentChanged += OnActiveSegmentChanged;
 
+                // Check if the project has changed — if so, save outgoing and load incoming settings
+                ApplyProjectSettingsFromDocument(_activeDocument);
+
                 // Reload MultiTerm termbases — may have switched projects
                 LoadMultiTermTermbases();
                 UpdateFromActiveSegment();
@@ -883,6 +894,84 @@ namespace Supervertaler.Trados
             {
                 SafeInvoke(() => _control.Value.Clear());
             }
+        }
+
+        /// <summary>
+        /// Detects whether the active document belongs to a different Trados project
+        /// and, if so, saves outgoing project settings and loads incoming project settings.
+        /// </summary>
+        private void ApplyProjectSettingsFromDocument(IStudioDocument document)
+        {
+            try
+            {
+                var project = document?.Project as FileBasedProject;
+                var projectPath = project?.FilePath;
+                var projectName = project?.GetProjectInfo()?.Name;
+
+                // Same project (or no project) — nothing to do
+                if (string.Equals(projectPath, _currentProjectPath, StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                // Save outgoing project settings (if we had a project active)
+                SaveCurrentProjectSettings();
+
+                // Update tracking
+                _currentProjectPath = projectPath;
+                _currentProjectName = projectName;
+
+                if (string.IsNullOrEmpty(projectPath))
+                    return;
+
+                // Load incoming project settings
+                var ps = ProjectSettings.Load(projectPath);
+                if (ps != null)
+                {
+                    _settings.ApplyProjectOverlay(ps);
+
+                    // Reload termbase with the project-specific path
+                    LoadTermbase(forceReload: true);
+                }
+            }
+            catch
+            {
+                // Never crash on project detection — fall back to global settings
+            }
+        }
+
+        /// <summary>
+        /// Saves the current per-project settings to disk (if a project is active).
+        /// Called on project switch and when the settings dialog is closed.
+        /// </summary>
+        private void SaveCurrentProjectSettings()
+        {
+            if (string.IsNullOrEmpty(_currentProjectPath)) return;
+
+            try
+            {
+                var ps = _settings.ExtractProjectSettings(_currentProjectPath, _currentProjectName);
+                ProjectSettings.Save(_currentProjectPath, ps);
+            }
+            catch
+            {
+                // Silently ignore save failures
+            }
+        }
+
+        /// <summary>
+        /// Returns the .sdlproj path of the currently active Trados project, or null.
+        /// Used by the settings dialog to save project-specific settings on OK.
+        /// </summary>
+        public static string GetCurrentProjectPath()
+        {
+            return _currentInstance?._currentProjectPath;
+        }
+
+        /// <summary>
+        /// Returns the name of the currently active Trados project, or null.
+        /// </summary>
+        public static string GetCurrentProjectName()
+        {
+            return _currentInstance?._currentProjectName;
         }
 
         private void OnActiveSegmentChanged(object sender, EventArgs e)
@@ -1197,6 +1286,15 @@ namespace Supervertaler.Trados
 
             // Re-read settings in case WriteTermbaseId or disabled list changed
             instance._settings = TermLensSettings.Load();
+
+            // Re-apply per-project overlay so the reload doesn't clobber project-specific values
+            if (!string.IsNullOrEmpty(instance._currentProjectPath))
+            {
+                var ps = ProjectSettings.Load(instance._currentProjectPath);
+                if (ps != null)
+                    instance._settings.ApplyProjectOverlay(ps);
+            }
+
             instance.LoadTermbase(forceReload: true);
             instance.UpdateFromActiveSegment();
         }

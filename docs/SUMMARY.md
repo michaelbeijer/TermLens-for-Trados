@@ -28,6 +28,7 @@
 * [AI Settings](settings/ai-settings.md)
 * [Prompts](settings/prompts.md)
 * [Backup & Restore](settings/backup.md)
+* [Per-Project Settings](settings/project-settings.md)
 
 ## Reference
 

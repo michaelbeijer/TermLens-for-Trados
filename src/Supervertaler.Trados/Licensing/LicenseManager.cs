@@ -322,6 +322,12 @@ namespace Supervertaler.Trados.Licensing
 
         private bool IsStatusActive()
         {
+            // Treat null/empty as active — the activation succeeded (we have an instance ID)
+            // but the Lemon Squeezy response may not have included a status field (e.g. API
+            // was down or returned an unexpected response format during activation).
+            if (string.IsNullOrEmpty(_info.Status))
+                return _info.IsActivated;
+
             return string.Equals(_info.Status, "active", StringComparison.OrdinalIgnoreCase);
         }
 
