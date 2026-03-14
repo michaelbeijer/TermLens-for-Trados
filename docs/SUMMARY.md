@@ -34,3 +34,4 @@
 
 * [Keyboard Shortcuts](keyboard-shortcuts.md)
 * [Troubleshooting](troubleshooting.md)
+* [Privacy Policy](privacy.md)

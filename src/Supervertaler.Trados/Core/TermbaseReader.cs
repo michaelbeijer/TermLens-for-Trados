@@ -1766,18 +1766,18 @@ namespace Supervertaler.Trados.Core
 
                         if (hasDomain)
                         {
-                            col++;
                             entry.Domain = reader.IsDBNull(col) ? "" : reader.GetString(col);
+                            col++;
                         }
                         if (hasNotes)
                         {
-                            col++;
                             entry.Notes = reader.IsDBNull(col) ? "" : reader.GetString(col);
+                            col++;
                         }
                         if (hasNt)
                         {
-                            col++;
                             entry.IsNonTranslatable = !reader.IsDBNull(col) && GetBool(reader, col);
+                            col++;
                         }
 
                         return entry;

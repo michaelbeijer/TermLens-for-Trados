@@ -72,7 +72,7 @@ namespace Supervertaler.Trados.Controls
             // Email
             var emailLink = new NoFocusCuesLinkLabel
             {
-                Text = "info@michaelbeijer.co.uk",
+                Text = "support@supervertaler.com",
                 Location = new Point(leftPad, y),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 8.5f),
@@ -83,7 +83,7 @@ namespace Supervertaler.Trados.Controls
             {
                 try
                 {
-                    Clipboard.SetText("info@michaelbeijer.co.uk");
+                    Clipboard.SetText("support@supervertaler.com");
                     var original = emailLink.Text;
                     emailLink.Text = "Copied!";
                     emailLink.LinkColor = Color.FromArgb(60, 160, 60);
@@ -251,6 +251,8 @@ namespace Supervertaler.Trados.Controls
                 tooltip: "Open the plugin documentation");
             AddLink("Support & Community", "https://supervertaler.com/trados/#support", leftPad, ref y,
                 tooltip: "Groups.io mailing list, ProZ forum, and GitHub Issues");
+            AddLink("Privacy Policy", "https://supervertaler.com/privacy/", leftPad, ref y,
+                tooltip: "How Supervertaler handles your data");
 
             y += 4;
 

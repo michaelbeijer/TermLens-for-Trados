@@ -177,11 +177,12 @@ Source-available license (not MIT). Source code viewable/forkable for personal u
 ## Monetization
 
 - Source code is open on GitHub (source-available license)
-- Pre-built .sdlplugin binaries sold via monthly/annual subscription
-- Technical support included with subscription
+- 90-day free trial (no credit card required), full feature access
+- Two paid tiers:
+  - **TermLens Edition** — €10/month or €120/year (terminology features)
+  - **TermLens + Assistant Edition** — €15/month or €180/year (terminology + AI features, priority support)
 - Payment platform: TBD (Lemon Squeezy or similar — handles EU VAT)
 - License key validation planned: key entered in plugin settings, validated against payment platform API
-- Free tier: TermLens terminology features. Paid tier: AI features (Batch Translate, AI Assistant)
 
 ---
 
