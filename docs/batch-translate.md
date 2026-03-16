@@ -46,9 +46,31 @@ During translation:
 * A **real-time log** displays the status of each segment as it is translated
 * The **Stop** button aborts the batch at any time – segments already translated are kept
 
-## Single-Segment AI Translation
+## Translate Active Segment (Ctrl+T)
 
-You do not need to open the Batch Translate tab to translate a single segment. Press **Ctrl+Alt+A** to translate just the active segment with AI. The translation is inserted directly into the target cell.
+Press **Ctrl+T** to translate the active segment instantly. This uses the same provider, model, and prompt currently selected in the Batch Translate tab, so you can switch prompts or providers in the Batch Translate tab and immediately use them for single segments with Ctrl+T.
+
+Ctrl+T is also available via right-click in the editor ("Translate active segment").
+
+### How it works
+
+1. The active segment's source text is sent to the AI provider configured in the Batch Translate tab
+2. The selected prompt (if any) is applied, along with termbase terms
+3. The translation is written directly into the target cell
+4. Inline tags (bold, italic, field codes, etc.) are preserved in the translation
+
+### Difference from Ctrl+Alt+A
+
+Supervertaler for Trados has two single-segment translation shortcuts:
+
+| Shortcut | Settings source | Best for |
+|----------|----------------|----------|
+| **Ctrl+T** | Batch Translate tab (provider, prompt, model) | Day-to-day translation — uses whatever you have set up in Batch Translate |
+| **Ctrl+Alt+A** | AI Settings (standalone) | Quick one-off translations without changing your batch settings |
+
+{% hint style="info" %}
+**Ctrl+T** is the recommended shortcut for most workflows. It ensures your single-segment and batch translations use the same prompt and provider, so the style is consistent.
+{% endhint %}
 
 ## Tips
 

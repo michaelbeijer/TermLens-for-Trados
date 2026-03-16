@@ -393,7 +393,7 @@ namespace Supervertaler.Trados.Core
                     if (tagMap.TryGetValue(st.TagNumber, out tagInfo) &&
                         tagInfo.OriginalMarkup != null)
                     {
-                        var clone = tagInfo.OriginalMarkup.Clone();
+                        var clone = (IAbstractMarkupData)tagInfo.OriginalMarkup.Clone();
                         container.Add(clone);
                     }
                     // If tag not found in map (LLM invented a tag), skip silently
@@ -405,7 +405,7 @@ namespace Supervertaler.Trados.Core
                         tagInfo.OriginalMarkup != null)
                     {
                         // Clone the tag pair and clear its content — we'll rebuild inside
-                        var clone = tagInfo.OriginalMarkup.Clone();
+                        var clone = (IAbstractMarkupData)tagInfo.OriginalMarkup.Clone();
 
                         if (clone is IAbstractMarkupDataContainer tagContainer)
                         {
@@ -431,7 +431,7 @@ namespace Supervertaler.Trados.Core
         /// Finds the first IText node in a segment (depth-first).
         /// Used as a clone template for creating new text nodes in the target.
         /// </summary>
-        internal static IText FindFirstText(ISegment segment)
+        public static IText FindFirstText(ISegment segment)
         {
             if (segment == null) return null;
 

@@ -614,32 +614,63 @@ namespace Supervertaler.Trados
                 {
                     if (e.SegmentPairRef == null || _activeDocument == null) return;
 
-                    // SegmentPairRef stores string[] { paragraphUnitId, segmentId }
-                    var ids = e.SegmentPairRef as string[];
-                    if (ids == null || ids.Length < 2) return;
-
-                    _activeDocument.SetActiveSegmentPair(ids[0], ids[1], true);
-
-                    // If source had tags, try to reconstruct target with proper tag objects
+                    // Tagged segments: use ProcessSegmentPair to modify via the document
+                    // model directly. This avoids the editor buffer issue where direct
+                    // manipulation of ActiveSegmentPair.Target gets lost because the
+                    // editor has its own buffer.
                     if (e.HasTags && e.TagMap != null && e.TagMap.Count > 0)
                     {
-                        var pair = _activeDocument.ActiveSegmentPair;
-                        if (pair != null)
-                        {
-                            bool reconstructed = SegmentTagHandler.ReconstructTarget(
-                                pair.Target, pair.Source, e.Translation, e.TagMap);
+                        var pair = e.SegmentPairRef as ISegmentPair;
+                        if (pair == null) return;
 
-                            if (reconstructed)
-                                return; // Success — tags preserved in target
-                        }
+                        _activeDocument.ProcessSegmentPair(pair, "Supervertaler",
+                            (sp, cancel) =>
+                            {
+                                bool reconstructed = SegmentTagHandler.ReconstructTarget(
+                                    sp.Target, sp.Source, e.Translation, e.TagMap);
 
-                        // Reconstruction failed — fall back to plain text (strip placeholders)
-                        var plainTranslation = SegmentTagHandler.StripTagPlaceholders(e.Translation);
-                        _activeDocument.Selection.Target.Replace(plainTranslation, "Supervertaler");
+                                if (!reconstructed)
+                                {
+                                    // Fall back to plain text (strip placeholders)
+                                    var plainTranslation = SegmentTagHandler.StripTagPlaceholders(e.Translation);
+                                    var textTemplate = SegmentTagHandler.FindFirstText(sp.Source);
+                                    if (textTemplate != null && !string.IsNullOrEmpty(plainTranslation))
+                                    {
+                                        sp.Target.Clear();
+                                        var textClone = (IText)textTemplate.Clone();
+                                        textClone.Properties.Text = plainTranslation;
+                                        sp.Target.Add(textClone);
+                                    }
+                                }
+                            });
+                        return;
+                    }
+
+                    // Non-tagged segments: navigate + editor Replace (proven approach)
+                    var ids = e.SegmentPairRef as string[];
+                    if (ids != null && ids.Length >= 2)
+                    {
+                        _activeDocument.SetActiveSegmentPair(ids[0], ids[1], true);
+                        _activeDocument.Selection.Target.Replace(e.Translation, "Supervertaler");
                     }
                     else
                     {
-                        _activeDocument.Selection.Target.Replace(e.Translation, "Supervertaler");
+                        // SegmentPairRef is an ISegmentPair (all segments store pairs now)
+                        var pair = e.SegmentPairRef as ISegmentPair;
+                        if (pair == null) return;
+
+                        _activeDocument.ProcessSegmentPair(pair, "Supervertaler",
+                            (sp, cancel) =>
+                            {
+                                var textTemplate = SegmentTagHandler.FindFirstText(sp.Source);
+                                if (textTemplate != null && !string.IsNullOrEmpty(e.Translation))
+                                {
+                                    sp.Target.Clear();
+                                    var textClone = (IText)textTemplate.Clone();
+                                    textClone.Properties.Text = e.Translation;
+                                    sp.Target.Add(textClone);
+                                }
+                            });
                     }
                 }
                 catch (Exception ex)
@@ -713,17 +744,29 @@ namespace Supervertaler.Trados
 
                     if (include)
                     {
-                        // Store IDs for later navigation via SetActiveSegmentPair
-                        var parentPU = _activeDocument.GetParentParagraphUnit(pair);
-                        var paragraphUnitId = parentPU.Properties.ParagraphUnitId.Id;
-                        var segmentId = pair.Properties.Id.Id;
+                        // For tagged segments, store the ISegmentPair directly so we
+                        // can use ProcessSegmentPair (which handles the edit transaction).
+                        // For non-tagged segments, store string[] IDs for SetActiveSegmentPair
+                        // + Selection.Target.Replace (the proven fast path).
+                        object segRef;
+                        if (serialization.HasTags)
+                        {
+                            segRef = pair;
+                        }
+                        else
+                        {
+                            var parentPU = _activeDocument.GetParentParagraphUnit(pair);
+                            var paragraphUnitId = parentPU.Properties.ParagraphUnitId.Id;
+                            var segmentId = pair.Properties.Id.Id;
+                            segRef = new[] { paragraphUnitId, segmentId };
+                        }
 
                         segments.Add(new BatchSegment
                         {
                             Index = index,
                             SourceText = sourceText,
                             ExistingTarget = targetText,
-                            SegmentPairRef = new[] { paragraphUnitId, segmentId },
+                            SegmentPairRef = segRef,
                             HasTags = serialization.HasTags,
                             TagMap = serialization.HasTags ? serialization.TagMap : null
                         });
@@ -1002,6 +1045,190 @@ namespace Supervertaler.Trados
                             instance.SafeInvoke(() =>
                                 batchControl.AppendLog(
                                     $"AI translate failed: {ex.Message}", true));
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Unexpected error: {ex.Message}",
+                        "Supervertaler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            });
+        }
+
+        // ─── Ctrl+T: Translate Active Segment via Batch Pipeline ──
+
+        /// <summary>
+        /// Translates the active segment using the batch translate pipeline
+        /// (same provider, prompt, and termbase settings as the Batch Translate tab).
+        /// Called by TranslateActiveSegmentAction (Ctrl+T).
+        /// </summary>
+        public static void HandleTranslateActiveSegment()
+        {
+            var instance = _currentInstance;
+            if (instance == null) return;
+
+            instance.SafeInvoke(() =>
+            {
+                try
+                {
+                    if (instance._activeDocument?.ActiveSegmentPair == null)
+                    {
+                        MessageBox.Show("No active segment.",
+                            "Supervertaler", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+
+                    // Don't start if a batch is already running
+                    if (instance._batchTranslator != null)
+                    {
+                        _control.Value.BatchTranslateControl.AppendLog(
+                            "A batch translation is already running.", true);
+                        return;
+                    }
+
+                    var settings = instance._settings;
+                    var aiSettings = settings?.AiSettings;
+                    if (aiSettings == null)
+                    {
+                        MessageBox.Show(
+                            "AI settings not configured.\n\nOpen Settings \u2192 AI Settings to configure a provider.",
+                            "Supervertaler",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    // Resolve provider (same logic as batch translate)
+                    var provider = aiSettings.SelectedProvider ?? LlmModels.ProviderOpenAi;
+                    string apiKey;
+                    string baseUrl = null;
+                    string model = aiSettings.GetSelectedModel();
+
+                    if (provider == LlmModels.ProviderOllama)
+                    {
+                        apiKey = "ollama";
+                        baseUrl = aiSettings.OllamaEndpoint ?? "http://localhost:11434";
+                    }
+                    else if (provider == LlmModels.ProviderCustomOpenAi)
+                    {
+                        var profile = aiSettings.GetActiveCustomProfile();
+                        if (profile == null)
+                        {
+                            _control.Value.BatchTranslateControl.AppendLog(
+                                "No custom OpenAI profile configured.", true);
+                            return;
+                        }
+                        apiKey = profile.ApiKey;
+                        baseUrl = profile.Endpoint;
+                        model = profile.Model;
+                    }
+                    else
+                    {
+                        apiKey = LlmClient.ResolveApiKey(provider, aiSettings.ApiKeys);
+                    }
+
+                    if (string.IsNullOrEmpty(apiKey))
+                    {
+                        _control.Value.BatchTranslateControl.AppendLog(
+                            $"No API key configured for {provider}. Open Settings \u2192 AI Settings to add one.", true);
+                        return;
+                    }
+
+                    var sourceLang = instance.GetDocumentSourceLanguage();
+                    var targetLang = instance.GetDocumentTargetLanguage();
+                    if (string.IsNullOrEmpty(sourceLang) || string.IsNullOrEmpty(targetLang))
+                    {
+                        _control.Value.BatchTranslateControl.AppendLog(
+                            "Cannot determine source/target language from document.", true);
+                        return;
+                    }
+
+                    // Collect only the active segment
+                    var pair = instance._activeDocument.ActiveSegmentPair;
+                    var sourceSegment = pair.Source;
+                    var serialization = SegmentTagHandler.Serialize(sourceSegment);
+                    var hasTags = serialization.HasTags;
+                    var sourceText = hasTags
+                        ? serialization.SerializedText
+                        : (sourceSegment?.ToString() ?? "");
+
+                    if (string.IsNullOrWhiteSpace(SegmentTagHandler.StripTagPlaceholders(sourceText)))
+                    {
+                        _control.Value.BatchTranslateControl.AppendLog(
+                            "Active segment has no source text.");
+                        return;
+                    }
+
+                    // Build single-segment batch
+                    object segRef;
+                    if (hasTags)
+                    {
+                        segRef = pair;
+                    }
+                    else
+                    {
+                        var parentPU = instance._activeDocument.GetParentParagraphUnit(pair);
+                        var paragraphUnitId = parentPU.Properties.ParagraphUnitId.Id;
+                        var segmentId = pair.Properties.Id.Id;
+                        segRef = new[] { paragraphUnitId, segmentId };
+                    }
+
+                    var segments = new List<BatchSegment>
+                    {
+                        new BatchSegment
+                        {
+                            Index = 0,
+                            SourceText = sourceText,
+                            ExistingTarget = pair.Target?.ToString() ?? "",
+                            SegmentPairRef = segRef,
+                            HasTags = hasTags,
+                            TagMap = hasTags ? serialization.TagMap : null
+                        }
+                    };
+
+                    // Get termbase terms (same filtering as batch translate)
+                    var allTerms = TermLensEditorViewPart.GetCurrentTermbaseTerms();
+                    var disabledIds = aiSettings.DisabledAiTermbaseIds ?? new List<long>();
+                    var termbaseTerms = disabledIds.Count > 0
+                        ? allTerms.Where(t => !disabledIds.Contains(t.TermbaseId)).ToList()
+                        : allTerms;
+
+                    // Resolve custom prompt (from batch translate tab selection)
+                    var batchControl = _control.Value.BatchTranslateControl;
+                    var selectedPromptPath = batchControl.GetSelectedPromptPath();
+                    aiSettings.SelectedPromptPath = selectedPromptPath;
+
+                    var customPromptContent = instance.ResolveCustomPromptContent(sourceLang, targetLang);
+                    var customSystemPrompt = aiSettings.CustomSystemPrompt;
+
+                    // Log and run
+                    batchControl.AppendLog(
+                        $"Ctrl+T: translating \"{Truncate(SegmentTagHandler.StripTagPlaceholders(sourceText), 60)}\"...");
+
+                    instance._batchCts = new CancellationTokenSource();
+                    instance._batchTranslator = new BatchTranslator();
+
+                    instance._batchTranslator.SegmentTranslated += instance.OnBatchSegmentTranslated;
+                    instance._batchTranslator.Completed += instance.OnBatchCompleted;
+
+                    var ct = instance._batchCts.Token;
+
+                    Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await instance._batchTranslator.TranslateAsync(
+                                segments, sourceLang, targetLang,
+                                aiSettings, termbaseTerms, 1, ct,
+                                customPromptContent, customSystemPrompt);
+                        }
+                        catch (Exception ex)
+                        {
+                            instance.SafeInvoke(() =>
+                            {
+                                batchControl.AppendLog($"Ctrl+T failed: {ex.Message}", true);
+                                batchControl.SetRunning(false);
+                            });
                         }
                     });
                 }
