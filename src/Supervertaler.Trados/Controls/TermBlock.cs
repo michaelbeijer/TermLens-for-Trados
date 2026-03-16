@@ -39,6 +39,7 @@ namespace Supervertaler.Trados.Controls
         private readonly bool _isProjectTermbase;
         private readonly bool _isNonTranslatable;
         private readonly bool _isMultiTerm;
+        private readonly HashSet<long> _abbreviationMatchIds;
 
         public event EventHandler<TermInsertEventArgs> TermInsertRequested;
         public event EventHandler<TermEditEventArgs> TermEditRequested;
@@ -46,7 +47,8 @@ namespace Supervertaler.Trados.Controls
         public event EventHandler<TermEditEventArgs> TermNonTranslatableToggled;
 
         public TermBlock(string sourceText, List<TermEntry> entries, int shortcutIndex = -1,
-            bool isProjectTermbase = false, bool isNonTranslatable = false, bool isMultiTerm = false)
+            bool isProjectTermbase = false, bool isNonTranslatable = false, bool isMultiTerm = false,
+            HashSet<long> abbreviationMatchIds = null)
         {
             _sourceText = sourceText;
             _entries = entries ?? new List<TermEntry>();
@@ -54,6 +56,7 @@ namespace Supervertaler.Trados.Controls
             _isProjectTermbase = isProjectTermbase;
             _isNonTranslatable = isNonTranslatable;
             _isMultiTerm = isMultiTerm;
+            _abbreviationMatchIds = abbreviationMatchIds ?? new HashSet<long>();
 
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint |
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
@@ -110,6 +113,53 @@ namespace Supervertaler.Trados.Controls
         public TermEntry PrimaryEntry => _entries.Count > 0 ? _entries[0] : null;
         public IReadOnlyList<TermEntry> Entries => _entries;
         public int ShortcutIndex => _shortcutIndex;
+
+        /// <summary>
+        /// True if the primary entry was matched via its SourceAbbreviation.
+        /// When true, the chip shows TargetAbbreviation and Alt+digit inserts
+        /// TargetAbbreviation instead of TargetTerm.
+        /// </summary>
+        public bool IsAbbreviationMatch =>
+            PrimaryEntry != null && _abbreviationMatchIds.Contains(PrimaryEntry.Id);
+
+        /// <summary>
+        /// Number of extra translations to show in the +N badge.
+        /// Includes: other entries - 1, plus the abbreviation pair if it exists
+        /// and isn't already the primary display.
+        /// </summary>
+        private int ExtraCount
+        {
+            get
+            {
+                int count = _entries.Count - 1;
+                // If the primary entry has an abbreviation pair that isn't the
+                // primary display, count it as an extra
+                if (PrimaryEntry != null &&
+                    !string.IsNullOrEmpty(PrimaryEntry.SourceAbbreviation) &&
+                    !string.IsNullOrEmpty(PrimaryEntry.PrimaryTargetAbbreviation))
+                {
+                    // If matched via abbreviation, the "extra" is the full term pair
+                    // If matched via full term, the "extra" is the abbreviation pair
+                    count++;
+                }
+                return count;
+            }
+        }
+
+        /// <summary>
+        /// The target text to display: TargetAbbreviation when matched via
+        /// abbreviation, TargetTerm otherwise.
+        /// </summary>
+        private string DisplayTargetText
+        {
+            get
+            {
+                if (PrimaryEntry == null) return "";
+                if (IsAbbreviationMatch && !string.IsNullOrEmpty(PrimaryEntry.PrimaryTargetAbbreviation))
+                    return PrimaryEntry.PrimaryTargetAbbreviation;
+                return PrimaryEntry.TargetTerm ?? "";
+            }
+        }
 
         private const int BadgeHeight = 16;
 
@@ -173,10 +223,10 @@ namespace Supervertaler.Trados.Controls
             using (var g = Graphics.FromHwnd(IntPtr.Zero))
             {
                 var sourceSize = g.MeasureString(_sourceText, SourceFont);
-                var targetText = PrimaryEntry?.TargetTerm ?? "";
+                var targetText = DisplayTargetText;
                 var targetSize = g.MeasureString(targetText, TargetFont);
 
-                int extraCount = _entries.Count - 1;
+                int extraCount = ExtraCount;
                 int extraWidth = 0;
                 if (extraCount > 0)
                     extraWidth = (int)Math.Ceiling(g.MeasureString($"+{extraCount}", BadgeFont).Width) + 6;
@@ -220,10 +270,10 @@ namespace Supervertaler.Trados.Controls
             y += sourceHeight;
 
             // Target row — highlighted background only around translation
-            var targetText = PrimaryEntry?.TargetTerm ?? "";
+            var targetText = DisplayTargetText;
             var targetSize = g.MeasureString(targetText, TargetFont);
 
-            int extraCount = _entries.Count - 1;
+            int extraCount = ExtraCount;
             float extraWidth = 0;
             if (extraCount > 0)
                 extraWidth = g.MeasureString($"+{extraCount}", BadgeFont).Width + 4;
@@ -351,11 +401,26 @@ namespace Supervertaler.Trados.Controls
                     lines.Add("[Non-translatable]");
                 foreach (var entry in _entries)
                 {
-                    var line = $"{entry.SourceTerm} \u2192 {entry.TargetTerm}";
+                    bool isAbbrMatch = _abbreviationMatchIds.Contains(entry.Id);
+                    string line;
+                    if (isAbbrMatch && !string.IsNullOrEmpty(entry.TargetAbbreviation))
+                        line = $"{entry.SourceAbbreviation} \u2192 {entry.TargetAbbreviation}";
+                    else
+                        line = $"{entry.SourceTerm} \u2192 {entry.TargetTerm}";
                     if (!string.IsNullOrEmpty(entry.TermbaseName))
                         line += $" [{entry.TermbaseName}]";
                     line += $" (ID {entry.Id})";
                     lines.Add(line);
+
+                    // Show the complementary form (abbreviation or full term)
+                    if (!string.IsNullOrEmpty(entry.SourceAbbreviation) &&
+                        !string.IsNullOrEmpty(entry.TargetAbbreviation))
+                    {
+                        if (isAbbrMatch)
+                            lines.Add($"  Full: {entry.SourceTerm} \u2192 {entry.TargetTerm}");
+                        else
+                            lines.Add($"  Abbr: {entry.SourceAbbreviation} \u2192 {entry.TargetAbbreviation}");
+                    }
 
                     foreach (var syn in entry.TargetSynonyms)
                         lines.Add($"  \u2022 {syn}");
@@ -386,9 +451,12 @@ namespace Supervertaler.Trados.Controls
         {
             if (PrimaryEntry != null)
             {
+                var textToInsert = IsAbbreviationMatch && !string.IsNullOrEmpty(PrimaryEntry.PrimaryTargetAbbreviation)
+                    ? PrimaryEntry.PrimaryTargetAbbreviation
+                    : PrimaryEntry.TargetTerm;
                 TermInsertRequested?.Invoke(this, new TermInsertEventArgs
                 {
-                    TargetTerm = PrimaryEntry.TargetTerm,
+                    TargetTerm = textToInsert,
                     Entry = PrimaryEntry
                 });
             }

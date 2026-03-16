@@ -135,6 +135,10 @@ namespace Supervertaler.Trados.Core
                         sb.AppendLine("- " + term.SourceTerm + " \u2192 " + term.TargetTerm + " (do not translate)");
                     else
                         sb.AppendLine("- " + term.SourceTerm + " \u2192 " + term.TargetTerm);
+
+                    // Include abbreviation pair if available
+                    if (!string.IsNullOrEmpty(term.SourceAbbreviation) && !string.IsNullOrEmpty(term.TargetAbbreviation))
+                        sb.AppendLine("- " + term.SourceAbbreviation + " \u2192 " + term.TargetAbbreviation + " (abbreviation of: " + term.SourceTerm + ")");
                 }
             }
 

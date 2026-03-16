@@ -22,6 +22,8 @@ namespace Supervertaler.Trados.Controls
         // Main fields
         private TextBox _txtSource;
         private TextBox _txtTarget;
+        private TextBox _txtSourceAbbr;
+        private TextBox _txtTargetAbbr;
         private TextBox _txtDefinition;
         private TextBox _txtDomain;
         private TextBox _txtNotes;
@@ -51,6 +53,7 @@ namespace Supervertaler.Trados.Controls
             public TermEntry Entry;
             public TermbaseInfo Termbase;
             public string Source, Target, Definition, Domain, Notes;
+            public string SourceAbbr, TargetAbbr;
             public bool IsNonTranslatable;
             public List<SynonymEntry> SourceSyns = new List<SynonymEntry>();
             public List<SynonymEntry> TargetSyns = new List<SynonymEntry>();
@@ -60,6 +63,8 @@ namespace Supervertaler.Trados.Controls
         // Output properties
         public string SourceTerm => _txtSource.Text.Trim();
         public string TargetTerm => _txtTarget.Text.Trim();
+        public string SourceAbbreviation => _txtSourceAbbr.Text.Trim();
+        public string TargetAbbreviation => _txtTargetAbbr.Text.Trim();
         public string Definition => _txtDefinition.Text.Trim();
         public string Domain => _txtDomain.Text.Trim();
         public string Notes => _txtNotes.Text.Trim();
@@ -114,6 +119,8 @@ namespace Supervertaler.Trados.Controls
                     Termbase = kv.Value,
                     Source = entry.SourceTerm ?? "",
                     Target = entry.TargetTerm ?? "",
+                    SourceAbbr = entry.SourceAbbreviation ?? "",
+                    TargetAbbr = entry.TargetAbbreviation ?? "",
                     Definition = entry.Definition ?? "",
                     Domain = entry.Domain ?? "",
                     Notes = entry.Notes ?? "",
@@ -149,8 +156,8 @@ namespace Supervertaler.Trados.Controls
             HelpButton = true;
             HelpButtonClicked += OnHelpButtonClicked;
             StartPosition = FormStartPosition.CenterParent;
-            ClientSize = new Size(580, 548);
-            MinimumSize = new Size(500, 470);
+            ClientSize = new Size(580, 596);
+            MinimumSize = new Size(500, 518);
             var formBg = Color.FromArgb(243, 243, 243);
             BackColor = formBg;
 
@@ -279,6 +286,39 @@ namespace Supervertaler.Trados.Controls
             };
             _contentPanel.Controls.Add(_txtTarget);
             y += 30;
+
+            // === Abbreviation fields ===
+            _contentPanel.Controls.Add(MakeLabel("Abbreviation:", leftX, y, labelColor));
+            _contentPanel.Controls.Add(MakeLabel("Abbreviation:", rightX, y, labelColor));
+            y += 18;
+
+            _txtSourceAbbr = new TextBox
+            {
+                Location = new Point(leftX, y),
+                Width = colWidth,
+                BackColor = inputBg,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Font = new Font("Segoe UI", 9f)
+            };
+            _contentPanel.Controls.Add(_txtSourceAbbr);
+
+            _txtTargetAbbr = new TextBox
+            {
+                Location = new Point(rightX, y),
+                Width = colWidth,
+                BackColor = inputBg,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Font = new Font("Segoe UI", 9f)
+            };
+            _contentPanel.Controls.Add(_txtTargetAbbr);
+            y += 30;
+
+            // Auto-fill target abbreviation when non-translatable
+            _txtSourceAbbr.TextChanged += (s, e) =>
+            {
+                if (_chkNonTranslatable.Checked)
+                    _txtTargetAbbr.Text = _txtSourceAbbr.Text;
+            };
 
             // ── Separator between primary terms and synonyms ──
             _contentPanel.Controls.Add(new Label
@@ -449,11 +489,16 @@ namespace Supervertaler.Trados.Controls
                     _txtTarget.Text = _txtSource.Text;
                     _txtTarget.ReadOnly = true;
                     _txtTarget.BackColor = Color.FromArgb(230, 230, 230);
+                    _txtTargetAbbr.Text = _txtSourceAbbr.Text;
+                    _txtTargetAbbr.ReadOnly = true;
+                    _txtTargetAbbr.BackColor = Color.FromArgb(230, 230, 230);
                 }
                 else
                 {
                     _txtTarget.ReadOnly = false;
                     _txtTarget.BackColor = inputBg;
+                    _txtTargetAbbr.ReadOnly = false;
+                    _txtTargetAbbr.BackColor = inputBg;
                 }
             };
             _contentPanel.Controls.Add(_chkNonTranslatable);
@@ -524,6 +569,8 @@ namespace Supervertaler.Trados.Controls
             if (entry == null) return;
             _txtSource.Text = entry.SourceTerm ?? "";
             _txtTarget.Text = entry.TargetTerm ?? "";
+            _txtSourceAbbr.Text = entry.SourceAbbreviation ?? "";
+            _txtTargetAbbr.Text = entry.TargetAbbreviation ?? "";
             _txtDefinition.Text = entry.Definition ?? "";
             _txtDomain.Text = entry.Domain ?? "";
             _txtNotes.Text = entry.Notes ?? "";
@@ -573,6 +620,8 @@ namespace Supervertaler.Trados.Controls
             var ed = _allEntryData[_activeEntryIndex];
             ed.Source = _txtSource.Text.Trim();
             ed.Target = _txtTarget.Text.Trim();
+            ed.SourceAbbr = _txtSourceAbbr.Text.Trim();
+            ed.TargetAbbr = _txtTargetAbbr.Text.Trim();
             ed.Definition = _txtDefinition.Text.Trim();
             ed.Domain = _txtDomain.Text.Trim();
             ed.Notes = _txtNotes.Text.Trim();
@@ -597,6 +646,8 @@ namespace Supervertaler.Trados.Controls
             // Load fields
             _txtSource.Text = ed.Source;
             _txtTarget.Text = ed.Target;
+            _txtSourceAbbr.Text = ed.SourceAbbr ?? "";
+            _txtTargetAbbr.Text = ed.TargetAbbr ?? "";
             _txtDefinition.Text = ed.Definition;
             _txtDomain.Text = ed.Domain;
             _txtNotes.Text = ed.Notes;
@@ -880,7 +931,9 @@ namespace Supervertaler.Trados.Controls
                     // Update the main term
                     TermbaseReader.UpdateTerm(_dbPath, _termId,
                         source, target, Definition, Domain, Notes,
-                        isNonTranslatable: IsNonTranslatable);
+                        isNonTranslatable: IsNonTranslatable,
+                        sourceAbbreviation: SourceAbbreviation,
+                        targetAbbreviation: TargetAbbreviation);
                 }
                 else if (_termbase != null)
                 {
@@ -890,7 +943,9 @@ namespace Supervertaler.Trados.Controls
                         source, target,
                         _termbase.SourceLang, _termbase.TargetLang,
                         Definition, Domain, Notes,
-                        isNonTranslatable: IsNonTranslatable);
+                        isNonTranslatable: IsNonTranslatable,
+                        sourceAbbreviation: SourceAbbreviation,
+                        targetAbbreviation: TargetAbbreviation);
 
                     // Can't save synonyms without a term ID
                     if (newId <= 0)

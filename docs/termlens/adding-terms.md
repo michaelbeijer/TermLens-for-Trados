@@ -44,6 +44,8 @@ For more control, open the full Add Term dialog:
 |-------|-------------|
 | **Source** | The source-language term |
 | **Target** | The target-language translation |
+| **Source Abbreviation** | Optional abbreviated form of the source term (e.g., "GC" for "gaschromatografie") |
+| **Target Abbreviation** | Optional abbreviated form of the target term (e.g., "GC" for "gas chromatography") |
 | **Definition** | Optional definition or usage note |
 | **Non-translatable** | Check this to mark the term as non-translatable |
 | **Termbase** | Choose which termbase to add the term to |
@@ -109,6 +111,39 @@ To edit a term that already exists in your termbase:
    - Toggle the non-translatable flag
 
 Click **Save** when done.
+
+## Abbreviations
+
+Term entries can have optional **source and target abbreviation** fields. When a source abbreviation appears in a segment, TermLens highlights it and shows the target abbreviation underneath — just like a regular term match.
+
+### Adding abbreviations
+
+1. Open the **Term Entry Editor** (right-click a term → Edit Term, or use Ctrl+Alt+T)
+2. Fill in the **Source Abbreviation** and **Target Abbreviation** fields
+3. Click **Save**
+
+### Multiple abbreviation variants
+
+You can specify multiple variants of the same abbreviation by separating them with a **pipe character** (`|`):
+
+```
+GC|G.C.|gc|g.c.
+```
+
+Each variant is indexed and matched independently, so all common forms of the abbreviation are recognised in the source text. The **first variant** is used as the display text and for insertion.
+
+### How abbreviation matching works
+
+When both the full term and its abbreviation appear in the same segment (e.g., "gaschromatografie (GC)"), TermLens shows **both** as highlighted chips:
+
+- The **full term** chip shows the full target translation (e.g., "gas chromatography")
+- The **abbreviation** chip shows the target abbreviation (e.g., "GC")
+
+Clicking or Alt+digit-inserting an abbreviation chip inserts the **target abbreviation** (first variant), not the full target term.
+
+{% hint style="info" %}
+Abbreviations are also included in AI translation prompts, so the AI knows both the full term and its abbreviated form.
+{% endhint %}
 
 ## Deleting terms
 

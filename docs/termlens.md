@@ -97,7 +97,8 @@ Use the **A+** and **A-** buttons in the TermLens panel header to increase or de
 
 * TermLens respects termbase activation –only terms from activated termbases are shown.
 * If you have many termbases, designate one as the **Project termbase** (shown in pink) to make its terms stand out.
-* Hover over a term to see a tooltip with all translations, synonyms, definitions, and the termbase name.
+* Hover over a term to see a tooltip with all translations, synonyms, abbreviation pairs, definitions, and the termbase name.
+* If a term has an **abbreviation** (e.g., "GC" for "gaschromatografie"), both the full term and the abbreviation are highlighted when they appear in the same segment. The abbreviation chip shows the abbreviated translation; the full-term chip shows the full translation.
 
 ***
 

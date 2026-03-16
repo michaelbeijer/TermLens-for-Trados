@@ -38,6 +38,43 @@ namespace Supervertaler.Trados.Models
         public bool IsNonTranslatable { get; set; }
 
         /// <summary>
+        /// Abbreviated form(s) of the source term (e.g., "GC" for "gas chromatography").
+        /// Multiple variants can be pipe-separated: "GC|G.C.|gc".
+        /// Each variant is indexed for matching — if any variant appears in a segment,
+        /// TermLens will show the abbreviation chip with the full term in the +N tooltip.
+        /// </summary>
+        public string SourceAbbreviation { get; set; }
+
+        /// <summary>
+        /// Abbreviated form(s) of the target term (e.g., "GC" for "gaschromatografie").
+        /// Multiple variants can be pipe-separated: "GC|G.C.".
+        /// The first variant is used as the primary display when matched via abbreviation.
+        /// </summary>
+        public string TargetAbbreviation { get; set; }
+
+        /// <summary>
+        /// Returns the individual source abbreviation variants (split on pipe).
+        /// </summary>
+        public string[] GetSourceAbbreviationVariants()
+        {
+            if (string.IsNullOrWhiteSpace(SourceAbbreviation)) return System.Array.Empty<string>();
+            return SourceAbbreviation.Split('|');
+        }
+
+        /// <summary>
+        /// Returns the primary (first) target abbreviation for display/insertion.
+        /// </summary>
+        public string PrimaryTargetAbbreviation
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(TargetAbbreviation)) return null;
+                var idx = TargetAbbreviation.IndexOf('|');
+                return idx >= 0 ? TargetAbbreviation.Substring(0, idx).Trim() : TargetAbbreviation.Trim();
+            }
+        }
+
+        /// <summary>
         /// True if this term comes from a MultiTerm .sdltb termbase (read-only).
         /// MultiTerm terms have negative IDs and cannot be edited or deleted.
         /// </summary>
@@ -80,6 +117,13 @@ namespace Supervertaler.Trados.Models
         public bool IsLineBreak { get; set; }
         public List<TermEntry> Matches { get; set; } = new List<TermEntry>();
         public bool HasMatch => Matches.Count > 0;
+
+        /// <summary>
+        /// Set of TermEntry IDs that were matched via their SourceAbbreviation
+        /// rather than their SourceTerm. Used by the display layer to show the
+        /// abbreviation pair as primary and the full term in the +N tooltip.
+        /// </summary>
+        public HashSet<long> AbbreviationMatchIds { get; set; } = new HashSet<long>();
     }
 
     /// <summary>
@@ -115,6 +159,18 @@ namespace Supervertaler.Trados.Models
                     {
                         TargetTerm = entry.TargetTerm,
                         TermbaseName = entry.TermbaseName,
+                        Ranking = entry.Ranking
+                    });
+                }
+
+                // Include primary abbreviation as a target option
+                var primaryAbbr = entry.PrimaryTargetAbbreviation;
+                if (!string.IsNullOrEmpty(primaryAbbr) && seen.Add(primaryAbbr))
+                {
+                    results.Add(new TermTargetOption
+                    {
+                        TargetTerm = primaryAbbr,
+                        TermbaseName = entry.TermbaseName + " (abbr)",
                         Ranking = entry.Ranking
                     });
                 }

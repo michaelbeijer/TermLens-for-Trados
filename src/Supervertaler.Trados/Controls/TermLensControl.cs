@@ -372,7 +372,7 @@ namespace Supervertaler.Trados.Controls
                         });
                     }
 
-                    var block = new TermBlock(token.Text, sortedEntries, shortcutIndex, isProject, isNonTranslatable, isMultiTerm)
+                    var block = new TermBlock(token.Text, sortedEntries, shortcutIndex, isProject, isNonTranslatable, isMultiTerm, token.AbbreviationMatchIds)
                     {
                         Font = Font,
                         Margin = new Padding(2, 1, 2, 1)
@@ -407,18 +407,19 @@ namespace Supervertaler.Trados.Controls
         }
 
         /// <summary>
-        /// Returns the TermEntry for the given 1-based shortcut index, or null if not found.
-        /// Used by Alt+digit insertion.
+        /// Returns the TermEntry and abbreviation-match flag for the given 1-based shortcut index.
+        /// When matchedViaAbbreviation is true, the caller should insert TargetAbbreviation
+        /// instead of TargetTerm.
         /// </summary>
-        public TermEntry GetTermByIndex(int oneBasedIndex)
+        public (TermEntry entry, bool matchedViaAbbreviation) GetTermByIndex(int oneBasedIndex)
         {
             foreach (Control ctrl in _flowPanel.Controls)
             {
                 var block = ctrl as TermBlock;
                 if (block != null && (block.ShortcutIndex + 1) == oneBasedIndex)
-                    return block.PrimaryEntry;
+                    return (block.PrimaryEntry, block.IsAbbreviationMatch);
             }
-            return null;
+            return (null, false);
         }
 
         /// <summary>

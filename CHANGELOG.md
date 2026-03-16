@@ -1,5 +1,20 @@
 # Changelog
 
+## [4.6.0] — 2026-03-16
+
+### Added
+- **Abbreviation fields on term entries** — each term entry now has optional **Source Abbreviation** and **Target Abbreviation** fields; when a source abbreviation appears in a segment, TermLens highlights it and shows the target abbreviation underneath, with the full term pair available in the +N tooltip
+- **Pipe-separated abbreviation variants** — abbreviation fields support multiple variants separated by `|` (e.g., `GC|G.C.|gc|g.c.`); each variant is indexed and matched independently, so all common forms of an abbreviation are recognised
+- **Abbreviation-aware insertion** — clicking or Alt+digit-inserting an abbreviation-matched chip inserts the target abbreviation (first variant) instead of the full target term
+- **Abbreviation in AI prompts** — AI translation prompts now include abbreviation pairs alongside their full terms, so the AI knows both forms
+- **Abbreviation columns in Term Editor** — the Add/Edit Term dialog includes Source Abbreviation and Target Abbreviation text fields between the primary term fields and the synonyms section
+- **Abbreviation columns in Termbase Editor** — the termbase grid shows SrcAbbr and TgtAbbr columns for viewing and editing abbreviations inline
+
+### Changed
+- **Database schema migration** — `source_abbreviation` and `target_abbreviation` columns are automatically added to existing databases on first write; fully backward-compatible with older Supervertaler databases
+
+---
+
 ## [4.5.0] — 2026-03-16
 
 ### Added

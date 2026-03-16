@@ -104,6 +104,31 @@ namespace Supervertaler.Trados.Core
                 }
                 strippedList.Add(entry);
             }
+
+            // Index source abbreviation variant(s) as additional lookup keys
+            foreach (var abbrVariant in entry.GetSourceAbbreviationVariants())
+            {
+                var abbrKey = abbrVariant.Trim().ToLowerInvariant();
+                if (string.IsNullOrEmpty(abbrKey) || abbrKey == key) continue;
+
+                if (!_termIndex.TryGetValue(abbrKey, out var abbrList))
+                {
+                    abbrList = new List<TermEntry>();
+                    _termIndex[abbrKey] = abbrList;
+                }
+                abbrList.Add(entry);
+
+                var abbrStripped = abbrKey.TrimEnd('.', '!', '?', ',', ';', ':');
+                if (abbrStripped != abbrKey && abbrStripped.Length > 0)
+                {
+                    if (!_termIndex.TryGetValue(abbrStripped, out var abbrStrippedList))
+                    {
+                        abbrStrippedList = new List<TermEntry>();
+                        _termIndex[abbrStripped] = abbrStrippedList;
+                    }
+                    abbrStrippedList.Add(entry);
+                }
+            }
         }
 
         /// <summary>
@@ -199,10 +224,29 @@ namespace Supervertaler.Trados.Core
 
             // Build final token list in order
             var tokens = new List<SegmentToken>();
-            var allSpans = new List<(int start, int end, string text, List<TermEntry> entries)>();
+            var allSpans = new List<(int start, int end, string text, List<TermEntry> entries, HashSet<long> abbrIds)>();
 
-            // Add multi-word matches
-            allSpans.AddRange(multiWordMatches);
+            // Add multi-word matches (with abbreviation detection)
+            foreach (var mw in multiWordMatches)
+            {
+                var abbrIds = new HashSet<long>();
+                var matchKey = mw.text.Trim().ToLowerInvariant();
+                foreach (var entry in mw.entries)
+                {
+                    if (string.Equals(entry.SourceTerm.Trim(), matchKey, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    foreach (var variant in entry.GetSourceAbbreviationVariants())
+                    {
+                        if (string.Equals(variant.Trim(), matchKey, StringComparison.OrdinalIgnoreCase))
+                        {
+                            abbrIds.Add(entry.Id);
+                            break;
+                        }
+                    }
+                }
+                allSpans.Add((mw.start, mw.end, mw.text, mw.entries, abbrIds));
+            }
 
             // Add single words not covered by multi-word matches
             foreach (var (start, end, text) in wordPositions)
@@ -219,19 +263,21 @@ namespace Supervertaler.Trados.Core
 
                 if (!covered)
                 {
-                    var entries = LookupTerm(text);
-                    allSpans.Add((start, end, text, entries));
+                    var (entries, abbrIds) = LookupTerm(text);
+                    allSpans.Add((start, end, text, entries, abbrIds));
                 }
             }
 
             // Sort by position
             allSpans.Sort((a, b) => a.start.CompareTo(b.start));
 
-            foreach (var (start, end, text, entries) in allSpans)
+            foreach (var (start, end, text, entries, abbrIds) in allSpans)
             {
                 var token = new SegmentToken { Text = text };
                 if (entries != null)
                     token.Matches = entries;
+                if (abbrIds != null && abbrIds.Count > 0)
+                    token.AbbreviationMatchIds = abbrIds;
                 tokens.Add(token);
             }
 
@@ -296,21 +342,49 @@ namespace Supervertaler.Trados.Core
             }
         }
 
-        private List<TermEntry> LookupTerm(string word)
+        /// <summary>
+        /// Looks up a word in the term index and returns matching entries plus a set
+        /// of entry IDs that matched via their SourceAbbreviation (not SourceTerm).
+        /// </summary>
+        private (List<TermEntry> entries, HashSet<long> abbrMatchIds) LookupTerm(string word)
         {
+            var emptyResult = (new List<TermEntry>(), new HashSet<long>());
             if (_termIndex == null || string.IsNullOrWhiteSpace(word))
-                return new List<TermEntry>();
+                return emptyResult;
 
             var normalised = word.Trim();
             var stripped = normalised.TrimEnd(PunctChars).TrimStart(PunctChars);
 
+            List<TermEntry> entries = null;
+
             // Try exact match first, then stripped
             if (_termIndex.TryGetValue(normalised, out var exact))
-                return exact;
-            if (stripped.Length > 0 && stripped != normalised && _termIndex.TryGetValue(stripped, out var strippedMatch))
-                return strippedMatch;
+                entries = exact;
+            else if (stripped.Length > 0 && stripped != normalised && _termIndex.TryGetValue(stripped, out var strippedMatch))
+                entries = strippedMatch;
 
-            return new List<TermEntry>();
+            if (entries == null || entries.Count == 0)
+                return emptyResult;
+
+            // Determine which entries matched via abbreviation (any pipe-separated variant)
+            var abbrIds = new HashSet<long>();
+            var matchKey = (stripped.Length > 0 ? stripped : normalised).ToLowerInvariant();
+            foreach (var entry in entries)
+            {
+                if (string.Equals(entry.SourceTerm.Trim(), matchKey, StringComparison.OrdinalIgnoreCase))
+                    continue; // matched via full term, not abbreviation
+
+                foreach (var variant in entry.GetSourceAbbreviationVariants())
+                {
+                    if (string.Equals(variant.Trim(), matchKey, StringComparison.OrdinalIgnoreCase))
+                    {
+                        abbrIds.Add(entry.Id);
+                        break;
+                    }
+                }
+            }
+
+            return (entries, abbrIds);
         }
     }
 }

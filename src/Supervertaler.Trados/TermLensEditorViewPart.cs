@@ -1593,12 +1593,15 @@ namespace Supervertaler.Trados
         {
             if (_activeDocument == null) return;
 
-            var entry = _control.Value.GetTermByIndex(oneBasedIndex);
+            var (entry, matchedViaAbbreviation) = _control.Value.GetTermByIndex(oneBasedIndex);
             if (entry == null) return;
 
             try
             {
-                _activeDocument.Selection.Target.Replace(entry.TargetTerm, "TermLens");
+                var textToInsert = matchedViaAbbreviation && !string.IsNullOrEmpty(entry.PrimaryTargetAbbreviation)
+                    ? entry.PrimaryTargetAbbreviation
+                    : entry.TargetTerm;
+                _activeDocument.Selection.Target.Replace(textToInsert, "TermLens");
             }
             catch (Exception)
             {

@@ -286,6 +286,8 @@ namespace Supervertaler.Trados.Controls
                 _dataTable.Columns.Add("Domain", typeof(string));
                 _dataTable.Columns.Add("Notes", typeof(string));
                 _dataTable.Columns.Add("NT", typeof(bool));
+                _dataTable.Columns.Add("SrcAbbr", typeof(string));
+                _dataTable.Columns.Add("TgtAbbr", typeof(string));
 
                 foreach (var term in terms)
                 {
@@ -299,7 +301,9 @@ namespace Supervertaler.Trados.Controls
                         term.Definition ?? "",
                         term.Domain ?? "",
                         term.Notes ?? "",
-                        term.IsNonTranslatable);
+                        term.IsNonTranslatable,
+                        term.SourceAbbreviation ?? "",
+                        term.TargetAbbreviation ?? "");
                 }
 
                 _bindingSource = new BindingSource { DataSource = _dataTable };
@@ -356,6 +360,20 @@ namespace Supervertaler.Trados.Controls
                     _dgvTerms.Columns["NT"].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
                     _dgvTerms.Columns["NT"].Width = 36;
                     _dgvTerms.Columns["NT"].FillWeight = 1;
+                }
+                if (_dgvTerms.Columns.Contains("SrcAbbr"))
+                {
+                    _dgvTerms.Columns["SrcAbbr"].HeaderText = "Src Abbr";
+                    _dgvTerms.Columns["SrcAbbr"].ToolTipText = "Source abbreviation";
+                    _dgvTerms.Columns["SrcAbbr"].FillWeight = 8;
+                    _dgvTerms.Columns["SrcAbbr"].MinimumWidth = 50;
+                }
+                if (_dgvTerms.Columns.Contains("TgtAbbr"))
+                {
+                    _dgvTerms.Columns["TgtAbbr"].HeaderText = "Tgt Abbr";
+                    _dgvTerms.Columns["TgtAbbr"].ToolTipText = "Target abbreviation";
+                    _dgvTerms.Columns["TgtAbbr"].FillWeight = 8;
+                    _dgvTerms.Columns["TgtAbbr"].MinimumWidth = 50;
                 }
 
                 UpdateTermCountLabel();
@@ -503,7 +521,9 @@ namespace Supervertaler.Trados.Controls
                     row["Definition"] as string ?? "",
                     row["Domain"] as string ?? "",
                     row["Notes"] as string ?? "",
-                    isNonTranslatable: isNt);
+                    isNonTranslatable: isNt,
+                    sourceAbbreviation: row["SrcAbbr"] as string ?? "",
+                    targetAbbreviation: row["TgtAbbr"] as string ?? "");
 
                 // Refresh the in-memory term index so TermLens reflects
                 // the edit immediately (source/target text may have changed)
