@@ -43,6 +43,9 @@ namespace Supervertaler.Trados.Controls
         // Batch Translate tab
         private readonly BatchTranslateControl _batchTranslateControl;
 
+        // Reports tab
+        private ReportsControl _reportsControl;
+
         private bool _isThinking;
 
         // Pending image attachments for the next message
@@ -77,6 +80,9 @@ namespace Supervertaler.Trados.Controls
         /// <summary>Exposes the BatchTranslateControl for event wiring by the ViewPart.</summary>
         public BatchTranslateControl BatchTranslateControl => _batchTranslateControl;
 
+        /// <summary>Exposes the ReportsControl for event wiring by the ViewPart.</summary>
+        public ReportsControl ReportsControl => _reportsControl;
+
         public AiAssistantControl()
         {
             SuspendLayout();
@@ -96,13 +102,19 @@ namespace Supervertaler.Trados.Controls
             _tabControl.TabPages.Add(chatPage);
 
             // === Batch Translate tab ===
-            var batchPage = new TabPage("Batch Translate") { BackColor = Color.White };
+            var batchPage = new TabPage("Batch Operations") { BackColor = Color.White };
             _batchTranslateControl = new BatchTranslateControl
             {
                 Dock = DockStyle.Fill
             };
             batchPage.Controls.Add(_batchTranslateControl);
             _tabControl.TabPages.Add(batchPage);
+
+            // === Reports tab ===
+            var reportsPage = new TabPage("Reports") { BackColor = Color.White };
+            _reportsControl = new ReportsControl { Dock = DockStyle.Fill };
+            reportsPage.Controls.Add(_reportsControl);
+            _tabControl.TabPages.Add(reportsPage);
 
             Controls.Add(_tabControl);
 
@@ -432,12 +444,23 @@ namespace Supervertaler.Trados.Controls
 
         private void OnHelpDropdown(object sender, EventArgs e)
         {
-            string topic = _tabControl.SelectedIndex == 1
-                ? HelpSystem.Topics.BatchTranslate
-                : HelpSystem.Topics.AiAssistantChat;
-            string label = _tabControl.SelectedIndex == 1
-                ? "Batch Translate Help"
-                : "Supervertaler Assistant Help";
+            string topic;
+            string label;
+            switch (_tabControl.SelectedIndex)
+            {
+                case 1:
+                    topic = HelpSystem.Topics.BatchTranslate;
+                    label = "Batch Translate Help";
+                    break;
+                case 2:
+                    topic = HelpSystem.Topics.BatchTranslate; // Reports shares batch docs for now
+                    label = "Proofreading & Reports Help";
+                    break;
+                default:
+                    topic = HelpSystem.Topics.AiAssistantChat;
+                    label = "Supervertaler Assistant Help";
+                    break;
+            }
 
             var menu = new ContextMenuStrip();
             menu.Items.Add(label, null, (s, ev) =>
@@ -457,9 +480,13 @@ namespace Supervertaler.Trados.Controls
         {
             if (keyData == Keys.F1)
             {
-                string topic = _tabControl.SelectedIndex == 1
-                    ? HelpSystem.Topics.BatchTranslate
-                    : HelpSystem.Topics.AiAssistantChat;
+                string topic;
+                switch (_tabControl.SelectedIndex)
+                {
+                    case 1: topic = HelpSystem.Topics.BatchTranslate; break;
+                    case 2: topic = HelpSystem.Topics.BatchTranslate; break; // Reports shares batch docs
+                    default: topic = HelpSystem.Topics.AiAssistantChat; break;
+                }
                 HelpSystem.OpenHelp(topic);
                 return true;
             }
@@ -905,6 +932,24 @@ namespace Supervertaler.Trados.Controls
         public void FocusInput()
         {
             _txtInput?.Focus();
+        }
+
+        /// <summary>
+        /// Updates the Reports tab text with a badge showing the issue count.
+        /// </summary>
+        public void UpdateReportsBadge(int issueCount)
+        {
+            _tabControl.TabPages[2].Text = issueCount > 0
+                ? $"Reports  \u26A0 {issueCount}"
+                : "Reports";
+        }
+
+        /// <summary>
+        /// Switches to the Reports tab.
+        /// </summary>
+        public void SwitchToReportsTab()
+        {
+            _tabControl.SelectedIndex = 2;
         }
 
         // ─── License gating ────────────────────────────────────────

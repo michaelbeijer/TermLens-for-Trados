@@ -410,9 +410,9 @@ namespace Supervertaler.Trados.Settings
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
                 FillWeight = 1,
                 FlatStyle = FlatStyle.Flat,
-                ToolTipText = "Case sensitivity for this termbase.\nDefault = use global setting."
+                ToolTipText = "Case sensitivity for this termbase."
             };
-            colCase.Items.AddRange("Default", "Sensitive", "Insensitive");
+            colCase.Items.AddRange("Insensitive", "Sensitive");
             var colName = new DataGridViewTextBoxColumn
             {
                 Name = "colName",
@@ -935,8 +935,7 @@ namespace Supervertaler.Trados.Settings
                                 bool isWrite = writeIds.Contains(tb.Id);
                                 bool isProject = tb.Id == _settings.ProjectTermbaseId;
                                 var caseText = tb.CaseSensitive == 1 ? "Sensitive"
-                                             : tb.CaseSensitive == 0 ? "Insensitive"
-                                             : "Default";
+                                             : "Insensitive";
                                 _dgvTermbases.Rows.Add(
                                     isRead,
                                     isWrite,
@@ -1238,8 +1237,8 @@ namespace Supervertaler.Trados.Settings
                 var projectChecked = _dgvTermbases.Rows[i].Cells["colProject"].Value as bool? ?? false;
 
                 // Save per-termbase case sensitivity to DB
-                var caseVal = _dgvTermbases.Rows[i].Cells["colCase"].Value as string ?? "Default";
-                int caseSetting = caseVal == "Sensitive" ? 1 : caseVal == "Insensitive" ? 0 : -1;
+                var caseVal = _dgvTermbases.Rows[i].Cells["colCase"].Value as string ?? "Insensitive";
+                int caseSetting = caseVal == "Sensitive" ? 1 : 0;
                 if (caseSetting != _termbases[i].CaseSensitive && !string.IsNullOrEmpty(dbPath) && File.Exists(dbPath))
                 {
                     try { TermbaseReader.SetTermbaseCaseSensitive(dbPath, _termbases[i].Id, caseSetting); }

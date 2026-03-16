@@ -8,8 +8,9 @@ using Supervertaler.Trados.Models;
 namespace Supervertaler.Trados.Controls
 {
     /// <summary>
-    /// WinForms UserControl for the Batch Translate tab.
-    /// Displays scope selector, provider info, progress, and translation log.
+    /// WinForms UserControl for the Batch Operations tab.
+    /// Supports two modes: Translate (batch AI translation) and Proofread (AI proofreading).
+    /// Displays mode toggle, scope selector, provider info, progress, and log.
     /// All layout is programmatic (no designer file).
     /// </summary>
     public class BatchTranslateControl : UserControl
@@ -17,11 +18,21 @@ namespace Supervertaler.Trados.Controls
         // Header
         private Label _lblHeader;
 
+        // Mode toggle
+        private Panel _modePanel;
+        private RadioButton _rbTranslate;
+        private RadioButton _rbProofread;
+        private BatchMode _currentMode = BatchMode.Translate;
+
         // Configuration
         private ComboBox _cmbScope;
+        private Label _lblScopeLabel;
         private ComboBox _cmbPrompt;
+        private Label _lblPromptLabel;
         private Label _lblProvider;
+        private Label _lblProviderLabel;
         private Label _lblSegmentCount;
+        private LinkLabel _lnkAiSettings;
 
         // Prompt list (aligned with ComboBox indices; index 0 = "None")
         private List<PromptTemplate> _promptList = new List<PromptTemplate>();
@@ -32,8 +43,10 @@ namespace Supervertaler.Trados.Controls
 
         // Action
         private Button _btnTranslate;
+        private CheckBox _chkAddComments;
 
         // Log
+        private Label _lblLog;
         private TextBox _txtLog;
 
         // State
@@ -41,6 +54,9 @@ namespace Supervertaler.Trados.Controls
 
         /// <summary>Fired when user clicks "Translate".</summary>
         public event EventHandler TranslateRequested;
+
+        /// <summary>Fired when user clicks "Proofread".</summary>
+        public event EventHandler ProofreadRequested;
 
         /// <summary>Fired when user clicks "Stop".</summary>
         public event EventHandler StopRequested;
@@ -50,6 +66,15 @@ namespace Supervertaler.Trados.Controls
 
         /// <summary>Fired when user changes the scope dropdown.</summary>
         public event EventHandler ScopeChanged;
+
+        /// <summary>Fired when user switches between Translate and Proofread mode.</summary>
+        public event EventHandler BatchModeChanged;
+
+        /// <summary>Gets the current batch mode.</summary>
+        public BatchMode CurrentMode => _currentMode;
+
+        /// <summary>Whether proofreading issues should also be added as Trados comments.</summary>
+        public bool AddAsComments => _chkAddComments?.Checked ?? false;
 
         public BatchTranslateControl()
         {
@@ -72,7 +97,7 @@ namespace Supervertaler.Trados.Controls
             // ─── Header ────────────────────────────────────────
             _lblHeader = new Label
             {
-                Text = "Batch Translate",
+                Text = "Batch Operations",
                 Font = headerFont,
                 ForeColor = Color.FromArgb(50, 50, 50),
                 Location = new Point(12, y),
@@ -81,8 +106,43 @@ namespace Supervertaler.Trados.Controls
             Controls.Add(_lblHeader);
             y += 26;
 
+            // ─── Mode Toggle ──────────────────────────────────
+            _modePanel = new Panel
+            {
+                Location = new Point(12, y),
+                Size = new Size(300, 24),
+                BackColor = Color.Transparent
+            };
+
+            _rbTranslate = new RadioButton
+            {
+                Text = "Translate",
+                Location = new Point(0, 2),
+                AutoSize = true,
+                Font = bodyFont,
+                ForeColor = labelColor,
+                Checked = true,
+                FlatStyle = FlatStyle.Flat
+            };
+            _rbTranslate.CheckedChanged += OnModeChanged;
+
+            _rbProofread = new RadioButton
+            {
+                Text = "Proofread",
+                Location = new Point(100, 2),
+                AutoSize = true,
+                Font = bodyFont,
+                ForeColor = labelColor,
+                FlatStyle = FlatStyle.Flat
+            };
+
+            _modePanel.Controls.Add(_rbTranslate);
+            _modePanel.Controls.Add(_rbProofread);
+            Controls.Add(_modePanel);
+            y += 30;
+
             // ─── Scope ─────────────────────────────────────────
-            var lblScope = new Label
+            _lblScopeLabel = new Label
             {
                 Text = "Scope:",
                 Location = new Point(12, y + 3),
@@ -97,18 +157,14 @@ namespace Supervertaler.Trados.Controls
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Font = bodyFont
             };
-            _cmbScope.Items.Add("Empty segments only");
-            _cmbScope.Items.Add("All segments");
-            _cmbScope.Items.Add("Filtered segments");
-            _cmbScope.Items.Add("Filtered (empty only)");
-            _cmbScope.SelectedIndex = 0;
+            PopulateTranslateScopes();
             _cmbScope.SelectedIndexChanged += (s, e) => ScopeChanged?.Invoke(this, EventArgs.Empty);
-            Controls.Add(lblScope);
+            Controls.Add(_lblScopeLabel);
             Controls.Add(_cmbScope);
             y += 28;
 
             // ─── Prompt ──────────────────────────────────────────
-            var lblPrompt = new Label
+            _lblPromptLabel = new Label
             {
                 Text = "Prompt:",
                 Location = new Point(12, y + 3),
@@ -125,12 +181,12 @@ namespace Supervertaler.Trados.Controls
             };
             _cmbPrompt.Items.Add("(None \u2014 default)");
             _cmbPrompt.SelectedIndex = 0;
-            Controls.Add(lblPrompt);
+            Controls.Add(_lblPromptLabel);
             Controls.Add(_cmbPrompt);
             y += 28;
 
             // ─── Provider ───────────────────────────────────────
-            var lblProviderLabel = new Label
+            _lblProviderLabel = new Label
             {
                 Text = "Provider:",
                 Location = new Point(12, y + 1),
@@ -146,12 +202,12 @@ namespace Supervertaler.Trados.Controls
                 Font = bodyFont,
                 ForeColor = Color.FromArgb(50, 50, 50)
             };
-            Controls.Add(lblProviderLabel);
+            Controls.Add(_lblProviderLabel);
             Controls.Add(_lblProvider);
             y += 22;
 
             // ─── AI Settings link ─────────────────────────────────
-            var lnkAiSettings = new LinkLabel
+            _lnkAiSettings = new LinkLabel
             {
                 Text = "AI Settings\u2026",
                 Location = new Point(100, y),
@@ -159,9 +215,9 @@ namespace Supervertaler.Trados.Controls
                 Font = bodyFont,
                 LinkColor = Color.FromArgb(0, 102, 204)
             };
-            lnkAiSettings.LinkClicked += (s, ev) =>
+            _lnkAiSettings.LinkClicked += (s, ev) =>
                 OpenAiSettingsRequested?.Invoke(this, EventArgs.Empty);
-            Controls.Add(lnkAiSettings);
+            Controls.Add(_lnkAiSettings);
             y += 20;
 
             // ─── Segment count ──────────────────────────────────
@@ -205,17 +261,31 @@ namespace Supervertaler.Trados.Controls
             {
                 Text = "\u25B6  Translate",
                 Location = new Point(12, y),
-                Width = 120,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowOnly,
+                MinimumSize = new Size(120, 28),
                 Height = 28,
                 FlatStyle = FlatStyle.System,
                 Font = bodyFont
             };
-            _btnTranslate.Click += OnTranslateClick;
+            _btnTranslate.Click += OnActionClick;
             Controls.Add(_btnTranslate);
+
+            _chkAddComments = new CheckBox
+            {
+                Text = "Also add issues as Trados comments",
+                Location = new Point(140, y + 4),
+                AutoSize = true,
+                Font = bodyFont,
+                ForeColor = Color.FromArgb(80, 80, 80),
+                Checked = false,
+                Visible = false // only shown in Proofread mode
+            };
+            Controls.Add(_chkAddComments);
             y += 38;
 
             // ─── Log ────────────────────────────────────────────
-            var lblLog = new Label
+            _lblLog = new Label
             {
                 Text = "Log:",
                 Location = new Point(12, y),
@@ -223,7 +293,7 @@ namespace Supervertaler.Trados.Controls
                 Font = bodyFont,
                 ForeColor = labelColor
             };
-            Controls.Add(lblLog);
+            Controls.Add(_lblLog);
             y += 18;
 
             _txtLog = new TextBox
@@ -259,14 +329,84 @@ namespace Supervertaler.Trados.Controls
             _lblProgress.Location = new Point(_progressBar.Right + 8, _lblProgress.Top);
         }
 
-        // ─── Event Handlers ──────────────────────────────────────
+        // ─── Mode Toggle ──────────────────────────────────────────
 
-        private void OnTranslateClick(object sender, EventArgs e)
+        private void OnModeChanged(object sender, EventArgs e)
+        {
+            if (!_rbTranslate.Checked && !_rbProofread.Checked) return;
+
+            _currentMode = _rbTranslate.Checked ? BatchMode.Translate : BatchMode.Proofread;
+
+            // Update scope dropdown items
+            var prevScope = _cmbScope.SelectedIndex;
+            if (_currentMode == BatchMode.Translate)
+                PopulateTranslateScopes();
+            else
+                PopulateProofreadScopes();
+
+            // Update action button text
+            UpdateActionButtonText();
+
+            // Show/hide comments checkbox (only in Proofread mode)
+            _chkAddComments.Visible = _currentMode == BatchMode.Proofread;
+
+            // Notify listeners to refresh prompt dropdown
+            BatchModeChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void PopulateTranslateScopes()
+        {
+            _cmbScope.Items.Clear();
+            _cmbScope.Items.Add("Empty segments only");
+            _cmbScope.Items.Add("All segments");
+            _cmbScope.Items.Add("Filtered segments");
+            _cmbScope.Items.Add("Filtered (empty only)");
+            _cmbScope.SelectedIndex = 0;
+        }
+
+        private void PopulateProofreadScopes()
+        {
+            _cmbScope.Items.Clear();
+            _cmbScope.Items.Add("Confirmed only");
+            _cmbScope.Items.Add("Translated + Confirmed");
+            _cmbScope.Items.Add("All segments");
+            _cmbScope.Items.Add("Filtered segments");
+            _cmbScope.Items.Add("Filtered (confirmed only)");
+            _cmbScope.SelectedIndex = 0;
+        }
+
+        private void UpdateActionButtonText()
         {
             if (_isRunning)
-                StopRequested?.Invoke(this, EventArgs.Empty);
+            {
+                _btnTranslate.Text = _currentMode == BatchMode.Translate
+                    ? "\u25A0  Stop translating"
+                    : "\u25A0  Stop proofreading";
+            }
             else
+            {
+                _btnTranslate.Text = _currentMode == BatchMode.Translate
+                    ? "\u25B6  Translate"
+                    : "\u25B6  Proofread";
+            }
+        }
+
+        // ─── Event Handlers ──────────────────────────────────────
+
+        private void OnActionClick(object sender, EventArgs e)
+        {
+            if (_isRunning)
+            {
+                StopRequested?.Invoke(this, EventArgs.Empty);
+            }
+            else if (_currentMode == BatchMode.Proofread)
+            {
+                ProofreadRequested?.Invoke(this, EventArgs.Empty);
+            }
+            else
+            {
                 TranslateRequested?.Invoke(this, EventArgs.Empty);
+            }
         }
 
         // ─── Public Methods (called by ViewPart) ─────────────────
@@ -294,8 +434,9 @@ namespace Supervertaler.Trados.Controls
 
         /// <summary>
         /// Populates the prompt dropdown with available prompts and selects the specified one.
+        /// When categoryFilter is provided, only prompts whose Domain matches are shown.
         /// </summary>
-        public void SetPrompts(List<PromptTemplate> prompts, string selectedRelativePath)
+        public void SetPrompts(List<PromptTemplate> prompts, string selectedRelativePath, string categoryFilter = null)
         {
             _cmbPrompt.Items.Clear();
             _cmbPrompt.Items.Add("(None \u2014 default)");
@@ -306,11 +447,13 @@ namespace Supervertaler.Trados.Controls
             {
                 foreach (var p in prompts)
                 {
+                    // Filter by category if specified
+                    if (!string.IsNullOrEmpty(categoryFilter) &&
+                        !string.Equals(p.Domain, categoryFilter, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
                     _promptList.Add(p);
-                    var display = string.IsNullOrEmpty(p.Domain)
-                        ? p.Name
-                        : p.Domain + " / " + p.Name;
-                    _cmbPrompt.Items.Add(display);
+                    _cmbPrompt.Items.Add(p.Name);
 
                     if (!string.IsNullOrEmpty(selectedRelativePath) &&
                         string.Equals(p.RelativePath, selectedRelativePath, StringComparison.OrdinalIgnoreCase))
@@ -344,7 +487,7 @@ namespace Supervertaler.Trados.Controls
         }
 
         /// <summary>
-        /// Returns the selected batch scope.
+        /// Returns the selected batch scope (for Translate mode).
         /// </summary>
         public BatchScope GetSelectedScope()
         {
@@ -354,6 +497,21 @@ namespace Supervertaler.Trados.Controls
                 case 2: return BatchScope.Filtered;
                 case 3: return BatchScope.FilteredEmptyOnly;
                 default: return BatchScope.EmptyOnly;
+            }
+        }
+
+        /// <summary>
+        /// Returns the selected proofread scope (for Proofread mode).
+        /// </summary>
+        public ProofreadScope GetSelectedProofreadScope()
+        {
+            switch (_cmbScope.SelectedIndex)
+            {
+                case 1: return ProofreadScope.TranslatedAndConfirmed;
+                case 2: return ProofreadScope.AllSegments;
+                case 3: return ProofreadScope.Filtered;
+                case 4: return ProofreadScope.FilteredConfirmedOnly;
+                default: return ProofreadScope.ConfirmedOnly;
             }
         }
 
@@ -389,14 +547,47 @@ namespace Supervertaler.Trados.Controls
         }
 
         /// <summary>
+        /// Reports proofreading progress.
+        /// </summary>
+        public void ReportProofreadProgress(int current, int total)
+        {
+            if (total > 0)
+            {
+                _progressBar.Maximum = total;
+                _progressBar.Value = Math.Min(current, total);
+                _lblProgress.Text = $"{current}/{total}";
+            }
+
+            AppendLog($"\u2713 Checking segment {current}/{total}\u2026", false);
+        }
+
+        /// <summary>
+        /// Reports proofreading completion with summary.
+        /// </summary>
+        public void ReportProofreadCompleted(int checkedCount, int issues, int ok,
+            TimeSpan elapsed, bool cancelled)
+        {
+            SetRunning(false);
+
+            var status = cancelled ? "Cancelled" : "Complete";
+            var issueMarker = issues > 0 ? "\u26A0" : "\u2713";
+            AppendLog(
+                $"\u2014 {status}: {issueMarker} {issues} issue{(issues != 1 ? "s" : "")} found, " +
+                $"\u2713 {ok} OK ({elapsed.TotalSeconds:F1}s)",
+                false);
+        }
+
+        /// <summary>
         /// Toggles the UI between running and idle states.
         /// </summary>
         public void SetRunning(bool running)
         {
             _isRunning = running;
-            _btnTranslate.Text = running ? "\u25A0  Stop" : "\u25B6  Translate";
+            UpdateActionButtonText();
             _cmbScope.Enabled = !running;
             _cmbPrompt.Enabled = !running;
+            _rbTranslate.Enabled = !running;
+            _rbProofread.Enabled = !running;
 
             if (!running)
             {

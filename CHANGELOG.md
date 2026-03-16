@@ -1,9 +1,28 @@
 # Changelog
 
+## [4.8.0] — 2026-03-16
+
+### Added
+- **AI Proofreader** — new batch proofreading mode in the Batch Operations tab; select "Proofread" to check translated segments for errors using AI; results appear in the new Reports tab as clickable issue cards with segment number, issue description, and suggestion; clicking a card navigates to the corresponding segment in the editor
+- **Reports tab** — new tab in the Supervertaler Assistant panel displaying proofreading results; shows issue count, run duration, and a scrollable list of issue cards; Clear button to reset results
+- **Proofread scopes** — five scope options for proofreading: Confirmed only, Translated + Confirmed, All segments, Filtered segments, and Filtered (confirmed only)
+- **Segment navigation from reports** — clicking an issue card in the Reports tab navigates directly to the relevant segment in the Trados editor, using the segment's ParagraphUnitId and SegmentId for accurate navigation in multi-file projects
+- **Per-file segment numbering** — issue cards in the Reports tab show the actual per-file segment number (matching the Trados editor grid) rather than a cross-file batch index
+- **"Also add issues as Trados comments" checkbox** — in the Batch Operations tab (Proofread mode), option to insert proofreading issues as Trados segment comments alongside the Reports tab display
+- **Prompt category filtering** — the prompt dropdown in Batch Operations now filters by mode: only "Translate" prompts appear in Translate mode, only "Proofread" prompts in Proofread mode
+
+### Changed
+- **Prompt file extension** — built-in and user prompts now use `.svprompt` file extension (previously `.md`), matching the Supervertaler desktop application; existing `.md` prompt files are still loaded for backward compatibility
+- **Prompt YAML key renamed** — the `domain` key in prompt YAML frontmatter is now `category`; the parser accepts both for backward compatibility
+- **Prompt categories renamed** — "Domain Expertise" and "Style Guides" categories are now "Translate"; "Proofreading" is now "Proofread"
+- **Case sensitivity per-termbase dropdown simplified** — removed "Default" option; per-termbase case sensitivity is now simply "Insensitive" (default) or "Sensitive"
+
+---
+
 ## [4.7.0] — 2026-03-16
 
 ### Added
-- **Case-sensitive matching** — new global setting "Case-sensitive matching" (default: off) plus per-termbase override in the settings grid; when enabled, terms only match if the source text has the same letter case as the indexed term; per-termbase setting can be Default (use global), Sensitive, or Insensitive
+- **Case-sensitive matching** — new global setting "Case-sensitive matching" (default: off) plus per-termbase override in the settings grid; when enabled, terms only match if the source text has the same letter case as the indexed term; per-termbase setting can be Sensitive or Insensitive
 - **Mouse wheel scrolling in AI Assistant chat** — the chat message panel now supports mouse wheel scrolling; previously only the scrollbar worked
 
 ### Changed

@@ -112,7 +112,7 @@ namespace Supervertaler.Trados.Core
                     ? PromptsDir
                     : Path.Combine(PromptsDir, SanitizeFileName(prompt.Domain));
                 Directory.CreateDirectory(folder);
-                filePath = Path.Combine(folder, SanitizeFileName(prompt.Name) + ".md");
+                filePath = Path.Combine(folder, SanitizeFileName(prompt.Name) + ".svprompt");
             }
 
             var sb = new StringBuilder();
@@ -121,7 +121,7 @@ namespace Supervertaler.Trados.Core
             if (!string.IsNullOrEmpty(prompt.Description))
                 sb.AppendLine("description: \"" + EscapeYamlString(prompt.Description) + "\"");
             if (!string.IsNullOrEmpty(prompt.Domain))
-                sb.AppendLine("domain: \"" + EscapeYamlString(prompt.Domain) + "\"");
+                sb.AppendLine("category: \"" + EscapeYamlString(prompt.Domain) + "\"");
             if (prompt.IsBuiltIn)
                 sb.AppendLine("built_in: true");
             sb.AppendLine("---");
@@ -166,7 +166,7 @@ namespace Supervertaler.Trados.Core
                     : Path.Combine(PromptsDir, builtin.Domain);
                 Directory.CreateDirectory(folder);
 
-                var filePath = Path.Combine(folder, SanitizeFileName(builtin.Name) + ".md");
+                var filePath = Path.Combine(folder, SanitizeFileName(builtin.Name) + ".svprompt");
                 if (!File.Exists(filePath))
                 {
                     var sb = new StringBuilder();
@@ -201,7 +201,7 @@ namespace Supervertaler.Trados.Core
                     : Path.Combine(PromptsDir, builtin.Domain);
                 Directory.CreateDirectory(folder);
 
-                var filePath = Path.Combine(folder, SanitizeFileName(builtin.Name) + ".md");
+                var filePath = Path.Combine(folder, SanitizeFileName(builtin.Name) + ".svprompt");
 
                 var sb = new StringBuilder();
                 sb.AppendLine("---");
@@ -227,7 +227,10 @@ namespace Supervertaler.Trados.Core
         {
             try
             {
-                foreach (var file in Directory.GetFiles(dir, "*.md", SearchOption.AllDirectories))
+                var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                // Scan .svprompt files first (preferred format)
+                foreach (var file in Directory.GetFiles(dir, "*.svprompt", SearchOption.AllDirectories))
                 {
                     try
                     {
@@ -236,6 +239,7 @@ namespace Supervertaler.Trados.Core
                         {
                             prompt.IsReadOnly = isReadOnly;
                             _cache.Add(prompt);
+                            seenNames.Add(prompt.Name);
                         }
                     }
                     catch
@@ -244,13 +248,13 @@ namespace Supervertaler.Trados.Core
                     }
                 }
 
-                // Also scan .svprompt files (Supervertaler format)
-                foreach (var file in Directory.GetFiles(dir, "*.svprompt", SearchOption.AllDirectories))
+                // Also scan .md files (legacy format) — skip if .svprompt version exists
+                foreach (var file in Directory.GetFiles(dir, "*.md", SearchOption.AllDirectories))
                 {
                     try
                     {
                         var prompt = ParsePromptFile(file, rootDir);
-                        if (prompt != null)
+                        if (prompt != null && !seenNames.Contains(prompt.Name))
                         {
                             prompt.IsReadOnly = isReadOnly;
                             _cache.Add(prompt);
@@ -358,7 +362,8 @@ namespace Supervertaler.Trados.Core
                     case "description":
                         prompt.Description = value;
                         break;
-                    case "domain":
+                    case "category":
+                    case "domain": // backward compatibility
                         prompt.Domain = value;
                         break;
                     case "built_in":
@@ -462,7 +467,7 @@ namespace Supervertaler.Trados.Core
                 {
                     Name = "Medical Translation Specialist",
                     Description = "Specialized for medical and healthcare translation",
-                    Domain = "Domain Expertise",
+                    Domain = "Translate",
                     IsBuiltIn = true,
                     Content = @"You are a medical translation specialist with extensive knowledge of medical terminology, anatomy, pharmacology, and healthcare procedures. Your task is to translate medical content from {source_lang} to {target_lang} with the highest level of accuracy and precision.
 
@@ -486,7 +491,7 @@ Special attention to:
                 {
                     Name = "Legal Translation Specialist",
                     Description = "Specialized for legal and juridical translation",
-                    Domain = "Domain Expertise",
+                    Domain = "Translate",
                     IsBuiltIn = true,
                     Content = @"You are a legal translation specialist with deep expertise in comparative law, legal systems, and juridical terminology. Your task is to translate legal content from {source_lang} to {target_lang} with absolute precision and legal accuracy.
 
@@ -512,7 +517,7 @@ Special attention to:
                 {
                     Name = "Patent Translation Specialist",
                     Description = "Specialized for patent and intellectual property translation",
-                    Domain = "Domain Expertise",
+                    Domain = "Translate",
                     IsBuiltIn = true,
                     Content = @"You are an expert {source_lang} to {target_lang} patent translator with deep expertise in intellectual property, technical terminology, and patent law requirements.
 
@@ -535,7 +540,7 @@ Special attention to:
                 {
                     Name = "Financial Translation Specialist",
                     Description = "Specialized for financial and banking translation",
-                    Domain = "Domain Expertise",
+                    Domain = "Translate",
                     IsBuiltIn = true,
                     Content = @"You are a financial translation specialist with expertise in banking, investment, financial markets, and regulatory compliance. Your task is to translate financial content from {source_lang} to {target_lang} with precision and market-appropriate terminology.
 
@@ -562,7 +567,7 @@ Special attention to:
                 {
                     Name = "Technical Translation Specialist",
                     Description = "Specialized for engineering and technical documentation",
-                    Domain = "Domain Expertise",
+                    Domain = "Translate",
                     IsBuiltIn = true,
                     Content = @"You are a technical translation specialist with extensive knowledge of engineering, manufacturing, and industrial processes. Your task is to translate technical content from {source_lang} to {target_lang} with precision and clarity.
 
@@ -586,7 +591,7 @@ Special attention to:
                 {
                     Name = "Marketing & Creative Specialist",
                     Description = "Specialized for marketing copy and creative content",
-                    Domain = "Domain Expertise",
+                    Domain = "Translate",
                     IsBuiltIn = true,
                     Content = @"You are a marketing and creative translation specialist (transcreator) with expertise in adapting persuasive content across cultures. Your task is to translate marketing content from {source_lang} to {target_lang} while preserving its persuasive impact and cultural relevance.
 
@@ -610,7 +615,7 @@ Special attention to:
                 {
                     Name = "IT & Software Localization Specialist",
                     Description = "Specialized for software UI and IT documentation",
-                    Domain = "Domain Expertise",
+                    Domain = "Translate",
                     IsBuiltIn = true,
                     Content = @"You are an IT and software localization specialist with expertise in translating user interfaces, technical documentation, and software-related content. Your task is to translate IT content from {source_lang} to {target_lang} with technical accuracy and user-friendly language.
 
@@ -636,7 +641,7 @@ Special attention to:
                 {
                     Name = "Dutch Style Guide",
                     Description = "Number formatting and style conventions for Dutch",
-                    Domain = "Style Guides",
+                    Domain = "Translate",
                     IsBuiltIn = true,
                     Content = @"# Dutch Style Guide
 
@@ -668,7 +673,7 @@ Special attention to:
                 {
                     Name = "English Style Guide",
                     Description = "Number formatting and style conventions for English",
-                    Domain = "Style Guides",
+                    Domain = "Translate",
                     IsBuiltIn = true,
                     Content = @"# English Style Guide
 
@@ -697,7 +702,7 @@ Special attention to:
                 {
                     Name = "French Style Guide",
                     Description = "Number formatting and style conventions for French",
-                    Domain = "Style Guides",
+                    Domain = "Translate",
                     IsBuiltIn = true,
                     Content = @"# French Style Guide
 
@@ -723,7 +728,7 @@ Special attention to:
                 {
                     Name = "German Style Guide",
                     Description = "Number formatting and style conventions for German",
-                    Domain = "Style Guides",
+                    Domain = "Translate",
                     IsBuiltIn = true,
                     Content = @"# German Style Guide
 
@@ -749,7 +754,7 @@ Special attention to:
                 {
                     Name = "Spanish Style Guide",
                     Description = "Number formatting and style conventions for Spanish",
-                    Domain = "Style Guides",
+                    Domain = "Translate",
                     IsBuiltIn = true,
                     Content = @"# Spanish Style Guide
 
@@ -777,7 +782,7 @@ Special attention to:
                 {
                     Name = "Professional Tone & Style",
                     Description = "Maintain formal, business-appropriate language",
-                    Domain = "Project Prompts",
+                    Domain = "Translate",
                     IsBuiltIn = true,
                     Content = @"IMPORTANT: Maintain a professional, formal tone throughout the translation. Use business-appropriate language and avoid colloquialisms or casual expressions.
 
@@ -792,7 +797,7 @@ Guidelines:
                 {
                     Name = "Preserve Formatting & Layout",
                     Description = "Strict formatting preservation for layout-sensitive content",
-                    Domain = "Project Prompts",
+                    Domain = "Translate",
                     IsBuiltIn = true,
                     Content = @"CRITICAL FORMATTING REQUIREMENT:
 Preserve ALL formatting elements exactly as they appear in the source:
@@ -803,6 +808,81 @@ Preserve ALL formatting elements exactly as they appear in the source:
 - Whitespace patterns and alignment
 
 Translate only the text content while keeping ALL formatting identical to the source."
+                },
+
+                // ─── Proofreading ─────────────────────────────────────────
+                new PromptTemplate
+                {
+                    Name = "Default Proofreading Prompt",
+                    Description = "Reviews translations for accuracy, completeness, terminology, grammar, and style issues",
+                    Domain = "Proofread",
+                    IsBuiltIn = true,
+                    Content = @"You are a professional translation proofreader. Your task is to review {{SOURCE_LANGUAGE}} to {{TARGET_LANGUAGE}} translation pairs and identify issues. You must check EVERY segment provided — do not skip any.
+
+For each segment, check the following:
+
+## 1. Accuracy
+- Does the translation faithfully convey the meaning of the source?
+- Are there any mistranslations, shifts in meaning, or misinterpretations?
+- Are ambiguous source phrases resolved appropriately for the target language?
+
+## 2. Completeness
+- Is any source content omitted in the translation?
+- Is any content added that is not present in the source?
+- Are all numbers, dates, and references carried over correctly?
+
+## 3. Terminology Consistency
+- Are key terms translated consistently across segments?
+- Are domain-specific terms translated correctly?
+- Are proper nouns, brand names, and product names handled appropriately?
+
+## 4. Grammar & Style
+- Is the translation grammatically correct in {{TARGET_LANGUAGE}}?
+- Is the style appropriate for the text type and register?
+- Is the sentence structure natural and fluent in the target language?
+
+## 5. Number & Unit Formatting
+- Are numbers formatted according to {{TARGET_LANGUAGE}} conventions (decimal separators, thousand separators)?
+- Are units of measurement correct and properly formatted?
+- Are currency symbols and codes appropriate for the target locale?
+
+## Language-Specific Checks
+
+### Dutch
+- Compound words: verify correct spelling (e.g., 'ziekenhuisopname' not 'ziekenhuis opname')
+- dt-errors: check verb conjugation (word/wordt, vind/vindt, etc.)
+- de/het articles: verify correct article usage with nouns
+- Spelling: follow current Woordenlijst Nederlandse Taal (het Groene Boekje)
+
+### German
+- Compound nouns: verify correct formation (Zusammenschreibung)
+- Capitalization: all nouns must be capitalized
+- Case system: check correct use of Nominativ, Akkusativ, Dativ, Genitiv
+- Verb position: verify correct verb placement in main and subordinate clauses
+
+### French
+- Accents: verify all accents are correct (é, è, ê, ë, à, ç, etc.)
+- Gender/number agreement: check adjective-noun and subject-verb agreement
+- Punctuation spacing: non-breaking space before ; : ! ? and inside « »
+- Elision and liaison rules
+
+## Output Format
+
+You MUST use this exact format for every segment. Check ALL segments — do not skip any.
+
+For segments with no issues:
+[SEGMENT XXXX] OK
+
+For segments with issues:
+[SEGMENT XXXX] ISSUE
+Issue: <brief description of the problem>
+Suggestion: <describe what should be changed — do NOT provide a full corrected translation>
+
+IMPORTANT RULES:
+- NEVER provide corrected full translations. Only describe the issue and suggest what specifically should be fixed.
+- Use the segment number as it appears in the input (e.g., [SEGMENT 0042]).
+- Report each distinct issue on its own ISSUE block if a segment has multiple problems.
+- You MUST review ALL segments. Do not stop early or summarize remaining segments as 'OK'."
                 }
             };
         }

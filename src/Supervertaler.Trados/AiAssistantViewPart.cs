@@ -49,6 +49,11 @@ namespace Supervertaler.Trados
         private BatchTranslator _batchTranslator;
         private CancellationTokenSource _batchCts;
 
+        // Proofreading state
+        private BatchProofreader _batchProofreader;
+        private CancellationTokenSource _proofreadCts;
+        private ProofreadingReport _currentReport;
+
         // Prompt library
         private PromptLibrary _promptLibrary;
 
@@ -110,9 +115,16 @@ namespace Supervertaler.Trados
             // Wire batch translate control events
             var batchControl = _control.Value.BatchTranslateControl;
             batchControl.TranslateRequested += OnBatchTranslateRequested;
+            batchControl.ProofreadRequested += OnProofreadRequested;
             batchControl.StopRequested += OnBatchStopRequested;
             batchControl.ScopeChanged += OnBatchScopeChanged;
             batchControl.OpenAiSettingsRequested += OnSettingsRequested;
+            batchControl.BatchModeChanged += (s, e) => PopulateBatchPromptDropdown();
+
+            // Wire reports control events
+            var reportsControl = _control.Value.ReportsControl;
+            reportsControl.NavigateToSegmentRequested += OnNavigateToSegment;
+            reportsControl.ClearResultsRequested += OnClearReports;
 
             // Initial context update
             UpdateContextDisplay();
@@ -438,7 +450,9 @@ namespace Supervertaler.Trados
             {
                 var prompts = _promptLibrary?.GetAllPrompts();
                 var selectedPath = _settings?.AiSettings?.SelectedPromptPath ?? "";
-                _control.Value.BatchTranslateControl.SetPrompts(prompts, selectedPath);
+                var mode = _control.Value.BatchTranslateControl.CurrentMode;
+                var categoryFilter = mode == BatchMode.Proofread ? "Proofread" : "Translate";
+                _control.Value.BatchTranslateControl.SetPrompts(prompts, selectedPath, categoryFilter);
             });
         }
 
@@ -591,6 +605,7 @@ namespace Supervertaler.Trados
         private void OnBatchStopRequested(object sender, EventArgs e)
         {
             _batchCts?.Cancel();
+            _proofreadCts?.Cancel();
             SafeInvoke(() => _control.Value.BatchTranslateControl.AppendLog("Cancellation requested..."));
         }
 
@@ -705,6 +720,354 @@ namespace Supervertaler.Trados
 
             _batchCts?.Dispose();
             _batchCts = null;
+        }
+
+        // ─── Proofreading ─────────────────────────────────────────
+
+        private void OnProofreadRequested(object sender, EventArgs e)
+        {
+            SafeInvoke(() =>
+            {
+                var batchControl = _control.Value.BatchTranslateControl;
+
+                if (_activeDocument == null)
+                {
+                    batchControl.AppendLog("No document open.", true);
+                    return;
+                }
+
+                var aiSettings = _settings.AiSettings;
+                if (aiSettings == null)
+                {
+                    batchControl.AppendLog("AI settings not configured. Open Settings to configure a provider.", true);
+                    return;
+                }
+
+                // Resolve API key (same pattern as batch translate)
+                var provider = aiSettings.SelectedProvider ?? LlmModels.ProviderOpenAi;
+                string apiKey;
+                string baseUrl = null;
+                string model = aiSettings.GetSelectedModel();
+
+                if (provider == LlmModels.ProviderOllama)
+                {
+                    apiKey = "ollama";
+                    baseUrl = aiSettings.OllamaEndpoint ?? "http://localhost:11434";
+                }
+                else if (provider == LlmModels.ProviderCustomOpenAi)
+                {
+                    var profile = aiSettings.GetActiveCustomProfile();
+                    if (profile == null)
+                    {
+                        batchControl.AppendLog("No custom OpenAI profile configured.", true);
+                        return;
+                    }
+                    apiKey = profile.ApiKey;
+                    baseUrl = profile.Endpoint;
+                    model = profile.Model;
+                }
+                else
+                {
+                    apiKey = LlmClient.ResolveApiKey(provider, aiSettings.ApiKeys);
+                }
+
+                if (string.IsNullOrEmpty(apiKey))
+                {
+                    batchControl.AppendLog(
+                        $"No API key configured for {provider}. Open Settings \u2192 AI Settings to add one.", true);
+                    return;
+                }
+
+                // Get language pair
+                var sourceLang = GetDocumentSourceLanguage();
+                var targetLang = GetDocumentTargetLanguage();
+
+                if (string.IsNullOrEmpty(sourceLang) || string.IsNullOrEmpty(targetLang))
+                {
+                    batchControl.AppendLog("Cannot determine source/target language from document.", true);
+                    return;
+                }
+
+                // Collect segments based on proofread scope
+                var proofScope = batchControl.GetSelectedProofreadScope();
+                var segments = CollectProofreadSegments(proofScope);
+
+                if (segments.Count == 0)
+                {
+                    batchControl.AppendLog("No segments to proofread.", true);
+                    return;
+                }
+
+                // Get termbase terms for prompt injection (filtered by AI-disabled list)
+                var allTerms = TermLensEditorViewPart.GetCurrentTermbaseTerms();
+                var batchDisabledIds = _settings?.AiSettings?.DisabledAiTermbaseIds ?? new List<long>();
+                var termbaseTerms = batchDisabledIds.Count > 0
+                    ? allTerms.Where(t => !batchDisabledIds.Contains(t.TermbaseId)).ToList()
+                    : allTerms;
+
+                // Resolve custom prompt from library selection
+                var selectedPromptPath = batchControl.GetSelectedPromptPath();
+                aiSettings.SelectedPromptPath = selectedPromptPath;
+                _settings.Save();
+
+                var customPromptContent = ResolveCustomPromptContent(sourceLang, targetLang);
+
+                int batchSize = aiSettings.BatchSize > 0 ? aiSettings.BatchSize : 20;
+
+                // Initialize the report
+                _currentReport = new ProofreadingReport();
+
+                // Start proofreading
+                batchControl.SetRunning(true);
+                batchControl.AppendLog(
+                    $"Starting proofreading: {segments.Count} segments, provider={provider}, model={model}, " +
+                    $"batch size={batchSize}");
+
+                _proofreadCts = new CancellationTokenSource();
+                _batchProofreader = new BatchProofreader();
+
+                _batchProofreader.Progress += OnBatchProgress;
+                _batchProofreader.SegmentProofread += OnProofreadSegmentResult;
+                _batchProofreader.Completed += OnProofreadCompleted;
+
+                var ct = _proofreadCts.Token;
+
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _batchProofreader.ProofreadAsync(
+                            segments, sourceLang, targetLang,
+                            aiSettings, termbaseTerms, batchSize, ct,
+                            customPromptContent);
+                    }
+                    catch (Exception ex)
+                    {
+                        SafeInvoke(() =>
+                        {
+                            batchControl.AppendLog($"Unexpected error: {ex.Message}", true);
+                            batchControl.SetRunning(false);
+                        });
+                    }
+                });
+            });
+        }
+
+        private void OnProofreadSegmentResult(object sender, ProofreadSegmentEventArgs e)
+        {
+            SafeInvoke(() =>
+            {
+                if (_currentReport != null && e.Issue != null)
+                {
+                    _currentReport.Issues.Add(e.Issue);
+                }
+
+                var batchControl = _control.Value.BatchTranslateControl;
+                if (e.Issue != null)
+                {
+                    if (e.Issue.IsOk)
+                    {
+                        batchControl.AppendLog($"\u2713 Seg {e.Issue.SegmentNumber}: OK");
+                    }
+                    else
+                    {
+                        var desc = Truncate(e.Issue.IssueDescription, 80);
+                        batchControl.AppendLog($"\u26A0 Seg {e.Issue.SegmentNumber}: {desc}");
+                    }
+                }
+            });
+        }
+
+        private void OnProofreadCompleted(object sender, ProofreadCompletedEventArgs e)
+        {
+            SafeInvoke(() =>
+            {
+                if (_currentReport != null)
+                {
+                    _currentReport.Duration = e.Elapsed;
+                    _currentReport.TotalSegmentsChecked = e.TotalChecked;
+
+                    _control.Value.ReportsControl.SetResults(_currentReport);
+                    _control.Value.UpdateReportsBadge(_currentReport.IssueCount);
+
+                    if (_currentReport.IssueCount > 0)
+                    {
+                        _control.Value.SwitchToReportsTab();
+                    }
+                }
+
+                _control.Value.BatchTranslateControl.ReportProofreadCompleted(
+                    e.TotalChecked, e.IssueCount, e.OkCount,
+                    e.Elapsed, e.Cancelled);
+            });
+
+            // Clean up
+            if (_batchProofreader != null)
+            {
+                _batchProofreader.Progress -= OnBatchProgress;
+                _batchProofreader.SegmentProofread -= OnProofreadSegmentResult;
+                _batchProofreader.Completed -= OnProofreadCompleted;
+                _batchProofreader = null;
+            }
+
+            _proofreadCts?.Dispose();
+            _proofreadCts = null;
+        }
+
+        private void OnNavigateToSegment(object sender, NavigateToSegmentEventArgs e)
+        {
+            SafeInvoke(() =>
+            {
+                if (_activeDocument == null) return;
+                if (string.IsNullOrEmpty(e.ParagraphUnitId) || string.IsNullOrEmpty(e.SegmentId))
+                    return;
+
+                try
+                {
+                    _activeDocument.SetActiveSegmentPair(e.ParagraphUnitId, e.SegmentId, true);
+                }
+                catch (Exception)
+                {
+                    // Segment may no longer be accessible
+                }
+            });
+        }
+
+        private void OnClearReports(object sender, EventArgs e)
+        {
+            _currentReport = null;
+            _control.Value.ReportsControl.ClearResults();
+            _control.Value.UpdateReportsBadge(0);
+        }
+
+        /// <summary>
+        /// Collects segments for proofreading based on the selected scope.
+        /// Unlike batch translate, proofreading only targets segments that have
+        /// a translation (non-empty target), filtering by confirmation level.
+        /// </summary>
+        private List<BatchSegment> CollectProofreadSegments(ProofreadScope scope)
+        {
+            var segments = new List<BatchSegment>();
+            if (_activeDocument == null) return segments;
+
+            try
+            {
+                // Use filtered or full segment pairs depending on scope
+                var useFiltered = scope == ProofreadScope.Filtered
+                    || scope == ProofreadScope.FilteredConfirmedOnly;
+                var pairs = useFiltered
+                    ? _activeDocument.FilteredSegmentPairs
+                    : _activeDocument.SegmentPairs;
+
+                // Build a map of (ParagraphUnitId + SegmentId) → per-file segment number.
+                // In multi-file projects, segment numbering restarts per file.
+                // We detect file boundaries by tracking the IDocumentProperties file association.
+                var segmentNumberMap = new Dictionary<string, int>();
+                int fileSegIdx = 0;
+                Sdl.FileTypeSupport.Framework.BilingualApi.IFileProperties lastFile = null;
+                foreach (var allPair in _activeDocument.SegmentPairs)
+                {
+                    try
+                    {
+                        var parentPu = _activeDocument.GetParentParagraphUnit(allPair);
+                        var sid = allPair.Properties?.Id.Id;
+
+                        // Simple heuristic: if segment ID parses to an int that is <= previous,
+                        // we've crossed a file boundary
+                        int segIdNum;
+                        if (int.TryParse(sid, out segIdNum) && segIdNum <= fileSegIdx && fileSegIdx > 0)
+                            fileSegIdx = 0;
+
+                        fileSegIdx++;
+
+                        if (!string.IsNullOrEmpty(sid))
+                        {
+                            var puId = parentPu?.Properties?.ParagraphUnitId.Id ?? "";
+                            segmentNumberMap[puId + "|" + sid] = fileSegIdx;
+                        }
+                    }
+                    catch
+                    {
+                        fileSegIdx++;
+                    }
+                }
+
+                int index = 0;
+                foreach (var pair in pairs)
+                {
+                    var targetText = pair.Target?.ToString() ?? "";
+
+                    // Skip segments with empty target — nothing to proofread
+                    if (string.IsNullOrWhiteSpace(targetText))
+                    {
+                        index++;
+                        continue;
+                    }
+
+                    var sourceText = pair.Source?.ToString() ?? "";
+                    if (string.IsNullOrWhiteSpace(sourceText))
+                    {
+                        index++;
+                        continue;
+                    }
+
+                    // Filter by confirmation level based on scope
+                    bool include = false;
+                    var confirmLevel = pair.Properties?.ConfirmationLevel
+                        ?? Sdl.Core.Globalization.ConfirmationLevel.Unspecified;
+
+                    switch (scope)
+                    {
+                        case ProofreadScope.ConfirmedOnly:
+                        case ProofreadScope.FilteredConfirmedOnly:
+                            include = confirmLevel >= Sdl.Core.Globalization.ConfirmationLevel.ApprovedTranslation;
+                            break;
+                        case ProofreadScope.TranslatedAndConfirmed:
+                            include = confirmLevel >= Sdl.Core.Globalization.ConfirmationLevel.Translated;
+                            break;
+                        case ProofreadScope.AllSegments:
+                        case ProofreadScope.Filtered:
+                            include = true;
+                            break;
+                    }
+
+                    if (include)
+                    {
+                        // Get paragraph unit ID and segment ID for navigation
+                        string paragraphUnitId = null;
+                        string segmentId = null;
+                        try
+                        {
+                            var parentPU = _activeDocument.GetParentParagraphUnit(pair);
+                            paragraphUnitId = parentPU.Properties.ParagraphUnitId.Id;
+                            segmentId = pair.Properties.Id.Id;
+                        }
+                        catch { }
+
+                        // Use actual per-file segment number, not filtered/cross-file index
+                        int actualSegNum = index + 1;
+                        var mapKey = (paragraphUnitId ?? "") + "|" + (segmentId ?? "");
+                        if (segmentNumberMap.TryGetValue(mapKey, out var docNum))
+                            actualSegNum = docNum;
+
+                        segments.Add(new BatchSegment
+                        {
+                            Index = actualSegNum - 1, // 0-based for BatchSegment.Index
+                            SourceText = sourceText,
+                            ExistingTarget = targetText,
+                            SegmentPairRef = new[] { paragraphUnitId, segmentId }
+                        });
+                    }
+
+                    index++;
+                }
+            }
+            catch (Exception)
+            {
+                // Document may not be accessible during transitions
+            }
+
+            return segments;
         }
 
         private List<BatchSegment> CollectSegments(BatchScope scope)
@@ -1602,6 +1965,19 @@ namespace Supervertaler.Trados
                 _batchTranslator.SegmentTranslated -= OnBatchSegmentTranslated;
                 _batchTranslator.Completed -= OnBatchCompleted;
                 _batchTranslator = null;
+            }
+
+            // Cancel any running proofreading
+            _proofreadCts?.Cancel();
+            _proofreadCts?.Dispose();
+            _proofreadCts = null;
+
+            if (_batchProofreader != null)
+            {
+                _batchProofreader.Progress -= OnBatchProgress;
+                _batchProofreader.SegmentProofread -= OnProofreadSegmentResult;
+                _batchProofreader.Completed -= OnProofreadCompleted;
+                _batchProofreader = null;
             }
 
             if (_editorController != null)
