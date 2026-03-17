@@ -16,8 +16,9 @@
   * [Term Picker](termlens/term-picker.md)
 * [MultiTerm Support](multiterm-support.md)
 * [Supervertaler Assistant](ai-assistant.md)
-* [Batch Translate](batch-translate.md)
-* [AI Proofreader](ai-proofreader.md)
+* [Batch Operations](batch-operations.md)
+  * [Batch Translate](batch-translate.md)
+  * [AI Proofreader](ai-proofreader.md)
 
 ## Terminology
 

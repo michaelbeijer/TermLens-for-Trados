@@ -453,8 +453,8 @@ namespace Supervertaler.Trados.Controls
                     label = "Batch Translate Help";
                     break;
                 case 2:
-                    topic = HelpSystem.Topics.BatchTranslate; // Reports shares batch docs for now
-                    label = "Proofreading & Reports Help";
+                    topic = HelpSystem.Topics.AiProofreader;
+                    label = "Proofreading && Reports Help";
                     break;
                 default:
                     topic = HelpSystem.Topics.AiAssistantChat;
@@ -484,7 +484,7 @@ namespace Supervertaler.Trados.Controls
                 switch (_tabControl.SelectedIndex)
                 {
                     case 1: topic = HelpSystem.Topics.BatchTranslate; break;
-                    case 2: topic = HelpSystem.Topics.BatchTranslate; break; // Reports shares batch docs
+                    case 2: topic = HelpSystem.Topics.AiProofreader; break;
                     default: topic = HelpSystem.Topics.AiAssistantChat; break;
                 }
                 HelpSystem.OpenHelp(topic);

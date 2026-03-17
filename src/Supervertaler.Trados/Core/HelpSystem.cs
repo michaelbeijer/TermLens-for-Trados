@@ -32,8 +32,9 @@ namespace Supervertaler.Trados.Core
             public const string AddTermDialog      = "features/termlens/adding-terms";
             public const string TermPickerDialog   = "features/termlens/term-picker";
             public const string AiAssistantChat    = "features/ai-assistant";
-            public const string BatchTranslate     = "features/batch-translate";
-            public const string AiProofreader      = "features/ai-proofreader";
+            public const string BatchOperations    = "features/batch-operations";
+            public const string BatchTranslate     = "features/batch-operations/batch-translate";
+            public const string AiProofreader      = "features/batch-operations/ai-proofreader";
             public const string MultiTermSupport   = "features/multiterm-support";
             public const string TermbaseEditor     = "terminology/termbase-management";
             public const string SettingsTermLens   = "settings/termlens";
