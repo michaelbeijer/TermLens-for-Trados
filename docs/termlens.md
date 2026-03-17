@@ -86,7 +86,7 @@ You can add terms without opening a dialogue:
 | -------------- | ------------------------------------------------------------------------- |
 | **Alt+Down**   | Quick-add the selected text to all write termbases                        |
 | **Alt+Up**     | Quick-add the selected text to the project termbase                       |
-| **Ctrl+Alt+T** | Open the Add Term dialog (full control over source, target, and termbase) |
+| **Ctrl+Alt+T** | Open the Add Term Entry dialog (full editor: definition, domain, notes, synonyms) |
 | **Ctrl+Alt+N** | Quick-add the selected text as a non-translatable term                    |
 
 {% hint style="success" %}

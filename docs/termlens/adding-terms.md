@@ -17,7 +17,7 @@ The fastest way to add a term while translating:
 The term is added instantly to all **write-enabled** termbases. No dialog, no interruption.
 
 {% hint style="info" %}
-Quick-add writes to every termbase that has **Write** enabled in your [TermLens Settings](../settings/termlens.md). If you want to target a specific termbase, use the Add Term dialog instead.
+Quick-add writes to every termbase that has **Write** enabled in your [TermLens Settings](../settings/termlens.md). If you want to target a specific termbase, use the Add Term Entry dialog (Ctrl+Alt+T) instead.
 {% endhint %}
 
 ## Quick-add to project termbase (Alt+Up)
@@ -126,7 +126,7 @@ Term entries can have optional **source and target abbreviation** fields. When a
 
 ### Adding abbreviations
 
-1. Open the **Term Entry Editor** (right-click a term → Edit Term, or use Ctrl+Alt+T)
+1. Open the **Term Entry Editor** (right-click a term → Edit Term)
 2. Fill in the **Source Abbreviation** and **Target Abbreviation** fields
 3. Click **Save**
 
