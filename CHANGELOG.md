@@ -1,6 +1,6 @@
 # Changelog
 
-## [4.9.0] — 2026-03-17
+## [4.9.0] — 2026-03-17 ([#4](https://github.com/Supervertaler/Supervertaler-for-Trados/issues/4))
 
 ### Added
 - **Unified user data folder** — Supervertaler for Trados now stores all data (settings, licence, projects, prompts) in a single shared folder alongside Supervertaler Workbench (default: `~/Supervertaler/`); the folder is configured via a shared `%APPDATA%\Supervertaler\config.json` pointer so both products automatically read from the same location
