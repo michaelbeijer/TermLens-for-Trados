@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.10.4] — 2026-03-18
+
+### Fixed
+- **Prompts tab: double-click opens wrong prompt after column sort** — after sorting the prompt list by clicking a column header, double-clicking a row now opens the correct prompt; previously it used the visual row index, which diverged from the data list order after sorting
+- **"Surrounding segments" spinner overlap** — the spinner for the Surrounding segments setting in AI Settings was positioned too close to its label and appeared partially overlapping it; moved right to give the label room
+
+### Changed
+- **`{{PROJECT}}` display in chat** — when a QuickLauncher prompt containing `{{PROJECT}}` is sent, the chat bubble now shows a compact summary (e.g. `[source document — 47 segments]`) instead of the full source document text; the complete text is still sent to the AI unchanged
+
+---
+
 ## [4.10.3] — 2026-03-18
 
 ### Added
