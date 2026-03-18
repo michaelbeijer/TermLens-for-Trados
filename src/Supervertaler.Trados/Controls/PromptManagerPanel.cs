@@ -465,7 +465,8 @@ namespace Supervertaler.Trados.Controls
             foreach (var p in _prompts)
             {
                 var source = p.IsReadOnly ? "Supervertaler" : (p.IsBuiltIn ? "Built-in" : "Custom");
-                _dgvPrompts.Rows.Add(p.Name, p.Domain, source);
+                var rowIndex = _dgvPrompts.Rows.Add(p.Name, p.Domain, source);
+                _dgvPrompts.Rows[rowIndex].Tag = p;
             }
         }
 
@@ -473,10 +474,7 @@ namespace Supervertaler.Trados.Controls
         {
             if (_dgvPrompts.SelectedRows.Count == 0)
                 return null;
-            var idx = _dgvPrompts.SelectedRows[0].Index;
-            if (idx < 0 || idx >= _prompts.Count)
-                return null;
-            return _prompts[idx];
+            return _dgvPrompts.SelectedRows[0].Tag as PromptTemplate;
         }
 
         private void OnNewPrompt(object sender, EventArgs e)
