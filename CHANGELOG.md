@@ -1,5 +1,24 @@
 # Changelog
 
+## [4.10.3] — 2026-03-18
+
+### Added
+- **`{{PROJECT_NAME}}` variable** — replaced with the Trados project name in QuickLauncher prompts
+- **`{{DOCUMENT_NAME}}` variable** — replaced with the active file name in QuickLauncher prompts
+- **`{{SURROUNDING_SEGMENTS}}` variable** — replaced with N source segments before and after the active segment, numbered with their actual per-file Trados segment numbers and the active segment marked `← ACTIVE`; N is configurable in Settings → AI Settings → Surrounding segments (default: 5)
+- **`{{PROJECT}}` variable** — replaced with all source segments in the active document, numbered with actual Trados segment numbers; multi-file projects include `=== File N ===` headers at file boundaries where segment numbering restarts
+- **Surrounding segments setting** — new spinner in AI Settings: "Surrounding segments" (default: 5, range 1–20); controls both the `{{SURROUNDING_SEGMENTS}}` QuickLauncher variable and the context window in the AI Assistant chat
+
+### Changed
+- **AI Assistant surrounding context** — was previously hardcoded to 2 segments on each side; now uses the new "Surrounding segments" setting (default 5)
+
+### Notes
+- Segment numbers in `{{SURROUNDING_SEGMENTS}}` and `{{PROJECT}}` match the numbers shown in the Trados editor (per-file, 1-based); the same numbering logic used by the AI Proofreader results
+- `{{PROJECT}}` is evaluated lazily — only when the prompt template actually contains `{{PROJECT}}`; it has no cost unless used
+- Sending a 10,000-word patent as `{{PROJECT}}` to a Sonnet-class model costs approximately $0.04–0.05 per call
+
+---
+
 ## [4.10.2] — 2026-03-17
 
 ### Changed

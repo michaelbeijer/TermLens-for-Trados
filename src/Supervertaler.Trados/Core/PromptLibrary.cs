@@ -79,6 +79,20 @@ namespace Supervertaler.Trados.Core
         public static string ApplyVariables(string content, string sourceLang, string targetLang,
             string sourceText, string targetText, string selection)
         {
+            return ApplyVariables(content, sourceLang, targetLang,
+                sourceText, targetText, selection,
+                null, null, null, null);
+        }
+
+        /// <summary>
+        /// Applies variable substitution to prompt content, including all segment-level
+        /// and project-level variables.
+        /// Supports both {{UPPERCASE}} and {lowercase} placeholder formats.
+        /// </summary>
+        public static string ApplyVariables(string content, string sourceLang, string targetLang,
+            string sourceText, string targetText, string selection,
+            string projectName, string documentName, string surroundingSegments, string projectText)
+        {
             if (string.IsNullOrEmpty(content))
                 return content;
 
@@ -95,6 +109,12 @@ namespace Supervertaler.Trados.Core
             content = content.Replace("{{TARGET_TEXT}}", targetText ?? "");
 
             content = content.Replace("{{SELECTION}}", selection ?? "");
+
+            // Project / document variables
+            content = content.Replace("{{PROJECT_NAME}}", projectName ?? "");
+            content = content.Replace("{{DOCUMENT_NAME}}", documentName ?? "");
+            content = content.Replace("{{SURROUNDING_SEGMENTS}}", surroundingSegments ?? "");
+            content = content.Replace("{{PROJECT}}", projectText ?? "");
 
             // {lowercase} format (legacy compatibility with Python domain prompts)
             content = content.Replace("{source_lang}", sourceLang ?? "");

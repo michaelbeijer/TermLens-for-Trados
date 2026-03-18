@@ -87,6 +87,15 @@ namespace Supervertaler.Trados.Settings
         public int DocumentContextMaxSegments { get; set; } = 500;
 
         /// <summary>
+        /// Number of segments before and after the active segment to include as context
+        /// in QuickLauncher prompts ({{SURROUNDING_SEGMENTS}} variable) and in the
+        /// AI Assistant chat system prompt.
+        /// Default: 5 (five segments on each side).
+        /// </summary>
+        [DataMember(Name = "quickLauncherSurroundingSegments")]
+        public int QuickLauncherSurroundingSegments { get; set; } = 5;
+
+        /// <summary>
         /// Whether to include term definitions, domains, and notes alongside
         /// matched terminology in the AI chat prompt.
         /// </summary>

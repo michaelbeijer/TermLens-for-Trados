@@ -44,6 +44,8 @@ namespace Supervertaler.Trados.Controls
         private CheckBox _chkIncludeDocumentContext;
         private Label _lblMaxSegments;
         private NumericUpDown _nudMaxSegments;
+        private Label _lblSurroundingSegments;
+        private NumericUpDown _nudSurroundingSegments;
         private CheckBox _chkIncludeTermMetadata;
         private CheckedListBox _clbAiTermbases;
         private Label _lblAiContextHeader;
@@ -426,6 +428,31 @@ namespace Supervertaler.Trados.Controls
                 "Documents larger than this will be truncated (first 80% + last 20%).");
             Controls.Add(_nudMaxSegments);
 
+            _lblSurroundingSegments = new Label
+            {
+                Text = "Surrounding segments:",
+                Location = new Point(36, 0), // positioned dynamically
+                AutoSize = true,
+                ForeColor = labelColor
+            };
+            Controls.Add(_lblSurroundingSegments);
+
+            _nudSurroundingSegments = new NumericUpDown
+            {
+                Location = new Point(160, 0), // positioned dynamically
+                Width = 60,
+                Minimum = 1,
+                Maximum = 20,
+                Value = 5,
+                Increment = 1
+            };
+            var surroundingTip = new ToolTip { AutoPopDelay = 10000, InitialDelay = 300 };
+            surroundingTip.SetToolTip(_nudSurroundingSegments,
+                "Number of segments before and after the active segment to include\r\n" +
+                "in {{SURROUNDING_SEGMENTS}} QuickLauncher prompts and the AI Assistant\r\n" +
+                "chat context. Default: 5 (five segments on each side).");
+            Controls.Add(_nudSurroundingSegments);
+
             _chkIncludeTermMetadata = new CheckBox
             {
                 Text = "Include term definitions and domains",
@@ -551,6 +578,10 @@ namespace Supervertaler.Trados.Controls
             _nudMaxSegments.Location = new Point(160, y);
             y += 30;
 
+            _lblSurroundingSegments.Location = new Point(36, y + 3);
+            _nudSurroundingSegments.Location = new Point(160, y);
+            y += 30;
+
             _chkIncludeTermMetadata.Location = new Point(16, y);
             y += 28;
 
@@ -621,6 +652,8 @@ namespace Supervertaler.Trados.Controls
                 Math.Min(_nudMaxSegments.Maximum, settings.DocumentContextMaxSegments));
             _nudMaxSegments.Enabled = settings.IncludeDocumentContext;
             _lblMaxSegments.Enabled = settings.IncludeDocumentContext;
+            _nudSurroundingSegments.Value = Math.Max(_nudSurroundingSegments.Minimum,
+                Math.Min(_nudSurroundingSegments.Maximum, settings.QuickLauncherSurroundingSegments));
             _chkIncludeTermMetadata.Checked = settings.IncludeTermMetadata;
         }
 
@@ -702,6 +735,7 @@ namespace Supervertaler.Trados.Controls
             settings.IncludeTmMatches = _chkIncludeTmMatches.Checked;
             settings.IncludeDocumentContext = _chkIncludeDocumentContext.Checked;
             settings.DocumentContextMaxSegments = (int)_nudMaxSegments.Value;
+            settings.QuickLauncherSurroundingSegments = (int)_nudSurroundingSegments.Value;
             settings.IncludeTermMetadata = _chkIncludeTermMetadata.Checked;
 
             // Build disabled AI termbase IDs from unchecked items

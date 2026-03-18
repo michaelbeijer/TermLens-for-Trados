@@ -54,6 +54,19 @@ These are only available in QuickLauncher prompts, because they refer to the spe
 **Segment vs selection:** `{{SOURCE_SEGMENT}}` and `{{TARGET_SEGMENT}}` always give you the **entire active segment**. `{{SELECTION}}` gives you only the **highlighted portion** — useful for looking up or explaining a specific word or phrase within the segment. If nothing is selected, `{{SELECTION}}` is replaced with an empty string.
 {% endhint %}
 
+### Project variables — QuickLauncher only
+
+| Variable | Replaced with |
+|----------|---------------|
+| `{{PROJECT_NAME}}` | Trados project name (e.g. `EP3456789_NL_EN`) |
+| `{{DOCUMENT_NAME}}` | Active file name (e.g. `EP3456789A1.docx`) |
+| `{{SURROUNDING_SEGMENTS}}` | N source segments before and after the active segment, with actual Trados segment numbers and the active segment marked `← ACTIVE`. N is set in **Settings → AI Settings → Surrounding segments** (default: 5). |
+| `{{PROJECT}}` | All source segments in the document, numbered with their actual Trados segment numbers. In multi-file projects a `=== File N ===` header separates each file (Trados restarts segment numbering per file). |
+
+{% hint style="warning" %}
+`{{PROJECT}}` sends the entire document to the AI and uses significantly more tokens than other variables. For a 10,000-word patent this costs roughly 4–5 cents per call with a Sonnet-class model. Reserve it for prompts where full document context genuinely matters.
+{% endhint %}
+
 ---
 
 ## Writing a custom prompt

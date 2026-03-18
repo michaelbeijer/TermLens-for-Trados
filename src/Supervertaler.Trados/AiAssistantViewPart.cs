@@ -293,8 +293,9 @@ namespace Supervertaler.Trados
                 totalSegmentCount = documentSegments?.Count ?? 0;
             }
 
-            // Surrounding segments (2 before + 2 after)
-            var surroundingSegments = GetSurroundingSegments(2);
+            // Surrounding segments — count from settings (default 5)
+            var surroundingSegments = GetSurroundingSegments(
+                _settings?.AiSettings?.QuickLauncherSurroundingSegments ?? 5);
 
             // Project metadata
             var projectName = GetProjectName();

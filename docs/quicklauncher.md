@@ -27,18 +27,67 @@ Trados Studio assigns `Ctrl+Q` to **View Internally Source** by default. To use 
 
 ## Prompt variables
 
-QuickLauncher prompts have access to the full segment context at the moment you trigger them:
+QuickLauncher prompts have access to the full segment and project context at the moment you trigger them.
+
+### Language variables
 
 | Variable | Replaced with | Example |
 |----------|---------------|---------|
 | `{{SOURCE_LANGUAGE}}` | Source language name, including locale | `Dutch (Belgium)` |
 | `{{TARGET_LANGUAGE}}` | Target language name, including locale | `English (United States)` |
+
+### Segment variables
+
+| Variable | Replaced with | Example |
+|----------|---------------|---------|
 | `{{SOURCE_SEGMENT}}` | Full text of the **active source segment** | `De stand der techniek...` |
 | `{{TARGET_SEGMENT}}` | Full text of the **active target segment** (your translation so far) | `The prior art...` |
 | `{{SELECTION}}` | Text currently **selected** in the editor | `vloerbekledingen` |
 
 {% hint style="info" %}
 **Segment vs selection:** `{{SOURCE_SEGMENT}}` and `{{TARGET_SEGMENT}}` always give the **entire active segment**. `{{SELECTION}}` gives only the **highlighted portion** — useful for term lookups or focused questions. If nothing is selected, `{{SELECTION}}` is an empty string.
+{% endhint %}
+
+### Project variables
+
+| Variable | Replaced with |
+|----------|---------------|
+| `{{PROJECT_NAME}}` | Trados project name (e.g. `EP3456789_NL_EN`) |
+| `{{DOCUMENT_NAME}}` | Active file name (e.g. `EP3456789A1.docx`) |
+| `{{SURROUNDING_SEGMENTS}}` | N source segments before and after the active segment, with their actual Trados segment numbers and the active segment marked `← ACTIVE` |
+| `{{PROJECT}}` | All source segments in the active document, numbered with their actual Trados segment numbers |
+
+**`{{SURROUNDING_SEGMENTS}}` example output** (with N = 2):
+
+```
+[11] Voorgaande zin.
+[12] Nog een voorgaande zin.
+[13 ← ACTIVE] De stand der techniek op het gebied van vloerbekledingen...
+[14] Volgende zin.
+[15] Nog een volgende zin.
+```
+
+**`{{PROJECT}}` example output** (single-file project):
+
+```
+[1] De uitvinding heeft betrekking op een werkwijze...
+[2] De stand der techniek op het gebied van vloerbekledingen...
+[3] ...
+```
+
+In a **multi-file project**, a file header is inserted at each boundary (because Trados restarts segment numbering per file):
+
+```
+=== File 1 ===
+[1] Conclusie 1 omvat...
+[2] Conclusie 2 omvat...
+
+=== File 2 ===
+[1] De beschrijving begint hier...
+```
+
+{% hint style="warning" %}
+`{{PROJECT}}` sends all source segments to the AI. For a typical 10,000-word patent this costs roughly **4–5 cents** per call with a Sonnet-class model — negligible for important work, but avoid using it in high-frequency prompts. The number of surrounding segments for `{{SURROUNDING_SEGMENTS}}` is configured in **Settings → AI Settings → Surrounding segments** (default: 5).
 {% endhint %}
 
 ### Example: explain a selected term

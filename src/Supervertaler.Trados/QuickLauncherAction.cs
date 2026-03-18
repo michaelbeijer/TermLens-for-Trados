@@ -6,6 +6,7 @@ using Sdl.TranslationStudioAutomation.IntegrationApi;
 using Sdl.TranslationStudioAutomation.IntegrationApi.Presentation.DefaultLocations;
 using Supervertaler.Trados.Core;
 using Supervertaler.Trados.Licensing;
+using Supervertaler.Trados.Settings;
 
 namespace Supervertaler.Trados
 {
@@ -61,6 +62,8 @@ namespace Supervertaler.Trados
             var selection = "";
             var sourceLang = "";
             var targetLang = "";
+            var projectName = "";
+            var documentName = "";
 
             if (doc != null)
             {
@@ -93,7 +96,14 @@ namespace Supervertaler.Trados
                     }
                 }
                 catch { /* Language info may not be available */ }
+
+                projectName = DocumentContextHelper.GetProjectName(doc);
+                documentName = DocumentContextHelper.GetDocumentName(doc);
             }
+
+            // Load settings once for surrounding segments count
+            var settings = TermLensSettings.Load();
+            var surroundingCount = settings?.AiSettings?.QuickLauncherSurroundingSegments ?? 5;
 
             // Build and show the context menu at the current cursor position.
             // Do NOT use a 'using' block or dispose on Closed — Show() is non-blocking
@@ -109,6 +119,10 @@ namespace Supervertaler.Trados
                 var capturedSelection = selection;
                 var capturedSourceLang = sourceLang;
                 var capturedTargetLang = targetLang;
+                var capturedProjectName = projectName;
+                var capturedDocumentName = documentName;
+                var capturedDoc = doc;
+                var capturedSurroundingCount = surroundingCount;
 
                 var item = new ToolStripMenuItem(capturedPrompt.MenuLabel);
                 if (!string.IsNullOrEmpty(capturedPrompt.Description))
@@ -116,10 +130,23 @@ namespace Supervertaler.Trados
 
                 item.Click += (s, e) =>
                 {
+                    var content = capturedPrompt.Content;
+
+                    // Lazily gather expensive context only if the prompt actually uses it
+                    var surroundingSegments = content.Contains("{{SURROUNDING_SEGMENTS}}")
+                        ? DocumentContextHelper.FormatSurroundingSegments(capturedDoc, capturedSurroundingCount)
+                        : null;
+
+                    var projectText = content.Contains("{{PROJECT}}")
+                        ? DocumentContextHelper.FormatProjectText(capturedDoc)
+                        : null;
+
                     var expanded = PromptLibrary.ApplyVariables(
-                        capturedPrompt.Content,
+                        content,
                         capturedSourceLang, capturedTargetLang,
-                        capturedSourceText, capturedTargetText, capturedSelection);
+                        capturedSourceText, capturedTargetText, capturedSelection,
+                        capturedProjectName, capturedDocumentName,
+                        surroundingSegments, projectText);
 
                     AiAssistantViewPart.RunQuickLauncherPrompt(expanded);
                 };
