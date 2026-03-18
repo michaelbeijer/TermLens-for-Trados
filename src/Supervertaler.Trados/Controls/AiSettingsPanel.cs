@@ -439,7 +439,7 @@ namespace Supervertaler.Trados.Controls
 
             _nudSurroundingSegments = new NumericUpDown
             {
-                Location = new Point(160, 0), // positioned dynamically
+                Location = new Point(210, 0), // positioned dynamically — label is wider than "Max segments:"
                 Width = 60,
                 Minimum = 1,
                 Maximum = 20,
@@ -579,7 +579,7 @@ namespace Supervertaler.Trados.Controls
             y += 30;
 
             _lblSurroundingSegments.Location = new Point(36, y + 3);
-            _nudSurroundingSegments.Location = new Point(160, y);
+            _nudSurroundingSegments.Location = new Point(210, y);
             y += 30;
 
             _chkIncludeTermMetadata.Location = new Point(16, y);
