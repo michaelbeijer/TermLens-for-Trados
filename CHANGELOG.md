@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.12.5] — 2026-03-19
+
+### Fixed
+- **Fixed duplicate plugin crash** — the `.sdlplugin` package filename (`Supervertaler.Trados`) did not match the `<PlugInName>` in the manifest (`Supervertaler for Trados`), causing Trados to create a second copy of the package under the manifest name. Two copies of the same plugin loaded simultaneously, crashing Trados on startup. The package filename now matches the manifest name. The build script also cleans up the old-name package and unpacked folder to prevent recurrence.
+
+---
+
 ## [4.12.4] — 2026-03-19
 
 ### Added

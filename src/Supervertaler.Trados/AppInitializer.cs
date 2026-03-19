@@ -89,8 +89,8 @@ namespace Supervertaler.Trados
 
         // ── Stale-plugin detection ───────────────────────────────────
 
-        private const string PluginFolderName = "Supervertaler.Trados";
-        private const string PluginFileName   = "Supervertaler.Trados.sdlplugin";
+        private const string PluginFolderName = "Supervertaler for Trados";
+        private const string PluginFileName   = "Supervertaler for Trados.sdlplugin";
 
         /// <summary>
         /// Detects if a newer .sdlplugin package has been installed but Trados

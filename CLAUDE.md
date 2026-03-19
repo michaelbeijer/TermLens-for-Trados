@@ -12,7 +12,7 @@ Supervertaler for Trados is a Trados Studio 2024 (v18) plugin that brings key Su
 - **Language**: C# / .NET Framework 4.8, SDK-style .csproj
 - **Namespace**: `Supervertaler.Trados` (sub-namespaces: `.Controls`, `.Core`, `.Models`, `.Settings`)
 - **Build**: `bash build.sh` from repo root (dotnet build → package_plugin.py → deploy)
-- **Deploy target**: `%LOCALAPPDATA%\Trados\Trados Studio\18\Plugins\Packages\Supervertaler.Trados.sdlplugin`
+- **Deploy target**: `%APPDATA%\Trados\Trados Studio\18\Plugins\Packages\Supervertaler for Trados.sdlplugin`
 - **Strong-name key**: `src/Supervertaler.Trados/Supervertaler.Trados.snk` — PublicKeyToken: `6afde1272ae2306a`
   (Trados's `DefaultPluginTypeLoader` refuses unsigned assemblies — this is non-negotiable)
 

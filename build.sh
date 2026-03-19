@@ -10,12 +10,12 @@ BUILD_DIR="$PROJECT_DIR/bin/Release"
 DOTNET="${HOME}/.dotnet/dotnet"
 
 PACKAGES_DIR="$APPDATA/Trados/Trados Studio/18/Plugins/Packages"
-UNPACKED_DIR="$APPDATA/Trados/Trados Studio/18/Plugins/Unpacked/Supervertaler.Trados"
+UNPACKED_DIR="$APPDATA/Trados/Trados Studio/18/Plugins/Unpacked/Supervertaler for Trados"
 OLD_UNPACKED_DIR="$APPDATA/Trados/Trados Studio/18/Plugins/Unpacked/TermLens"
 
 # Also clean up old Local install location if present
 OLD_LOCAL_PACKAGES="$LOCALAPPDATA/Trados/Trados Studio/18/Plugins/Packages"
-OLD_LOCAL_UNPACKED="$LOCALAPPDATA/Trados/Trados Studio/18/Plugins/Unpacked/Supervertaler.Trados"
+OLD_LOCAL_UNPACKED="$LOCALAPPDATA/Trados/Trados Studio/18/Plugins/Unpacked/Supervertaler for Trados"
 
 echo "=== Building Supervertaler for Trados ==="
 "$DOTNET" build "$PROJECT_DIR/Supervertaler.Trados.csproj" -c Release
@@ -32,10 +32,11 @@ if [ -f "$ARM64_SRC" ] && [ ! -f "$ARM64_DST/e_sqlite3.dll" ]; then
 fi
 
 echo ""
-echo "=== Packaging Supervertaler.Trados.sdlplugin (OPC format) ==="
+PLUGIN_FILENAME="Supervertaler for Trados.sdlplugin"
+echo "=== Packaging $PLUGIN_FILENAME (OPC format) ==="
 mkdir -p "$DIST_DIR"
-rm -f "$DIST_DIR/Supervertaler.Trados.sdlplugin"
-python "$SCRIPT_DIR/package_plugin.py" "$BUILD_DIR" "$DIST_DIR/Supervertaler.Trados.sdlplugin"
+rm -f "$DIST_DIR/$PLUGIN_FILENAME"
+python "$SCRIPT_DIR/package_plugin.py" "$BUILD_DIR" "$DIST_DIR/$PLUGIN_FILENAME"
 
 echo ""
 echo "=== Deploying to Trados Studio ==="
@@ -53,7 +54,7 @@ fi
 
 # Wipe the Unpacked folder so Trados re-extracts cleanly on next start.
 if [ -d "$UNPACKED_DIR" ]; then
-    echo "  Removing stale Unpacked/Supervertaler.Trados..."
+    echo "  Removing stale Unpacked/Supervertaler for Trados..."
     rm -rf "$UNPACKED_DIR"
     echo "  Unpacked folder cleaned."
 fi
@@ -82,10 +83,22 @@ if [ -f "$OLD_PACKAGE" ]; then
     rm -f "$OLD_PACKAGE"
 fi
 
+# Remove old dotted-name package (replaced by spaced name matching PlugInName in manifest)
+OLD_DOTTED="$PACKAGES_DIR/Supervertaler.Trados.sdlplugin"
+if [ -f "$OLD_DOTTED" ]; then
+    echo "  Removing old Supervertaler.Trados.sdlplugin..."
+    rm -f "$OLD_DOTTED"
+fi
+OLD_DOTTED_UNPACKED="$APPDATA/Trados/Trados Studio/18/Plugins/Unpacked/Supervertaler.Trados"
+if [ -d "$OLD_DOTTED_UNPACKED" ]; then
+    echo "  Removing old Unpacked/Supervertaler.Trados..."
+    rm -rf "$OLD_DOTTED_UNPACKED"
+fi
+
 # Copy the new package.
 mkdir -p "$PACKAGES_DIR"
-cp "$DIST_DIR/Supervertaler.Trados.sdlplugin" "$PACKAGES_DIR/Supervertaler.Trados.sdlplugin"
-echo "  Installed: $PACKAGES_DIR/Supervertaler.Trados.sdlplugin"
+cp "$DIST_DIR/$PLUGIN_FILENAME" "$PACKAGES_DIR/$PLUGIN_FILENAME"
+echo "  Installed: $PACKAGES_DIR/$PLUGIN_FILENAME"
 
 echo ""
 echo "=== Done — start Trados Studio to load the updated plugin ==="

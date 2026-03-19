@@ -9,12 +9,12 @@ You are viewing help for **Supervertaler for Trados** — the Trados Studio plug
 ### Download
 
 1. Go to the [GitHub Releases](https://github.com/Supervertaler/Supervertaler-for-Trados/releases) page
-2. Download the latest `Supervertaler.Trados.sdlplugin` file
+2. Download the latest `Supervertaler for Trados.sdlplugin` file
 
 ### Install
 
 1. **Close Trados Studio** if it is running
-2. **Double-click** the downloaded `Supervertaler.Trados.sdlplugin` file
+2. **Double-click** the downloaded `Supervertaler for Trados.sdlplugin` file
 3. The Trados Plugin Installer opens — select your Trados Studio version and choose an installation location:
 
 <figure><img src=".gitbook/assets/Trados-plugin-installation-dialogue.png" alt="Trados Plugin Installer showing version selection and installation location options"><figcaption><p>The Trados Plugin Installer lets you choose which Trados version to install for and where to place the plugin.</p></figcaption></figure>
@@ -86,7 +86,7 @@ The Trados plugin cannot reliably use a Mac-side path (`\\Mac\Home\...`) due to 
 
 To update to a newer version:
 
-1. Download the latest `Supervertaler.Trados.sdlplugin` file from [GitHub Releases](https://github.com/Supervertaler/Supervertaler-for-Trados/releases)
+1. Download the latest `Supervertaler for Trados.sdlplugin` file from [GitHub Releases](https://github.com/Supervertaler/Supervertaler-for-Trados/releases)
 2. **Close Trados Studio completely** — the plugin files are locked while Trados is running
 3. Double-click the new `.sdlplugin` file — the Trados Plugin Installer handles the rest
 4. Start Trados Studio — it detects the updated package and loads the new version automatically
@@ -99,7 +99,7 @@ Trados Studio **must be fully closed** before installing or updating. If Trados 
 
 ### Troubleshooting: old version still showing after update
 
-If Trados still loads an older version of the plugin after installing a new one, an old copy may be lingering in a different installation location. Check all three plugin folders and remove any old `Supervertaler.Trados.sdlplugin` (in `Packages`) and `Supervertaler.Trados` folder (in `Unpacked`):
+If Trados still loads an older version of the plugin after installing a new one, an old copy may be lingering in a different installation location. Check all three plugin folders and remove any old `Supervertaler for Trados.sdlplugin` (in `Packages`) and `Supervertaler.Trados` folder (in `Unpacked`):
 
 | Folder    | Path                                                       |
 | --------- | ---------------------------------------------------------- |
@@ -108,7 +108,7 @@ If Trados still loads an older version of the plugin after installing a new one,
 | All users | `%ProgramData%\Trados\Trados Studio\18\Plugins\Packages\`  |
 
 {% hint style="info" %}
-**Quick way to check:** paste each path into the Windows Run dialog (`Win+R`) or File Explorer address bar. If the folder exists and contains an old `Supervertaler.Trados.sdlplugin`, delete it. Also check for an `Unpacked\Supervertaler.Trados` folder at the same level and delete it if present.
+**Quick way to check:** paste each path into the Windows Run dialog (`Win+R`) or File Explorer address bar. If the folder exists and contains an old `Supervertaler for Trados.sdlplugin`, delete it. Also check for an `Unpacked\Supervertaler for Trados` folder at the same level and delete it if present.
 {% endhint %}
 
 After removing the old files, double-click the new `.sdlplugin` to install it fresh, then start Trados.
