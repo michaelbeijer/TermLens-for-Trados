@@ -19,7 +19,7 @@ The plugin stores all termbases in a single `.db` file (SQLite database).
 - Click **Create New** to create a fresh, empty database
 
 {% hint style="info" %}
-The `.db` file uses the same Supervertaler SQLite format as the standalone application. You can share the same termbase file between both tools.
+The `.db` file uses the same Supervertaler SQLite format as the standalone application. On Windows, you can share the same termbase file between both tools by pointing them to the same data folder. On a Mac with Parallels, see the note below.
 {% endhint %}
 
 ## MultiTerm termbases
@@ -95,6 +95,10 @@ For full editing capabilities, double-click a termbase in the list to open the *
 
 {% hint style="success" %}
 **Tip:** Keep the `.db` file on a network drive or cloud-synced folder (OneDrive, Dropbox, Google Drive) to share termbases across machines and with colleagues. Since both the Trados plugin and Supervertaler Workbench use the same format, everyone can work from the same terminology.
+{% endhint %}
+
+{% hint style="warning" %}
+**Mac users (Parallels):** On a Mac, Supervertaler Workbench runs natively on macOS while the Trados plugin runs inside Parallels (Windows). The two products cannot share the same `.db` file directly because the Trados plugin must store its data on the Windows side (`C:\Users\...`) — not on the Mac-side shared folder (`\\Mac\Home\...`). To keep your termbases in sync, export from one side and import on the other after making changes. This is a limitation of Parallels' virtual network filesystem, not of the termbase format itself.
 {% endhint %}
 
 ---

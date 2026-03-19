@@ -22,7 +22,7 @@ On the **TermLens** tab:
 You can add multiple termbases. Designate one as the **Project termbase** to give its terms higher priority (shown in pink).
 
 {% hint style="info" %}
-Supervertaler for Trados uses the same `.db` termbase format as Supervertaler Workbench. Any termbase created in either tool works in both.
+Supervertaler for Trados uses the same `.db` termbase format as Supervertaler Workbench. Any termbase created in either tool works in both. On Windows, both tools can point to the same `.db` file in a shared data folder. On a Mac running Trados via Parallels, the two products use separate filesystems — see [Running on a Mac](installation.md#running-on-a-mac-parallels) for details.
 {% endhint %}
 
 ### 3. Configure AI (AI Settings tab)

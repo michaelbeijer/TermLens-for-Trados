@@ -69,6 +69,17 @@ Supervertaler stores termbases as SQLite databases, and SQLite requires a local 
 
 The plugin automatically detects Parallels and shows a warning if you select a Mac-side path during setup.
 
+#### Sharing termbases between Workbench and the Trados plugin on a Mac
+
+On Windows, both Supervertaler Workbench and the Trados plugin can point to the same shared data folder and work from the same `.db` termbase file simultaneously.
+
+On a Mac with Parallels, this is **not possible** because the two products run on different filesystems:
+
+- **Supervertaler Workbench** runs natively on macOS — its data folder is on the Mac filesystem (e.g., `/Users/<username>/Supervertaler/`)
+- **Supervertaler for Trados** runs inside Parallels (Windows) — its data folder must be on the Windows filesystem (e.g., `C:\Users\<username>\Supervertaler\`)
+
+The Trados plugin cannot reliably use a Mac-side path (`\\Mac\Home\...`) due to SQLite limitations on virtual network shares. To keep your termbases in sync between the two products on a Mac, copy the `.db` file from one side to the other after making changes. This is a limitation of the Parallels virtualisation layer, not of the termbase format.
+
 ***
 
 ### Updating
