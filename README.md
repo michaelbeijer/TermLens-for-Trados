@@ -22,8 +22,9 @@ Purchase a licence at [supervertaler.com/trados](https://supervertaler.com/trado
 This plugin makes **no network calls** except to:
 1. **Your chosen AI provider** (OpenAI, Anthropic, Google Gemini, or local Ollama) — only when you use AI features
 2. **Lemon Squeezy licence API** — for licence activation and periodic validation (sends only your licence key and a hashed machine fingerprint)
+3. **Anonymous usage statistics** (strictly opt-in) — if you choose to opt in, a single lightweight ping is sent on startup containing only: plugin version, OS version, Trados version, and system locale. No personal data, no translation content, no termbase information. You can opt out at any time in Settings.
 
-No telemetry, no tracking, no analytics, no data collection. Your API keys are stored locally in your Supervertaler data folder (`~/Supervertaler/trados/settings.json` by default) and are never transmitted anywhere except to your chosen AI provider. The full source code is available here for security audit.
+Your API keys are stored locally in your Supervertaler data folder (`~/Supervertaler/trados/settings.json` by default) and are never transmitted anywhere except to your chosen AI provider. The full source code is available here for security audit.
 
 ## TermLens — inline terminology display
 

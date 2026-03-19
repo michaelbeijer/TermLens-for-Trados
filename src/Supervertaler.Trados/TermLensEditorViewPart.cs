@@ -118,6 +118,13 @@ namespace Supervertaler.Trados
                 }
             });
 
+            // Anonymous usage statistics — opt-in dialog + background ping
+            ShowUsageStatisticsOptIn(ctrl);
+            System.Threading.Tasks.Task.Run(async () =>
+            {
+                try { await UsageStatistics.SendPingAsync(); } catch { }
+            });
+
             if (LicenseManager.Instance.CurrentTier == LicenseTier.None)
             {
                 _control.Value.ShowLicenseRequired();
@@ -1673,6 +1680,52 @@ namespace Supervertaler.Trados
         }
 
         // ─── Update checker dialog ──────────────────────────────────
+
+        /// <summary>
+        /// Shows the one-time usage statistics opt-in dialog if the user hasn't been asked yet.
+        /// Waits for the control handle, then shows the dialog on the UI thread.
+        /// </summary>
+        private void ShowUsageStatisticsOptIn(TermLensControl ctrl)
+        {
+            var settings = TermLensSettings.Load();
+            if (settings.UsageStatisticsAsked)
+                return;
+
+            System.Threading.Tasks.Task.Run(async () =>
+            {
+                try
+                {
+                    // Wait for the control's window handle (same pattern as update checker)
+                    for (int i = 0; i < 30 && !ctrl.IsHandleCreated; i++)
+                        await System.Threading.Tasks.Task.Delay(500);
+
+                    if (!ctrl.IsHandleCreated) return;
+
+                    ctrl.BeginInvoke(new Action(() =>
+                    {
+                        using (var dlg = new UsageStatisticsDialog())
+                        {
+                            var result = dlg.ShowDialog();
+                            settings.UsageStatisticsAsked = true;
+                            settings.UsageStatisticsEnabled = (result == DialogResult.Yes);
+                            if (settings.UsageStatisticsEnabled && string.IsNullOrEmpty(settings.UsageStatisticsId))
+                                settings.UsageStatisticsId = Guid.NewGuid().ToString("D");
+                            settings.Save();
+
+                            // If they opted in, send the first ping now
+                            if (settings.UsageStatisticsEnabled)
+                            {
+                                System.Threading.Tasks.Task.Run(async () =>
+                                {
+                                    try { await UsageStatistics.SendPingAsync(); } catch { }
+                                });
+                            }
+                        }
+                    }));
+                }
+                catch { }
+            });
+        }
 
         private void ShowUpdateDialog(string newVersion, string releaseUrl)
         {

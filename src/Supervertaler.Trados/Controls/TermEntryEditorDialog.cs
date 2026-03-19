@@ -294,6 +294,28 @@ namespace Supervertaler.Trados.Controls
             };
             _contentPanel.Controls.Add(_txtSource);
 
+            // Reverse button: swaps source ↔ target head terms
+            var btnReverse = new Button
+            {
+                Text = "\u21C4",
+                Location = new Point(leftX + colWidth + 1, y - 1),
+                Size = new Size(14, 24),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8f),
+                Cursor = Cursors.Hand,
+                TabStop = false
+            };
+            btnReverse.FlatAppearance.BorderSize = 0;
+            var reverseTip = new ToolTip();
+            reverseTip.SetToolTip(btnReverse, "Swap source and target terms");
+            btnReverse.Click += (s, ev) =>
+            {
+                var tmp = _txtSource.Text;
+                _txtSource.Text = _txtTarget.Text;
+                _txtTarget.Text = tmp;
+            };
+            _contentPanel.Controls.Add(btnReverse);
+
             _txtTarget = new TextBox
             {
                 Location = new Point(rightX, y),

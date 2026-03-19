@@ -10,10 +10,10 @@ For the full Supervertaler privacy policy, please visit:
 
 ## Summary
 
-- Supervertaler does **not** collect, store, or transmit your data to Supervertaler servers
+- Supervertaler does **not** collect, store, or transmit your translations, termbases, or documents to Supervertaler servers
 - Your translations, termbases, and documents stay on your machine
 - When you use AI features, data is sent directly to the AI provider **you** selected, using your own API key
-- No telemetry, no usage tracking, no analytics
+- **Optional anonymous usage statistics** — strictly opt-in. If you consent, a single ping on startup sends only: plugin version, OS version, Trados version, and system locale. No personal data, no translation content. You can opt out at any time in Settings. See [Usage Statistics](settings/usage-statistics.md) for full details.
 - For maximum confidentiality with AI features, use [Ollama](https://ollama.com) — all processing stays local
 - Source code is publicly available on [GitHub](https://github.com/Supervertaler/Supervertaler-for-Trados) for independent verification
 

@@ -32,6 +32,7 @@
 * [Prompts](settings/prompts.md)
 * [Backup & Restore](settings/backup.md)
 * [Per-Project Settings](settings/project-settings.md)
+* [Usage Statistics](settings/usage-statistics.md)
 
 ## Reference
 

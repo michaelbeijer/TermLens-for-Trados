@@ -137,6 +137,29 @@ namespace Supervertaler.Trados.Settings
         [DataMember(Name = "skippedUpdateVersion")]
         public string SkippedUpdateVersion { get; set; } = "";
 
+        // ─── Usage statistics ──────────────────────────────────────
+        /// <summary>
+        /// Whether the user has opted in to anonymous usage statistics.
+        /// Default: false (strictly opt-in). Can be changed at any time in Settings.
+        /// </summary>
+        [DataMember(Name = "usageStatisticsEnabled")]
+        public bool UsageStatisticsEnabled { get; set; } = false;
+
+        /// <summary>
+        /// Random anonymous UUID generated on first opt-in.
+        /// Not tied to any account, machine, or identity — purely random.
+        /// </summary>
+        [DataMember(Name = "usageStatisticsId")]
+        public string UsageStatisticsId { get; set; } = "";
+
+        /// <summary>
+        /// Whether the user has already been asked about usage statistics.
+        /// Once true, the opt-in dialog is not shown again (the user can
+        /// still change the setting in Settings at any time).
+        /// </summary>
+        [DataMember(Name = "usageStatisticsAsked")]
+        public bool UsageStatisticsAsked { get; set; } = false;
+
         // ─── AI settings ────────────────────────────────────────────
         /// <summary>
         /// AI provider configuration (API keys, provider selection, model selection).
@@ -204,6 +227,10 @@ namespace Supervertaler.Trados.Settings
                     // Ensure update checker field is never null
                     if (s.SkippedUpdateVersion == null)
                         s.SkippedUpdateVersion = "";
+
+                    // Ensure usage statistics ID is never null
+                    if (s.UsageStatisticsId == null)
+                        s.UsageStatisticsId = "";
 
                     return s;
                 }

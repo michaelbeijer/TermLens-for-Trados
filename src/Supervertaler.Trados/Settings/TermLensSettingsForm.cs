@@ -38,6 +38,7 @@ namespace Supervertaler.Trados.Settings
         private Button _btnOpenTermbase;
         private CheckBox _chkAutoLoad;
         private CheckBox _chkCaseSensitive;
+        private CheckBox _chkUsageStats;
         private NumericUpDown _nudFontSize;
         private ComboBox _cboShortcutStyle;
         private NumericUpDown _nudChordDelay;
@@ -452,6 +453,33 @@ namespace Supervertaler.Trados.Settings
             // Double-click a termbase row to open the Termbase Editor
             _dgvTermbases.CellDoubleClick += OnGridCellDoubleClick;
 
+            // Right-click context menu for termbase rows
+            var termbaseContextMenu = new ContextMenuStrip();
+            var renameMenuItem = new ToolStripMenuItem("Rename");
+            renameMenuItem.ShortcutKeyDisplayString = "F2";
+            renameMenuItem.Click += (s, ev) =>
+            {
+                if (_dgvTermbases.SelectedRows.Count > 0)
+                {
+                    var rowIndex = _dgvTermbases.SelectedRows[0].Index;
+                    if (rowIndex >= 0 && rowIndex < _termbases.Count)
+                        RenameTermbase(rowIndex);
+                }
+            };
+            var openMenuItem = new ToolStripMenuItem("Open in Editor");
+            openMenuItem.Click += (s, ev) => OnOpenTermbaseClick(s, ev);
+            termbaseContextMenu.Items.Add(openMenuItem);
+            termbaseContextMenu.Items.Add(renameMenuItem);
+            _dgvTermbases.ContextMenuStrip = termbaseContextMenu;
+            _dgvTermbases.CellMouseDown += (s, ev) =>
+            {
+                if (ev.Button == MouseButtons.Right && ev.RowIndex >= 0 && ev.RowIndex < _termbases.Count)
+                {
+                    _dgvTermbases.ClearSelection();
+                    _dgvTermbases.Rows[ev.RowIndex].Selected = true;
+                }
+            };
+
             // === Options section (inside bottomPanel, positions relative to panel) ===
             var sep = new Label
             {
@@ -549,6 +577,14 @@ namespace Supervertaler.Trados.Settings
                 ForeColor = Color.FromArgb(100, 100, 100)
             };
 
+            _chkUsageStats = new CheckBox
+            {
+                Text = "Share anonymous usage statistics (no personal data)",
+                Location = new Point(10, 142),
+                AutoSize = true,
+                ForeColor = Color.FromArgb(60, 60, 60)
+            };
+
             var tips = new ToolTip();
             tips.SetToolTip(_btnOpenTermbase,
                 "Open the selected termbase in the built-in termbase editor.");
@@ -569,6 +605,9 @@ namespace Supervertaler.Trados.Settings
             tips.SetToolTip(_chkCaseSensitive,
                 "When checked, terms only match if the case matches exactly.\n" +
                 "Individual termbases can override this using the Case column above.");
+            tips.SetToolTip(_chkUsageStats,
+                "Sends a single anonymous ping on startup (plugin version, OS, Trados version, locale).\n" +
+                "No personal data, translation content, or termbase info is ever collected.");
 
             // Add controls to their respective panels
             topPanel.Controls.AddRange(new Control[]
@@ -583,7 +622,8 @@ namespace Supervertaler.Trados.Settings
                 sep, _chkAutoLoad, _chkCaseSensitive,
                 lblFontSize, _nudFontSize, lblFontPt,
                 lblShortcutStyle, _cboShortcutStyle,
-                lblChordDelay, _nudChordDelay, lblChordMs
+                lblChordDelay, _nudChordDelay, lblChordMs,
+                _chkUsageStats
             });
 
             gridPanel.Controls.Add(_dgvTermbases);
@@ -789,13 +829,6 @@ namespace Supervertaler.Trados.Settings
             if (colName == "colRead" || colName == "colWrite" || colName == "colProject" || colName == "colCS")
                 return;
 
-            // Double-click on name column → rename
-            if (colName == "colName")
-            {
-                RenameTermbase(e.RowIndex);
-                return;
-            }
-
             OpenTermbaseEditor(e.RowIndex);
         }
 
@@ -841,6 +874,7 @@ namespace Supervertaler.Trados.Settings
             _txtTermbasePath.Text = _settings.TermbasePath ?? "";
             _chkAutoLoad.Checked = _settings.AutoLoadOnStartup;
             _chkCaseSensitive.Checked = _settings.CaseSensitiveMatching;
+            _chkUsageStats.Checked = _settings.UsageStatisticsEnabled;
             _nudFontSize.Value = Math.Max(_nudFontSize.Minimum, Math.Min(_nudFontSize.Maximum, (decimal)_settings.PanelFontSize));
             UpdateTermbaseInfo(_settings.TermbasePath);
             PopulateTermbaseList(_settings.TermbasePath);
@@ -1269,6 +1303,12 @@ namespace Supervertaler.Trados.Settings
             _settings.TermbasePath = _txtTermbasePath.Text.Trim();
             _settings.AutoLoadOnStartup = _chkAutoLoad.Checked;
             _settings.CaseSensitiveMatching = _chkCaseSensitive.Checked;
+            _settings.UsageStatisticsEnabled = _chkUsageStats.Checked;
+            // Mark as asked so the opt-in dialog won't show again
+            _settings.UsageStatisticsAsked = true;
+            // Generate anonymous ID on first opt-in
+            if (_settings.UsageStatisticsEnabled && string.IsNullOrEmpty(_settings.UsageStatisticsId))
+                _settings.UsageStatisticsId = System.Guid.NewGuid().ToString("D");
             _settings.PanelFontSize = (float)_nudFontSize.Value;
             _settings.TermShortcutStyle = _cboShortcutStyle.SelectedIndex == 1 ? "repeated" : "sequential";
             _settings.ChordDelayMs = (int)_nudChordDelay.Value;

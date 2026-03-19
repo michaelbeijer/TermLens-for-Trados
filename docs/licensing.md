@@ -82,8 +82,9 @@ The plugin makes **no network calls** except to:
 
 1. **Your chosen AI provider** (OpenAI, Anthropic, Google Gemini, or local Ollama) — only when you use AI features
 2. **Lemon Squeezy licence API** (`api.lemonsqueezy.com`) — for licence activation and periodic validation
+3. **Anonymous usage statistics** (strictly opt-in) — if you consent, a single ping on startup sends only: plugin version, OS version, Trados version, and system locale. See [Usage Statistics](settings/usage-statistics.md) for details.
 
-The licence validation sends only your licence key and a hashed machine fingerprint (a one-way hash of your computer name and Windows user ID). No personal data, no usage tracking, no analytics.
+The licence validation sends only your licence key and a hashed machine fingerprint (a one-way hash of your computer name and Windows user ID). No personal data, no translation content, no termbase information is ever collected.
 
 Your API keys are stored locally in `%LocalAppData%\Supervertaler.Trados\settings.json` and are never transmitted anywhere except to your chosen AI provider.
 

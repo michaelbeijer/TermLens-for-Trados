@@ -1684,10 +1684,31 @@ namespace Supervertaler.Trados.Core
                     }
                 }
 
+                // Look up the termbase's language pair for the header
+                string srcHeader = "Source Term";
+                string tgtHeader = "Target Term";
+                using (var langCmd = new SqliteCommand(
+                    "SELECT source_lang, target_lang FROM termbases WHERE id = @tbId", conn))
+                {
+                    langCmd.Parameters.AddWithValue("@tbId", termbaseId);
+                    using (var lr = langCmd.ExecuteReader())
+                    {
+                        if (lr.Read())
+                        {
+                            var sl = lr.IsDBNull(0) ? null : lr.GetString(0);
+                            var tl = lr.IsDBNull(1) ? null : lr.GetString(1);
+                            if (!string.IsNullOrEmpty(sl))
+                                srcHeader = LanguageUtils.ShortenLanguageName(sl);
+                            if (!string.IsNullOrEmpty(tl))
+                                tgtHeader = LanguageUtils.ShortenLanguageName(tl);
+                        }
+                    }
+                }
+
                 // Write TSV
                 using (var sw = new StreamWriter(tsvPath, false, new UTF8Encoding(true)))
                 {
-                    sw.WriteLine("Term UUID\tSource Term\tTarget Term\tPriority\tDomain\tNotes\tProject\tClient\tForbidden");
+                    sw.WriteLine($"Term UUID\t{srcHeader}\t{tgtHeader}\tPriority\tDomain\tNotes\tProject\tClient\tForbidden");
 
                     foreach (var term in terms)
                     {

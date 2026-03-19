@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.11.0] — 2026-03-19
+
+### Added
+- **Opt-in anonymous usage statistics** — on first launch after this update, a dialog asks whether you'd like to share anonymous usage data to help improve the plugin. Only plugin version, OS version, Trados version, and system locale are sent — once per session, on startup. No personal data, translation content, or termbase information is ever collected. The setting can be changed at any time in Settings. Includes Parallels/VM detection to understand how many users run Trados on a Mac. Data is sent to a first-party Cloudflare Worker endpoint (no third-party trackers). ([#7](https://github.com/Supervertaler/Supervertaler-for-Trados/issues/7))
+
+---
+
 ## [4.10.12] — 2026-03-18
 
 ### Added
