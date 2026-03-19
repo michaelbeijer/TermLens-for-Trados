@@ -1028,20 +1028,24 @@ namespace Supervertaler.Trados.Controls
 
         private void SaveAllSynonyms(long termId)
         {
-            // Combine source and target synonym lists
+            // Combine source and target synonym lists.
+            // When inverted, the left column shows DB target synonyms and the right
+            // column shows DB source synonyms, so we must reverse the language tags.
+            var leftLang = _isInverted ? "target" : "source";
+            var rightLang = _isInverted ? "source" : "target";
             var allSynonyms = new List<SynonymEntry>();
 
             for (int i = 0; i < _sourceSyns.Count; i++)
             {
                 _sourceSyns[i].DisplayOrder = i;
-                _sourceSyns[i].Language = "source";
+                _sourceSyns[i].Language = leftLang;
                 allSynonyms.Add(_sourceSyns[i]);
             }
 
             for (int i = 0; i < _targetSyns.Count; i++)
             {
                 _targetSyns[i].DisplayOrder = i;
-                _targetSyns[i].Language = "target";
+                _targetSyns[i].Language = rightLang;
                 allSynonyms.Add(_targetSyns[i]);
             }
 

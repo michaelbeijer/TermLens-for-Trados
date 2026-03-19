@@ -12,6 +12,7 @@
 
 ### Fixed
 - **Save as Prompt dialog** — fixed buttons being cut off at the bottom of the dialog under certain DPI scaling settings.
+- **Synonym language tags in inverted termbases** — when editing a term from an inverted termbase (e.g. EN→NL termbase used in an NL→EN project), synonyms were saved with swapped language tags, causing them to appear on the wrong side. Now correctly reverses the language tags when saving.
 
 ---
 
