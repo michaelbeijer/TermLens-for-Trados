@@ -47,9 +47,9 @@ For full control over a new term, press **Ctrl+Alt+T** (or right-click in the ed
 | **Target Abbreviation** | Optional abbreviated form of the target term |
 | **Source synonyms** | Alternative source-language forms for the same concept |
 | **Target synonyms** | Alternative target-language translations |
-| **Definition** | Optional definition or usage note |
+| **Definition** | Optional definition or usage note. Supports multiple lines — click the **▼** button to expand the field for longer content. |
 | **Domain** | Subject area or client (e.g. "Legal", "ACME Corp") |
-| **Notes** | Any additional notes for translators |
+| **Notes** | Any additional notes for translators. Supports multiple lines with an expand button, like Definition. |
 | **URL** | Optional reference URL (shown as a clickable link in the term popup) |
 | **Non-translatable** | Check this to mark the term as non-translatable |
 

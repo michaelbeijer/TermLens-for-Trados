@@ -91,6 +91,10 @@ To update to a newer version:
 
 The new version cleanly replaces the previous installation. Your settings, termbases, and licence key are all preserved — no need to uninstall first.
 
+{% hint style="success" %}
+**One-click update:** When a new version is available, the plugin shows an "Update Available" dialogue on startup. Click **Install Update** to download and install the new version automatically — no need to visit GitHub. After installation, the plugin offers to restart Trados Studio for you.
+{% endhint %}
+
 {% hint style="warning" %}
 Trados Studio **must be fully closed** before installing or updating. If Trados is still running, the installer may silently fail because the plugin files are locked.
 {% endhint %}
