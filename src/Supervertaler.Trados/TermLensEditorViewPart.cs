@@ -1912,9 +1912,22 @@ namespace Supervertaler.Trados
                                 var tradosExe = FindTradosExecutable();
                                 if (tradosExe != null)
                                 {
-                                    System.Diagnostics.Process.Start(tradosExe);
+                                    // Launch a cmd process that waits for the current Trados
+                                    // to fully exit before starting the new instance.
+                                    // This prevents the race condition of two instances running.
+                                    var pid = System.Diagnostics.Process.GetCurrentProcess().Id;
+                                    var cmd = $"/c taskkill /PID {pid} /F >nul 2>&1 & " +
+                                              $"ping -n 3 127.0.0.1 >nul 2>&1 & " +
+                                              $"\"{tradosExe}\"";
+                                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                                    {
+                                        FileName = "cmd.exe",
+                                        Arguments = cmd,
+                                        WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
+                                        CreateNoWindow = true
+                                    });
                                     form.DialogResult = DialogResult.Yes;
-                                    // Use BeginInvoke to close after dialog exits cleanly
+                                    // Exit immediately — cmd will wait, then relaunch
                                     System.Threading.SynchronizationContext.Current?.Post(_ =>
                                     {
                                         System.Windows.Forms.Application.Exit();
