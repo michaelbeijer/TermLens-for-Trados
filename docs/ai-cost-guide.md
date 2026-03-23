@@ -33,7 +33,7 @@ These are estimates for a representative document. Actual usage varies with segm
 |-------|-----------|-----------|-----------------|
 | **GPT-4.1** (recommended) | $0.31 | $0.34 | $0.04 |
 | **GPT-4.1 Mini** | $0.06 | $0.07 | $0.01 |
-| **GPT-5.3** | $0.33 | $0.36 | $0.05 |
+| **GPT-5.4** | $0.33 | $0.36 | $0.05 |
 | **o4-mini** (reasoning) | — | — | $0.02 |
 
 ### Claude (Anthropic)
@@ -73,6 +73,14 @@ These are estimates for a representative document. Actual usage varies with segm
 **Ollama models run on your own computer** — there are no API costs. The trade-off is that quality depends on your hardware and the models are generally less capable than cloud-hosted models. See [AI Settings](settings/ai-settings.md) for setup instructions.
 {% endhint %}
 
+## Our recommendation
+
+{% hint style="success" %}
+**If you could only pick one model for everything — translation, proofreading, and chat — we would recommend Claude Sonnet 4.6.** It follows translation instructions precisely, handles terminology constraints well, is fast enough for batch operations, and delivers consistently high quality across legal, technical, and general content. It costs roughly $0.50 per 5,000-word document, which is a fraction of a cent per segment.
+{% endhint %}
+
+For budget-conscious batch work, **GPT-4.1 Mini** or **Gemini 2.5 Flash** offer excellent quality at a fifth of the price. For the absolute highest quality on specialised content, **Claude Opus 4.6** or **GPT-5.4** are worth the premium.
+
 ## Token pricing reference
 
 For reference, these are the per-token rates used in the calculations above:
@@ -81,7 +89,7 @@ For reference, these are the per-token rates used in the calculations above:
 |-------|----------------------|------------------------|
 | GPT-4.1 | $2.00 | $8.00 |
 | GPT-4.1 Mini | $0.40 | $1.60 |
-| GPT-5.3 | $1.75 | $14.00 |
+| GPT-5.4 | $1.75 | $14.00 |
 | o4-mini | $1.10 | $4.40 |
 | Claude Sonnet 4.6 | $3.00 | $15.00 |
 | Claude Haiku 4.5 | $1.00 | $5.00 |
@@ -101,7 +109,7 @@ Prices change regularly. Check your provider's pricing page for the latest rates
 ## Tips for managing costs
 
 * **Start with a budget model** — GPT-4.1 Mini, Gemini 2.5 Flash, or Grok 4.1 Fast are excellent for routine translation at a fraction of the cost.
-* **Use premium models selectively** — reserve GPT-5.3, Claude Opus, or Gemini 2.5 Pro for specialised content (legal, medical, patents) where the quality difference justifies the cost.
+* **Use premium models selectively** — reserve GPT-5.4, Claude Opus, or Gemini 2.5 Pro for specialised content (legal, medical, patents) where the quality difference justifies the cost.
 * **Reasoning models are for prompt generation only** — o4-mini and Grok 4.20 Reasoning think step-by-step, which is valuable for analysing a project and generating a prompt, but adds unnecessary cost and latency for translation.
 * **Try Ollama for zero cost** — if you have a computer with 8+ GB of RAM, TranslateGemma 12B delivers surprisingly good results for free.
 * **Check your usage** — the [Usage Statistics](settings/usage-statistics.md) tab in Settings tracks your token consumption per provider.
