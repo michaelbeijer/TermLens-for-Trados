@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -21,6 +22,14 @@ namespace Supervertaler.Trados.Core
     /// </summary>
     public class LlmClient : IDisposable
     {
+        // ─── Prompt Logging ────────────────────────────────────────
+
+        /// <summary>
+        /// Fires after every AI API call (success or failure) with full prompt details.
+        /// Subscribe to this event to log prompts to the Reports tab.
+        /// </summary>
+        public static event EventHandler<PromptLogEntry> PromptCompleted;
+
         // HttpClient is designed to be reused across the app lifetime
         private static readonly HttpClient Http;
 
@@ -79,22 +88,48 @@ namespace Supervertaler.Trados.Core
             string prompt,
             string systemPrompt = null,
             int? maxTokens = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            PromptLogFeature? feature = null,
+            string promptName = null)
         {
-            switch (_provider)
+            var sw = Stopwatch.StartNew();
+            string result = null;
+            string errorMsg = null;
+
+            try
             {
-                case LlmModels.ProviderOpenAi:
-                case LlmModels.ProviderGrok:
-                case LlmModels.ProviderCustomOpenAi:
-                    return await CallOpenAiAsync(prompt, systemPrompt, maxTokens, cancellationToken);
-                case LlmModels.ProviderClaude:
-                    return await CallClaudeAsync(prompt, systemPrompt, maxTokens, cancellationToken);
-                case LlmModels.ProviderGemini:
-                    return await CallGeminiAsync(prompt, systemPrompt, maxTokens, cancellationToken);
-                case LlmModels.ProviderOllama:
-                    return await CallOllamaAsync(prompt, systemPrompt, maxTokens, cancellationToken);
-                default:
-                    throw new ArgumentException($"Unsupported provider: {_provider}");
+                switch (_provider)
+                {
+                    case LlmModels.ProviderOpenAi:
+                    case LlmModels.ProviderGrok:
+                    case LlmModels.ProviderCustomOpenAi:
+                        result = await CallOpenAiAsync(prompt, systemPrompt, maxTokens, cancellationToken);
+                        break;
+                    case LlmModels.ProviderClaude:
+                        result = await CallClaudeAsync(prompt, systemPrompt, maxTokens, cancellationToken);
+                        break;
+                    case LlmModels.ProviderGemini:
+                        result = await CallGeminiAsync(prompt, systemPrompt, maxTokens, cancellationToken);
+                        break;
+                    case LlmModels.ProviderOllama:
+                        result = await CallOllamaAsync(prompt, systemPrompt, maxTokens, cancellationToken);
+                        break;
+                    default:
+                        throw new ArgumentException($"Unsupported provider: {_provider}");
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                errorMsg = ex.Message;
+                throw;
+            }
+            finally
+            {
+                sw.Stop();
+                if (feature.HasValue && feature.Value != PromptLogFeature.ConnectionTest)
+                    RaisePromptCompleted(feature.Value, systemPrompt, prompt, null, result, errorMsg, sw.Elapsed, promptName);
             }
         }
 
@@ -106,22 +141,48 @@ namespace Supervertaler.Trados.Core
             List<ChatMessage> messages,
             string systemPrompt = null,
             int? maxTokens = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            PromptLogFeature? feature = null,
+            string promptName = null)
         {
-            switch (_provider)
+            var sw = Stopwatch.StartNew();
+            string result = null;
+            string errorMsg = null;
+
+            try
             {
-                case LlmModels.ProviderOpenAi:
-                case LlmModels.ProviderGrok:
-                case LlmModels.ProviderCustomOpenAi:
-                    return await CallOpenAiChatAsync(messages, systemPrompt, maxTokens, cancellationToken);
-                case LlmModels.ProviderClaude:
-                    return await CallClaudeChatAsync(messages, systemPrompt, maxTokens, cancellationToken);
-                case LlmModels.ProviderGemini:
-                    return await CallGeminiChatAsync(messages, systemPrompt, maxTokens, cancellationToken);
-                case LlmModels.ProviderOllama:
-                    return await CallOllamaChatAsync(messages, systemPrompt, maxTokens, cancellationToken);
-                default:
-                    throw new ArgumentException($"Unsupported provider: {_provider}");
+                switch (_provider)
+                {
+                    case LlmModels.ProviderOpenAi:
+                    case LlmModels.ProviderGrok:
+                    case LlmModels.ProviderCustomOpenAi:
+                        result = await CallOpenAiChatAsync(messages, systemPrompt, maxTokens, cancellationToken);
+                        break;
+                    case LlmModels.ProviderClaude:
+                        result = await CallClaudeChatAsync(messages, systemPrompt, maxTokens, cancellationToken);
+                        break;
+                    case LlmModels.ProviderGemini:
+                        result = await CallGeminiChatAsync(messages, systemPrompt, maxTokens, cancellationToken);
+                        break;
+                    case LlmModels.ProviderOllama:
+                        result = await CallOllamaChatAsync(messages, systemPrompt, maxTokens, cancellationToken);
+                        break;
+                    default:
+                        throw new ArgumentException($"Unsupported provider: {_provider}");
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                errorMsg = ex.Message;
+                throw;
+            }
+            finally
+            {
+                sw.Stop();
+                if (feature.HasValue && feature.Value != PromptLogFeature.ConnectionTest)
+                    RaisePromptCompleted(feature.Value, systemPrompt, null, messages, result, errorMsg, sw.Elapsed, promptName);
             }
         }
 
@@ -149,6 +210,58 @@ namespace Supervertaler.Trados.Core
             catch (Exception ex)
             {
                 return ex.Message;
+            }
+        }
+
+        // ─── Prompt Logging Helper ───────────────────────────────────
+
+        private void RaisePromptCompleted(
+            PromptLogFeature feature,
+            string systemPrompt,
+            string userPrompt,
+            List<ChatMessage> messages,
+            string response,
+            string errorMessage,
+            TimeSpan duration,
+            string promptName = null)
+        {
+            var handler = PromptCompleted;
+            if (handler == null) return;
+
+            try
+            {
+                int inputTokens = messages != null
+                    ? TokenEstimator.EstimateInputTokens(messages, systemPrompt)
+                    : TokenEstimator.EstimateInputTokens(userPrompt, systemPrompt);
+                int outputTokens = TokenEstimator.EstimateTokens(response);
+
+                var modelInfo = LlmModels.FindModel(_model);
+
+                var entry = new PromptLogEntry
+                {
+                    Timestamp = DateTime.Now,
+                    Feature = feature,
+                    PromptName = promptName,
+                    Provider = _provider,
+                    Model = _model,
+                    DisplayModel = modelInfo?.DisplayName ?? _model,
+                    SystemPrompt = systemPrompt,
+                    UserPrompt = userPrompt,
+                    Messages = messages,
+                    Response = response,
+                    EstimatedInputTokens = inputTokens,
+                    EstimatedOutputTokens = outputTokens,
+                    EstimatedCost = TokenEstimator.EstimateCost(_model, inputTokens, outputTokens),
+                    Duration = duration,
+                    IsError = errorMessage != null,
+                    ErrorMessage = errorMessage
+                };
+
+                handler(this, entry);
+            }
+            catch
+            {
+                // Never let logging errors break the AI call
             }
         }
 

@@ -46,11 +46,19 @@ namespace Supervertaler.Trados.Controls
         private int _issueCount;
         private int _checkedCount;
 
-        // Card colours
+        // Proofreading card colours
         private static readonly Color CardColor = Color.FromArgb(255, 253, 231);      // #FFFDE7
         private static readonly Color HoverColor = Color.FromArgb(255, 249, 196);
         private static readonly Color TextColor = Color.FromArgb(60, 60, 60);
         private static readonly Color SuggColor = Color.FromArgb(120, 120, 120);
+
+        // Prompt log card colours
+        private static readonly Color PromptCardColor = Color.FromArgb(227, 242, 253);  // #E3F2FD
+        private static readonly Color PromptHoverColor = Color.FromArgb(207, 232, 252);
+        private static readonly Color PromptHeaderColor = Color.FromArgb(30, 90, 160);
+
+        private const int MaxPromptLogEntries = 500;
+        private int _promptLogCount;
 
         /// <summary>Fired when user clicks an issue card to navigate to that segment.</summary>
         public event EventHandler<NavigateToSegmentEventArgs> NavigateToSegmentRequested;
@@ -148,7 +156,7 @@ namespace Supervertaler.Trados.Controls
             // ─── Empty state label ────────────────────────────────
             _lblEmpty = new Label
             {
-                Text = "No proofreading results yet",
+                Text = "No reports yet",
                 Font = new Font("Segoe UI", 9f),
                 ForeColor = Color.FromArgb(160, 160, 160),
                 AutoSize = false,
@@ -385,8 +393,254 @@ namespace Supervertaler.Trados.Controls
             _issueCount = 0;
             _lblIssueCount.Text = "";
             _lblFooter.Text = "";
-            _lblEmpty.Text = "No proofreading results yet";
+            _lblEmpty.Text = "No reports yet";
             _lblEmpty.Visible = true;
+        }
+
+        // ─── Prompt Log ─────────────────────────────────────────────
+
+        /// <summary>
+        /// Adds a prompt log card to the results panel.
+        /// Cards are inserted at the top so the latest call is always visible.
+        /// </summary>
+        public void AddPromptLog(PromptLogEntry entry)
+        {
+            if (entry == null) return;
+
+            _lblEmpty.Visible = false;
+
+            // Cap entries
+            if (_promptLogCount >= MaxPromptLogEntries)
+            {
+                // Remove the oldest prompt log card (last one with PromptCardColor)
+                for (int i = _resultsPanel.Controls.Count - 1; i >= 0; i--)
+                {
+                    var ctrl = _resultsPanel.Controls[i];
+                    if (ctrl is Panel p && p.Tag is PromptLogEntry)
+                    {
+                        _resultsPanel.Controls.RemoveAt(i);
+                        ctrl.Dispose();
+                        _promptLogCount--;
+                        break;
+                    }
+                }
+            }
+
+            _resultsPanel.SuspendLayout();
+
+            var bodyFont = new Font("Segoe UI", 8.5f);
+            var headerFont = new Font("Segoe UI", 8.5f, FontStyle.Bold);
+            var smallFont = new Font("Segoe UI", 7.5f);
+
+            var availableWidth = _resultsPanel.ClientSize.Width
+                - SystemInformation.VerticalScrollBarWidth - 24;
+            if (availableWidth < 100) availableWidth = 300;
+
+            var card = new Panel
+            {
+                Width = availableWidth,
+                BackColor = PromptCardColor,
+                Padding = new Padding(8, 6, 8, 6),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Tag = entry
+            };
+
+            // Header: Feature label + timestamp
+            var headerText = $"{entry.FeatureLabel}  {entry.Timestamp:HH:mm:ss}";
+            var headerSize = TextRenderer.MeasureText(headerText, headerFont);
+            var lblHeader = new Label
+            {
+                Text = headerText,
+                Font = headerFont,
+                ForeColor = PromptHeaderColor,
+                Location = new Point(8, 6),
+                AutoSize = true
+            };
+            card.Controls.Add(lblHeader);
+
+            // Summary line
+            var summaryY = 6 + headerSize.Height + 2;
+            var summarySize = TextRenderer.MeasureText(entry.SummaryLine, bodyFont);
+            var lblSummary = new Label
+            {
+                Text = entry.SummaryLine,
+                Font = bodyFont,
+                ForeColor = TextColor,
+                Location = new Point(8, summaryY),
+                AutoSize = true
+            };
+            card.Controls.Add(lblSummary);
+
+            int yPos = summaryY + summarySize.Height + 4;
+            var textWidth = availableWidth - 20;
+
+            // Expandable sections
+            if (!string.IsNullOrEmpty(entry.SystemPrompt))
+            {
+                yPos = AddExpandableSection(card, "System prompt", entry.SystemPrompt,
+                    yPos, textWidth, smallFont, bodyFont);
+            }
+
+            if (entry.Messages != null && entry.Messages.Count > 0)
+            {
+                var sb = new System.Text.StringBuilder();
+                foreach (var msg in entry.Messages)
+                    sb.AppendLine($"[{msg.Role}]: {msg.Content}");
+                yPos = AddExpandableSection(card, "Messages", sb.ToString().TrimEnd(),
+                    yPos, textWidth, smallFont, bodyFont);
+            }
+            else if (!string.IsNullOrEmpty(entry.UserPrompt))
+            {
+                yPos = AddExpandableSection(card, "User prompt", entry.UserPrompt,
+                    yPos, textWidth, smallFont, bodyFont);
+            }
+
+            if (!string.IsNullOrEmpty(entry.Response))
+            {
+                yPos = AddExpandableSection(card, "Response", entry.Response,
+                    yPos, textWidth, smallFont, bodyFont);
+            }
+            else if (entry.IsError && !string.IsNullOrEmpty(entry.ErrorMessage))
+            {
+                yPos = AddExpandableSection(card, "Error", entry.ErrorMessage,
+                    yPos, textWidth, smallFont, bodyFont);
+            }
+
+            // Copy All link
+            var lnkCopyAll = new LinkLabel
+            {
+                Text = "Copy all",
+                Font = smallFont,
+                Location = new Point(8, yPos),
+                AutoSize = true,
+                LinkColor = PromptHeaderColor,
+                ActiveLinkColor = PromptHeaderColor
+            };
+            lnkCopyAll.Click += (s, e) =>
+            {
+                try { Clipboard.SetText(entry.ToFullText()); }
+                catch { }
+            };
+            card.Controls.Add(lnkCopyAll);
+
+            var copyAllSize = TextRenderer.MeasureText("Copy all", smallFont);
+            card.Height = Math.Max(40, yPos + copyAllSize.Height + 8);
+
+            // Hover effect
+            Action<Control> applyHover = null;
+            applyHover = (ctrl) =>
+            {
+                ctrl.MouseEnter += (s, e) => card.BackColor = PromptHoverColor;
+                ctrl.MouseLeave += (s, e) => card.BackColor = PromptCardColor;
+            };
+            applyHover(card);
+            foreach (Control child in card.Controls)
+                applyHover(child);
+
+            // Insert at top (after _lblEmpty which is index 0)
+            int insertIndex = 0;
+            for (int i = 0; i < _resultsPanel.Controls.Count; i++)
+            {
+                if (_resultsPanel.Controls[i] == _lblEmpty)
+                {
+                    insertIndex = i + 1;
+                    break;
+                }
+            }
+            _resultsPanel.Controls.Add(card);
+            _resultsPanel.Controls.SetChildIndex(card, insertIndex);
+
+            _promptLogCount++;
+
+            // Re-flow all cards
+            RelayoutCards();
+            _resultsPanel.ResumeLayout(true);
+
+            // Scroll to top
+            _resultsPanel.AutoScrollPosition = new Point(0, 0);
+        }
+
+        private int AddExpandableSection(Panel card, string title, string content,
+            int yPos, int textWidth, Font linkFont, Font contentFont)
+        {
+            var toggleText = $"Show {title.ToLowerInvariant()}...";
+            var toggleSize = TextRenderer.MeasureText(toggleText, linkFont);
+            var lnkToggle = new LinkLabel
+            {
+                Text = toggleText,
+                Font = linkFont,
+                Location = new Point(8, yPos),
+                AutoSize = true,
+                LinkColor = PromptHeaderColor,
+                ActiveLinkColor = PromptHeaderColor,
+                Tag = "toggle"
+            };
+
+            var txtContent = new TextBox
+            {
+                Text = content,
+                Font = contentFont,
+                ForeColor = TextColor,
+                BackColor = Color.FromArgb(245, 248, 252),
+                Location = new Point(8, yPos + toggleSize.Height + 2),
+                Multiline = true,
+                ReadOnly = true,
+                WordWrap = true,
+                ScrollBars = ScrollBars.Vertical,
+                BorderStyle = BorderStyle.FixedSingle,
+                Visible = false,
+                Width = textWidth,
+                Height = Math.Min(150, Math.Max(40, content.Split('\n').Length * 16 + 10))
+            };
+
+            var lnkCopy = new LinkLabel
+            {
+                Text = "Copy",
+                Font = linkFont,
+                AutoSize = true,
+                LinkColor = PromptHeaderColor,
+                ActiveLinkColor = PromptHeaderColor,
+                Visible = false,
+                Tag = "copy"
+            };
+            lnkCopy.Location = new Point(lnkToggle.Right + 8, yPos);
+            lnkCopy.Click += (s, e) =>
+            {
+                try { Clipboard.SetText(content); }
+                catch { }
+            };
+
+            var capturedCard = card;
+            lnkToggle.Click += (s, e) =>
+            {
+                txtContent.Visible = !txtContent.Visible;
+                lnkCopy.Visible = txtContent.Visible;
+                lnkToggle.Text = txtContent.Visible
+                    ? $"Hide {title.ToLowerInvariant()}"
+                    : $"Show {title.ToLowerInvariant()}...";
+
+                // Recalculate card height
+                RecalcPromptCardHeight(capturedCard);
+                RelayoutCards();
+            };
+
+            card.Controls.Add(lnkToggle);
+            card.Controls.Add(txtContent);
+            card.Controls.Add(lnkCopy);
+
+            return yPos + toggleSize.Height + 2;
+        }
+
+        private void RecalcPromptCardHeight(Panel card)
+        {
+            int maxBottom = 0;
+            foreach (Control ctrl in card.Controls)
+            {
+                if (!ctrl.Visible) continue;
+                int bottom = ctrl.Top + ctrl.Height;
+                if (bottom > maxBottom) maxBottom = bottom;
+            }
+            card.Height = Math.Max(40, maxBottom + 8);
         }
 
         // ─── Internal Helpers ──────────────────────────────────────

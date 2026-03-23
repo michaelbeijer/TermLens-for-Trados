@@ -69,6 +69,7 @@ namespace Supervertaler.Trados.Controls
         // When true, the next message displays as an assistant-styled (gray) bubble
         // instead of a user-styled (blue) bubble. Used for system-initiated messages.
         private bool _pendingShowAsStatus;
+        private string _pendingPromptName;
 
         private const int MaxImages = 5;
         private const int MaxDocuments = 5;
@@ -1131,6 +1132,8 @@ namespace Supervertaler.Trados.Controls
             _pendingMaxTokens = null;
             var showAsStatus = _pendingShowAsStatus;
             _pendingShowAsStatus = false;
+            var promptName = _pendingPromptName;
+            _pendingPromptName = null;
 
             SendRequested?.Invoke(this, new ChatSendEventArgs
             {
@@ -1139,7 +1142,8 @@ namespace Supervertaler.Trados.Controls
                 Documents = documents,
                 DisplayText = displayText,
                 MaxTokens = maxTokens,
-                ShowAsStatus = showAsStatus
+                ShowAsStatus = showAsStatus,
+                PromptName = promptName
             });
         }
 
@@ -1159,6 +1163,31 @@ namespace Supervertaler.Trados.Controls
 
             // Auto-scroll to latest message
             _chatPanel.ScrollControlIntoView(bubble);
+        }
+
+        /// <summary>
+        /// Adds a small muted summary line below the last chat bubble.
+        /// Used to show token/cost info after an AI call completes.
+        /// </summary>
+        public void AddSummaryLine(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+
+            var bubbleWidth = _chatPanel.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - 2;
+            var lbl = new Label
+            {
+                Text = text,
+                Font = new Font("Segoe UI", 7.5f),
+                ForeColor = Color.FromArgb(150, 150, 150),
+                AutoSize = false,
+                Width = Math.Max(200, bubbleWidth),
+                Height = 18,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(12, 0, 12, 0),
+                Margin = new Padding(0, 0, 0, 4)
+            };
+            _messageFlow.Controls.Add(lbl);
+            _chatPanel.ScrollControlIntoView(lbl);
         }
 
         /// <summary>
@@ -1410,8 +1439,8 @@ namespace Supervertaler.Trados.Controls
         /// sent to the AI. Use this when <paramref name="text"/> contains a large {{PROJECT}}
         /// expansion that would clutter the chat history.
         /// </summary>
-        public void SubmitMessage(string text, string displayText, int? maxTokens = null,
-            bool showAsStatus = false)
+        public void SubmitMessage(string text, string displayText, string promptName = null,
+            int? maxTokens = null, bool showAsStatus = false)
         {
             if (_isThinking) return;
             if (string.IsNullOrWhiteSpace(text)) return;
@@ -1422,6 +1451,7 @@ namespace Supervertaler.Trados.Controls
             _pendingDisplayText = displayText;
             _pendingMaxTokens = maxTokens;
             _pendingShowAsStatus = showAsStatus;
+            _pendingPromptName = promptName;
             _txtInput.Text = text;
             DoSend();
         }

@@ -127,5 +127,11 @@ namespace Supervertaler.Trados.Models
         /// The message is still sent to the AI as a user message.
         /// </summary>
         public bool ShowAsStatus { get; set; }
+
+        /// <summary>
+        /// Optional prompt template name for logging. When set, appears in the
+        /// Reports tab header (e.g. "QuickLauncher · Explain in Context").
+        /// </summary>
+        public string PromptName { get; set; }
     }
 }

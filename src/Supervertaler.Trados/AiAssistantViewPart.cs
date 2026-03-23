@@ -136,6 +136,9 @@ namespace Supervertaler.Trados
             reportsControl.NavigateToSegmentRequested += OnNavigateToSegment;
             reportsControl.ClearResultsRequested += OnClearReports;
 
+            // Wire prompt logging
+            LlmClient.PromptCompleted += OnPromptCompleted;
+
             // Initial context update
             UpdateContextDisplay();
             UpdateProviderDisplay();
@@ -472,6 +475,10 @@ namespace Supervertaler.Trados
             var capturedSystemPrompt = systemPrompt;
             var capturedMessages = messagesToSend;
             var capturedMaxTokens = args.MaxTokens ?? 4096;
+            var capturedPromptName = args.PromptName;
+            var capturedFeature = !string.IsNullOrEmpty(args.PromptName)
+                ? PromptLogFeature.QuickLauncher
+                : PromptLogFeature.Chat;
 
             // 7. Call LLM async — calculate prompt size for diagnostics
             var promptCharCount = 0;
@@ -486,7 +493,8 @@ namespace Supervertaler.Trados
                     var client = new LlmClient(capturedProvider, capturedModel, capturedKey, capturedBaseUrl);
                     var response = await client.SendChatAsync(
                         capturedMessages, capturedSystemPrompt,
-                        maxTokens: capturedMaxTokens, cancellationToken: ct);
+                        maxTokens: capturedMaxTokens, cancellationToken: ct,
+                        feature: capturedFeature, promptName: capturedPromptName);
 
                     var assistantMsg = new ChatMessage
                     {
@@ -1312,6 +1320,25 @@ namespace Supervertaler.Trados
             _control.Value.UpdateReportsBadge(0);
         }
 
+        private void OnPromptCompleted(object sender, PromptLogEntry entry)
+        {
+            if (entry == null) return;
+            if (_settings?.AiSettings?.LogPromptsToReports != true) return;
+
+            SafeInvoke(() =>
+            {
+                // Add card to Reports tab
+                _control.Value.ReportsControl.AddPromptLog(entry);
+
+                // Show summary line in chat for Chat/QuickLauncher calls
+                if (entry.Feature == PromptLogFeature.Chat ||
+                    entry.Feature == PromptLogFeature.QuickLauncher)
+                {
+                    _control.Value.AddSummaryLine(entry.SummaryLine);
+                }
+            });
+        }
+
         /// <summary>
         /// Collects segments for proofreading based on the selected scope.
         /// Unlike batch translate, proofreading only targets segments that have
@@ -1599,7 +1626,7 @@ namespace Supervertaler.Trados
         /// Optional shorter version shown in the chat bubble. Pass null to show the full prompt.
         /// Use this when the prompt contains a large {{PROJECT}} expansion.
         /// </param>
-        public static void RunQuickLauncherPrompt(string expandedPrompt, string displayPrompt = null)
+        public static void RunQuickLauncherPrompt(string expandedPrompt, string displayPrompt = null, string promptName = null)
         {
             if (string.IsNullOrWhiteSpace(expandedPrompt)) return;
 
@@ -1608,7 +1635,7 @@ namespace Supervertaler.Trados
 
             instance.SafeInvoke(() =>
             {
-                _control.Value.SubmitMessage(expandedPrompt, displayPrompt);
+                _control.Value.SubmitMessage(expandedPrompt, displayPrompt, promptName);
             });
         }
 
@@ -1755,7 +1782,8 @@ namespace Supervertaler.Trados
                             // For single segment, send it directly (not numbered batch format)
                             var userPrompt = $"Translate the following segment:\n\n{sourceText}";
 
-                            var response = await client.SendPromptAsync(userPrompt, systemPrompt);
+                            var response = await client.SendPromptAsync(userPrompt, systemPrompt,
+                                feature: PromptLogFeature.Translate);
 
                             if (!string.IsNullOrWhiteSpace(response))
                             {

@@ -5,6 +5,10 @@
 ### Fixed
 - **Tracked changes no longer corrupt term additions** — Add Term (Ctrl+Alt+T), Quick-Add (Alt+Down/Up), Non-Translatable (Ctrl+Alt+N), QuickLauncher prompts, and Expand Selection now strip deleted tracked changes, adding only the final text
 - **QuickLauncher segment context** — QuickLauncher chat prompts and slot runner now pass clean segment text without tracked changes markup
+- **Prompt log expandable sections now visible** — the "Show system prompt...", "Show messages...", "Show response...", and "Copy all" links in the Reports tab were invisible due to a layout calculation bug; now correctly positioned and clickable
+
+### Added
+- **Prompt name in Reports tab** — QuickLauncher entries now show the prompt template name in the header (e.g. "QuickLauncher · Explain in Context · 14:32:05") instead of generic "Chat"
 
 ---
 

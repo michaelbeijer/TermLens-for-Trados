@@ -181,7 +181,7 @@ namespace Supervertaler.Trados
                     surroundingSegments, placeholder, tmMatchesText);
             }
 
-            AiAssistantViewPart.RunQuickLauncherPrompt(expanded, displayExpanded);
+            AiAssistantViewPart.RunQuickLauncherPrompt(expanded, displayExpanded, prompt.Name);
         }
     }
 }

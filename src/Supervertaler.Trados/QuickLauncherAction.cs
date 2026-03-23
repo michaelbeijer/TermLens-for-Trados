@@ -194,7 +194,7 @@ namespace Supervertaler.Trados
                             surroundingSegments, placeholder, tmMatchesText);
                     }
 
-                    AiAssistantViewPart.RunQuickLauncherPrompt(expanded, displayExpanded);
+                    AiAssistantViewPart.RunQuickLauncherPrompt(expanded, displayExpanded, capturedPrompt.Name);
                 };
 
                 menu.Items.Add(item);
