@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.18.7] — 2026-03-24
+
+### Changed
+- **Trial period reduced to 14 days** — down from 90 days; the free trial now runs for 14 days from first launch
+- **Live Lemon Squeezy checkout** — switched from test mode to live payment processing
+
+---
+
 ## [4.18.6] — 2026-03-23
 
 ### Added
