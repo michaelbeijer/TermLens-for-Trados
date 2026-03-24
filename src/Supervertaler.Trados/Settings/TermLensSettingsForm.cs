@@ -961,7 +961,7 @@ namespace Supervertaler.Trados.Settings
 
             // AI settings
             _aiSettingsPanel.PopulateFromSettings(_settings.AiSettings);
-            _aiSettingsPanel.SetAvailableTermbases(_termbases,
+            _aiSettingsPanel.SetAvailableTermbases(GetCombinedTermbaseList(),
                 _settings.AiSettings?.DisabledAiTermbaseIds);
 
             // Prompts
@@ -1112,7 +1112,7 @@ namespace Supervertaler.Trados.Settings
             // the termbase list changes (new DB, add/remove termbase, etc.)
             if (_aiSettingsPanel != null)
             {
-                _aiSettingsPanel.SetAvailableTermbases(_termbases,
+                _aiSettingsPanel.SetAvailableTermbases(GetCombinedTermbaseList(),
                     _settings.AiSettings?.DisabledAiTermbaseIds);
             }
         }
@@ -1605,6 +1605,25 @@ namespace Supervertaler.Trados.Settings
         {
             e.Cancel = true; // prevent the "What's This?" cursor
             HelpSystem.OpenHelp(GetCurrentHelpTopic());
+        }
+
+        /// <summary>
+        /// Combines Supervertaler termbases and MultiTerm termbases into a single list
+        /// for the AI Settings termbase checklist.
+        /// </summary>
+        private List<TermbaseInfo> GetCombinedTermbaseList()
+        {
+            var combined = new List<TermbaseInfo>(_termbases);
+            foreach (var mt in _multiTermInfos)
+            {
+                combined.Add(new TermbaseInfo
+                {
+                    Id = mt.SyntheticId,
+                    Name = $"{mt.Name} [MultiTerm]",
+                    TermCount = mt.TermCount
+                });
+            }
+            return combined;
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
