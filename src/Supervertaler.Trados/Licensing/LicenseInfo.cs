@@ -71,7 +71,7 @@ namespace Supervertaler.Trados.Licensing
         // ─── Trial ──────────────────────────────────────────────────
 
         /// <summary>
-        /// When the 90-day trial started (UTC). Set on first-ever plugin launch.
+        /// When the 14-day trial started (UTC). Set on first-ever plugin launch.
         /// DateTime.MinValue means the trial hasn't started yet (shouldn't happen in practice).
         /// </summary>
         [DataMember(Name = "trialStartedAt")]
@@ -99,7 +99,7 @@ namespace Supervertaler.Trados.Licensing
         public bool IsActivated => !string.IsNullOrWhiteSpace(InstanceId);
 
         /// <summary>
-        /// Whether the trial is still within the 90-day window.
+        /// Whether the trial is still within the 14-day window.
         /// </summary>
         public bool IsTrialActive
         {
@@ -126,7 +126,7 @@ namespace Supervertaler.Trados.Licensing
         /// <summary>
         /// Trial duration in days. Must match LicenseManager.TrialDays.
         /// </summary>
-        private const int TrialDays = 90;
+        private const int TrialDays = 14;
 
         // ─── Persistence ────────────────────────────────────────────
 
