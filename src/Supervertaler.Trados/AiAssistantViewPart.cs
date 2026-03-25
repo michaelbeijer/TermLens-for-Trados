@@ -81,17 +81,18 @@ namespace Supervertaler.Trados
                 }));
             };
 
+            // Load settings and wire up gear button even when unlicensed,
+            // so users can open Settings → License to activate.
+            _settings = TermLensSettings.Load();
+            _promptLibrary = TermLensEditorViewPart.GetPromptLibrary() ?? new PromptLibrary();
+            _promptLibrary.EnsureBuiltInPrompts();
+            _control.Value.SettingsRequested += OnSettingsRequested;
+
             if (!LicenseManager.Instance.HasTier2Access)
             {
                 _control.Value.ShowUpgradeRequired();
                 return;
             }
-
-            _settings = TermLensSettings.Load();
-
-            // Initialize prompt library — try to share with TermLens if already loaded
-            _promptLibrary = TermLensEditorViewPart.GetPromptLibrary() ?? new PromptLibrary();
-            _promptLibrary.EnsureBuiltInPrompts();
 
             _editorController = SdlTradosStudio.Application.GetController<EditorController>();
             if (_editorController != null)
@@ -113,8 +114,7 @@ namespace Supervertaler.Trados
             _control.Value.SaveAsPromptRequested += OnSaveAsPromptRequested;
             _control.Value.StopRequested += OnStopRequested;
 
-            // Wire settings/help buttons
-            _control.Value.SettingsRequested += OnSettingsRequested;
+            // Wire remaining buttons (SettingsRequested already wired above)
             _control.Value.ModelChangeRequested += OnModelChangeRequested;
 
             // Chat font size: restore persisted size and wire change handler

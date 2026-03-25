@@ -125,13 +125,8 @@ namespace Supervertaler.Trados
                 try { await UsageStatistics.SendPingAsync(); } catch { }
             });
 
-            if (LicenseManager.Instance.CurrentTier == LicenseTier.None)
-            {
-                _control.Value.ShowLicenseRequired();
-                return;
-            }
-
-            // Load persisted settings
+            // Load persisted settings — needed even when unlicensed so the
+            // settings dialog can open and let the user enter a license key.
             _settings = TermLensSettings.Load();
 
             // Apply global UI scale factor before any controls are created
@@ -140,6 +135,16 @@ namespace Supervertaler.Trados
             // Initialize prompt library and seed built-in prompts on first run
             _promptLibrary = new PromptLibrary();
             _promptLibrary.EnsureBuiltInPrompts();
+
+            // Wire up the gear/settings button — must be done even when
+            // unlicensed so users can open Settings → License to activate.
+            _mainPanel.Value.SettingsRequested += OnSettingsRequested;
+
+            if (LicenseManager.Instance.CurrentTier == LicenseTier.None)
+            {
+                _control.Value.ShowLicenseRequired();
+                return;
+            }
 
             _editorController = SdlTradosStudio.Application.GetController<EditorController>();
 
@@ -165,9 +170,6 @@ namespace Supervertaler.Trados
             _control.Value.TermEditRequested += OnTermEditRequested;
             _control.Value.TermDeleteRequested += OnTermDeleteRequested;
             _control.Value.TermNonTranslatableToggled += OnTermNonTranslatableToggled;
-
-            // Wire up the gear/settings button (on the MainPanelControl, visible on all tabs)
-            _mainPanel.Value.SettingsRequested += OnSettingsRequested;
 
             // Wire up font size changes from the A+/A- buttons in the panel header
             _control.Value.FontSizeChanged += OnFontSizeChanged;

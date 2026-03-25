@@ -1491,7 +1491,7 @@ namespace Supervertaler.Trados.Controls
 
             var lbl = new Label
             {
-                Text = "The Supervertaler Assistant requires a\n\"TermLens + Supervertaler Assistant\" license.\n\nUpgrade in Settings \u2192 License.",
+                Text = "The Supervertaler Assistant requires a\n\"TermLens + Supervertaler Assistant\" license.\n\nClick the \u2699 button above to open Settings \u2192 License.",
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Dock = DockStyle.Fill,
@@ -1502,6 +1502,10 @@ namespace Supervertaler.Trados.Controls
             _upgradeOverlay.Controls.Add(lbl);
             Controls.Add(_upgradeOverlay);
             _upgradeOverlay.BringToFront();
+
+            // Keep gear and help buttons above the overlay so users can access settings
+            _btnSettings.BringToFront();
+            _btnHelp.BringToFront();
         }
 
         /// <summary>

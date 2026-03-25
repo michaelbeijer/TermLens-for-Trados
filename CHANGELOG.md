@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.18.12] — 2026-03-25
+
+### Fixed
+- **Settings accessible when trial expires** – the gear button on both the TermLens and Supervertaler Assistant panels now opens the Settings dialog even when the trial has expired or no licence is active, so users can enter a licence key
+- **AI Assistant gear button visible above overlay** – the settings and help buttons are no longer hidden behind the licence overlay
+
+### Changed
+- **Clearer expired trial message** – both panels now say "Click the ⚙ button above" instead of the vague "Enter a license key in Settings → License"
+
+---
+
 ## [4.18.11] — 2026-03-25
 
 ### Added
