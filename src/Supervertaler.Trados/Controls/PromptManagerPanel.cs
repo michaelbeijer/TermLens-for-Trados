@@ -27,6 +27,7 @@ namespace Supervertaler.Trados.Controls
         private Button _btnMoveDown;
         private Button _btnRefresh;
         private ContextMenuStrip _treeContextMenu;
+        private System.Windows.Forms.ToolTip _toolTip = new System.Windows.Forms.ToolTip();
 
         // ─── Right panel controls ────────────────────────────────
         private Panel _rightPanel;
@@ -141,6 +142,7 @@ namespace Supervertaler.Trados.Controls
 
             _btnRestore = CreateToolbarButton("Restore", 65);
             _btnRestore.Click += OnRestoreBuiltIn;
+            _toolTip.SetToolTip(_btnRestore, "Restore all built-in prompts to their defaults");
 
             _btnNewFolder = CreateToolbarButton("New Folder", 90);
             _btnNewFolder.Click += OnNewFolder;

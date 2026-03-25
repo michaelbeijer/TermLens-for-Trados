@@ -968,6 +968,67 @@ Use the fuzzy matches and surrounding context as reference, but produce a fresh,
 ---
 
 Using the project context above, suggest the best translation for ""{{SELECTION}}"" from {{SOURCE_LANGUAGE}} to {{TARGET_LANGUAGE}}. Reference relevant segments in your explanation."
+                },
+                new PromptTemplate
+                {
+                    Name = "Generate project brief",
+                    Description = "Generates a comprehensive project summary in Markdown that you can paste into any AI tool for context while translating",
+                    Domain = "QuickLauncher",
+                    IsBuiltIn = true,
+                    Content = @"You are a senior translation project analyst. Your job is to produce a comprehensive briefing document that a professional translator (or an AI assistant helping a translator) can use as reference material throughout an entire translation project.
+
+The briefing will be used as context when pasting into AI chat interfaces (Claude, ChatGPT, Gemini, etc.) to ask questions while translating.
+
+PROJECT METADATA:
+- Project name: {{PROJECT_NAME}}
+- Document: {{DOCUMENT_NAME}}
+- Source language: {{SOURCE_LANGUAGE}}
+- Target language: {{TARGET_LANGUAGE}}
+
+FULL SOURCE TEXT:
+{{PROJECT}}
+
+---
+
+Analyse the complete source text above and produce a **Project Brief** in clean Markdown with the following sections. Be thorough but concise – the briefing should be a practical reference, not a literary essay.
+
+## 1. Document Overview
+- What type of document is this? (legal, technical, marketing, medical, patent, financial, academic, etc.)
+- What is the document about? (2–4 sentences summarising the subject matter)
+- Who is the likely audience?
+- What is the overall tone and register? (formal, informal, technical, persuasive, neutral, etc.)
+
+## 2. Key Concepts and Subject Matter
+- List the main topics and concepts discussed in the document
+- Briefly explain any domain-specific concepts that a general translator might not immediately understand
+
+## 3. Terminology
+- List all important technical terms, abbreviations, and acronyms found in the source text
+- Format as a table: | Term | Explanation | Notes for translator |
+- Include any terms that appear frequently or that are critical to translate consistently
+- Flag any terms that are ambiguous or could be translated multiple ways
+
+## 4. Named Entities
+- List all proper nouns: people, organisations, products, brands, places, legislation, standards
+- Note which ones should likely remain untranslated and which may need localisation
+
+## 5. Structure and Patterns
+- Describe the document structure (sections, headings, lists, numbering patterns)
+- Note any recurring sentence patterns, boilerplate text, or formulaic language
+- Flag any segments that appear to be duplicated or near-duplicated
+
+## 6. Translation Challenges
+- Identify specific passages that are likely to be difficult to translate
+- Note any culturally specific references, wordplay, or idiomatic expressions
+- Flag any ambiguous passages where the meaning is unclear even in the source language
+- Note any inconsistencies in the source text (terminology, style, numbering)
+
+## 7. Style and Consistency Notes
+- Note the source text's style characteristics that should be preserved or adapted
+- Any patterns in capitalisation, punctuation, or formatting conventions
+- Recommendations for maintaining consistency throughout the translation
+
+Format the entire output as a single Markdown document that can be copied and pasted directly into another AI tool's chat interface."
                 }
             };
         }
