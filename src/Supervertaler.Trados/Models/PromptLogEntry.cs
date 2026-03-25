@@ -50,7 +50,7 @@ namespace Supervertaler.Trados.Models
                     case PromptLogFeature.BatchTranslate: baseLabel = "Batch Translate"; break;
                     case PromptLogFeature.Proofread: baseLabel = "Proofread"; break;
                     case PromptLogFeature.QuickLauncher: baseLabel = "QuickLauncher"; break;
-                    case PromptLogFeature.PromptGeneration: baseLabel = "Generate Prompt"; break;
+                    case PromptLogFeature.PromptGeneration: baseLabel = "AutoPrompt"; break;
                     case PromptLogFeature.ConnectionTest: baseLabel = "Connection Test"; break;
                     default: baseLabel = "Unknown"; break;
                 }

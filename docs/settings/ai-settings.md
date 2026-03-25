@@ -62,7 +62,7 @@ These options control what additional context is included when the AI translates
 
 When enabled, terminology matches from active termbases for the current segment are injected into the translation prompt. This helps the AI use the correct, approved terminology.
 
-For [prompt generation](../generate-prompt.md), **TermScan** automatically filters the termbase to only terms that appear in the document's source text, keeping the prompt focused and within token limits.
+For [AutoPrompt](../generate-prompt.md), **TermScan** automatically filters the termbase to only terms that appear in the document's source text, keeping the prompt focused and within token limits.
 
 {% hint style="warning" %}
 **Only enable termbases you trust.** The AI will follow your glossary entries even when they are wrong. If a termbase contains inaccurate, outdated, or low-quality translations, the AI will be forced to use them — producing worse results than if no termbase were enabled at all. Modern LLMs are remarkably good at choosing correct terminology on their own. When in doubt, disable termbases and add terms incrementally as you review the AI's output.
@@ -70,7 +70,7 @@ For [prompt generation](../generate-prompt.md), **TermScan** automatically filte
 
 ### Include TM matches
 
-When enabled, translation memory matches for the current segment are included in the prompt. This gives the AI context from previous translations, improving consistency. This setting also controls whether TM reference pairs are included when using [Analyse Project & Generate Prompt](../generate-prompt.md).
+When enabled, translation memory matches for the current segment are included in the prompt. This gives the AI context from previous translations, improving consistency. This setting also controls whether TM reference pairs are included when using [AutoPrompt](../generate-prompt.md).
 
 ### Include full document content
 

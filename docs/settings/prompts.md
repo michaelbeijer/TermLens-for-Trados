@@ -23,7 +23,7 @@ Open the plugin **Settings** dialogue and switch to the **Prompts** tab.
 
 #### See Also
 
-* [Analyse Project & Generate Prompt](../generate-prompt.md)
+* [AutoPrompt](../generate-prompt.md)
 * [QuickLauncher](../quicklauncher.md)
 * [AI Settings](ai-settings.md)
 * [Batch Translate](../batch-translate.md)

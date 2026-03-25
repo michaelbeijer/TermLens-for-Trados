@@ -70,7 +70,7 @@ namespace Supervertaler.Trados.Controls
         /// <summary>Fired when user switches between Translate and Proofread mode.</summary>
         public event EventHandler BatchModeChanged;
 
-        /// <summary>Fired when user clicks "Analyse Project &amp; Generate Prompt".</summary>
+        /// <summary>Fired when user clicks "AutoPrompt".</summary>
         public event EventHandler GeneratePromptRequested;
 
         /// <summary>Gets the current batch mode.</summary>
@@ -190,7 +190,7 @@ namespace Supervertaler.Trados.Controls
             // ─── Generate Prompt link ────────────────────────────
             var lnkGeneratePrompt = new LinkLabel
             {
-                Text = "Analyse Project && Generate Prompt\u2026",
+                Text = "AutoPrompt\u2026",
                 Location = new Point(_cmbPrompt.Right + 8, y + 2),
                 AutoSize = true,
                 Font = bodyFont,
@@ -200,8 +200,8 @@ namespace Supervertaler.Trados.Controls
                 GeneratePromptRequested?.Invoke(this, EventArgs.Empty);
             var tip = new ToolTip();
             tip.SetToolTip(lnkGeneratePrompt,
-                "Analyses your project\u2019s content, terminology, and TM data to generate\r\n" +
-                "a comprehensive domain-specific translation prompt using AI.\r\n\r\n" +
+                "AutoPrompt analyses your project\u2019s content, terminology (via TermScan),\r\n" +
+                "and TM data to generate a domain-specific translation prompt using AI.\r\n\r\n" +
                 "The result appears in the AI Assistant chat, where you can refine it.\r\n" +
                 "Right-click any assistant message \u2192 \u201cSave as Prompt\u2026\u201d to save it.");
             Controls.Add(lnkGeneratePrompt);

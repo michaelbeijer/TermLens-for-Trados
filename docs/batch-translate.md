@@ -73,7 +73,7 @@ Start by translating only the empty segments (scope: **Empty Segments Only**). R
 
 ### Generate a Domain-Specific Prompt Automatically
 
-Click **Analyse Project & Generate Prompt…** next to the prompt dropdown. Supervertaler analyses your entire document, detects the domain, and uses AI to generate a comprehensive translation prompt with terminology rules, style guidelines, and anti-truncation controls — all tailored to your specific project. See [Analyse Project & Generate Prompt](generate-prompt.md) for details.
+Click **AutoPrompt…** next to the prompt dropdown. Supervertaler analyses your entire document, detects the domain, and uses AI to generate a comprehensive translation prompt with terminology rules, style guidelines, and anti-truncation controls — all tailored to your specific project. See [AutoPrompt](generate-prompt.md) for details.
 
 ### Create Domain-Specific Prompts Manually
 
@@ -95,7 +95,7 @@ AI translation is a first draft. After a batch run:
 
 ## See Also
 
-* [Analyse Project & Generate Prompt](generate-prompt.md)
+* [AutoPrompt](generate-prompt.md)
 * [AI Proofreader](ai-proofreader.md)
 * [Supervertaler Assistant](ai-assistant.md)
 * [TermLens](termlens.md)

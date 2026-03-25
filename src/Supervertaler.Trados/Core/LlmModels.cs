@@ -61,7 +61,7 @@ namespace Supervertaler.Trados.Core
             new LlmModelInfo
             {
                 Id = "o4-mini", DisplayName = "o4-mini (Reasoning)",
-                Description = "Thinks step-by-step — use for Analyse Project & Generate Prompt, not for translation",
+                Description = "Thinks step-by-step — use for AutoPrompt, not for translation",
                 Provider = LlmProvider.OpenAi,
                 IsReasoningModel = true,
                 DefaultTimeoutMs = 600_000,

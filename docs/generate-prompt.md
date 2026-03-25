@@ -2,7 +2,7 @@
 You are viewing help for **Supervertaler for Trados** — the Trados Studio plugin. Looking for help with the standalone app? Visit [Supervertaler Workbench help](https://help.supervertaler.com).
 {% endhint %}
 
-This feature uses AI to analyse your entire project and generate a comprehensive, domain-specific translation prompt tailored to your document. The generated prompt includes terminology rules, style guidelines, anti-truncation controls, and domain-specific instructions — ready to use with Batch Translate.
+AutoPrompt uses AI to analyse your entire project and generate a comprehensive, domain-specific translation prompt tailored to your document. The generated prompt includes terminology rules, style guidelines, anti-truncation controls, and domain-specific instructions — ready to use with Batch Translate.
 
 <figure><img src=".gitbook/assets/image (7).png" alt=""><figcaption></figcaption></figure>
 
@@ -10,7 +10,7 @@ This feature uses AI to analyse your entire project and generate a comprehensive
 
 #### 1. Start the analysis
 
-On the **Batch Operations** tab, click the **Analyse Project & Generate Prompt…** link next to the prompt dropdown.
+On the **Batch Operations** tab, click the **AutoPrompt…** link next to the prompt dropdown.
 
 #### 2. What gets analysed
 
@@ -27,9 +27,9 @@ Supervertaler gathers the following data from your project and sends it to your 
 The full document is sent to the AI for analysis. For a typical 30,000-word document, this costs approximately $0.20–$0.25 with a Sonnet-class model, or $1.00–$1.15 with an Opus-class model.
 {% endhint %}
 
-#### 2b. TermScan — automatic term filtering
+#### 2b. TermScan — automatic glossary extraction
 
-Before building the prompt, Supervertaler runs **TermScan**: it concatenates all source segments in the document and checks each termbase entry against this text. Only terms whose source term, source abbreviation, or source synonyms actually appear in the document are included in the generated prompt.
+Before building the prompt, AutoPrompt runs **TermScan**: it concatenates all source segments in the document and checks each termbase entry against this text. Only terms whose source term, source abbreviation, or source synonyms actually appear in the document are included in the generated prompt.
 
 This dramatically reduces the glossary size — for example, a general patent termbase with 2,680 entries might yield only 123 relevant terms for a specific document. The status message in the AI Assistant confirms the filter: *"Termbase terms (filtered 123 relevant from 2,680 total)"*.
 
@@ -41,7 +41,7 @@ The filtering is case-insensitive and checks all variants of each term (source t
 
 #### 3. Domain detection
 
-Before sending to the AI, Supervertaler runs a local keyword-based analysis to detect the document's domain. Supported domains:
+Before sending to the AI, AutoPrompt runs a local keyword-based analysis to detect the document's domain. Supported domains:
 
 * **Patent** — claims, embodiments, prior art, figure references
 * **Legal** — contracts, clauses, statutory references
@@ -99,7 +99,7 @@ The generator includes **confirmed** segments (Translated, Approved, or Signed-o
 
 #### Review the glossary section
 
-The generated prompt includes only the document-relevant terms from your enabled termbases (filtered by TermScan). Check that the glossary accurately reflects your terminology preferences. You can ask the AI to reorganise terms by category or add missing mappings.
+The generated prompt includes only the document-relevant terms extracted by TermScan from your enabled termbases. Check that the glossary accurately reflects your terminology preferences. You can ask the AI to reorganise terms by category or add missing mappings.
 
 {% hint style="warning" %}
 If your termbase contains incorrect or low-quality entries, these will be injected into the prompt and the AI will be forced to follow them. Only enable termbases that you trust. When starting a new project with no established terminology, consider disabling termbases entirely and letting the AI translate freely — then add terms as you review.
@@ -111,7 +111,7 @@ After saving the generated prompt, select it from the prompt dropdown on the Bat
 
 #### Regenerate when the project changes
 
-If your project evolves significantly (new terminology, different document sections, additional termbases), run the analysis again to generate an updated prompt.
+If your project evolves significantly (new terminology, different document sections, additional termbases), run AutoPrompt again to generate an updated prompt.
 
 ***
 

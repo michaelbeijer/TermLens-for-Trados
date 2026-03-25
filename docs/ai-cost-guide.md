@@ -21,7 +21,7 @@ Because Supervertaler translates **segment by segment**, the system prompt and t
 |------|-------------|---------------|
 | **Batch Translate** | ~125,000 | ~8,000 |
 | **AI Proofreader** | ~140,000 | ~8,000 |
-| **Generate Prompt** | ~10,000 | ~2,000 |
+| **AutoPrompt** | ~10,000 | ~2,000 |
 
 These are estimates for a representative document. Actual usage varies with segment length, terminology context size, and prompt complexity.
 
@@ -29,7 +29,7 @@ These are estimates for a representative document. Actual usage varies with segm
 
 ### OpenAI
 
-| Model | Translate | Proofread | Generate Prompt |
+| Model | Translate | Proofread | AutoPrompt |
 |-------|-----------|-----------|-----------------|
 | **GPT-4.1** (recommended) | $0.31 | $0.34 | $0.04 |
 | **GPT-4.1 Mini** | $0.06 | $0.07 | $0.01 |
@@ -38,7 +38,7 @@ These are estimates for a representative document. Actual usage varies with segm
 
 ### Claude (Anthropic)
 
-| Model | Translate | Proofread | Generate Prompt |
+| Model | Translate | Proofread | AutoPrompt |
 |-------|-----------|-----------|-----------------|
 | **Claude Sonnet 4.6** (recommended) | $0.50 | $0.54 | $0.06 |
 | **Claude Haiku 4.5** | $0.17 | $0.18 | $0.02 |
@@ -46,7 +46,7 @@ These are estimates for a representative document. Actual usage varies with segm
 
 ### Google Gemini
 
-| Model | Translate | Proofread | Generate Prompt |
+| Model | Translate | Proofread | AutoPrompt |
 |-------|-----------|-----------|-----------------|
 | **Gemini 2.5 Flash** (recommended) | $0.06 | $0.06 | $0.01 |
 | **Gemini 2.5 Pro** | $0.24 | $0.26 | $0.03 |
@@ -54,7 +54,7 @@ These are estimates for a representative document. Actual usage varies with segm
 
 ### Grok (xAI)
 
-| Model | Translate | Proofread | Generate Prompt |
+| Model | Translate | Proofread | AutoPrompt |
 |-------|-----------|-----------|-----------------|
 | **Grok 4.20** (recommended) | $0.30 | $0.33 | $0.03 |
 | **Grok 4.1 Fast** | $0.03 | $0.03 | < $0.01 |
@@ -62,7 +62,7 @@ These are estimates for a representative document. Actual usage varies with segm
 
 ### Ollama (local)
 
-| Model | Translate | Proofread | Generate Prompt |
+| Model | Translate | Proofread | AutoPrompt |
 |-------|-----------|-----------|-----------------|
 | **TranslateGemma 12B** | Free | Free | Free |
 | **TranslateGemma 4B** | Free | Free | Free |
@@ -110,7 +110,7 @@ Prices change regularly. Check your provider's pricing page for the latest rates
 
 * **Start with a budget model** — GPT-4.1 Mini, Gemini 2.5 Flash, or Grok 4.1 Fast are excellent for routine translation at a fraction of the cost.
 * **Use premium models selectively** — reserve GPT-5.4, Claude Opus, or Gemini 2.5 Pro for specialised content (legal, medical, patents) where the quality difference justifies the cost.
-* **Reasoning models are for prompt generation only** — o4-mini and Grok 4.20 Reasoning think step-by-step, which is valuable for analysing a project and generating a prompt, but adds unnecessary cost and latency for translation.
+* **Reasoning models are for AutoPrompt only** — o4-mini and Grok 4.20 Reasoning think step-by-step, which is valuable for AutoPrompt (analysing a project and generating a prompt), but adds unnecessary cost and latency for translation.
 * **Try Ollama for zero cost** — if you have a computer with 8+ GB of RAM, TranslateGemma 12B delivers surprisingly good results for free.
 * **Check your usage** — the [Usage Statistics](settings/usage-statistics.md) tab in Settings tracks your token consumption per provider.
 
@@ -119,5 +119,5 @@ Prices change regularly. Check your provider's pricing page for the latest rates
 * [AI Settings](settings/ai-settings.md) — configure your API keys and choose a model
 * [Batch Translate](batch-translate.md) — translate segments in bulk
 * [AI Proofreader](ai-proofreader.md) — proofread translated segments
-* [Analyse Project & Generate Prompt](generate-prompt.md) — generate translation prompts
+* [AutoPrompt](generate-prompt.md) — generate translation prompts
 * [Licensing & Pricing](licensing.md) — Supervertaler subscription plans
