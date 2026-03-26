@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.18.15] — 2026-03-26
+
+### Changed
+- **Default max segments reduced to 20** – the "Include full document content in AI context" setting now defaults to 20 segments instead of 500, avoiding unexpectedly high API costs for new users
+
+---
+
 ## [4.18.14] — 2026-03-26
 
 ### Added
