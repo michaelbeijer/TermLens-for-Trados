@@ -9,7 +9,7 @@
 
 ### Changed
 - **Domain → Category rename** — the `Domain` property on prompts has been renamed to `Category` throughout the UI and codebase for clarity
-- **Support links updated** — About dialog, support docs, and help pages now point to the Supervertaler Forum on TranslationTech; Groups.io and ProZ.com references removed
+- **Support links updated** — About dialog, support docs, and help pages now point to the Supervertaler forum on TranslationTech; Groups.io and ProZ.com references removed
 
 ---
 
