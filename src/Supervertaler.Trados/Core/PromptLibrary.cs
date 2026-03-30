@@ -485,6 +485,39 @@ namespace Supervertaler.Trados.Core
                     }
                 }
 
+                // ─── Migration: move "Text operations" from QuickLauncher/ to Default/ ───
+                // v4.18.27 shipped with category "QuickLauncher/Text operations"; v4.18.28+
+                // uses "QuickLauncher/Default/Text operations" so it groups with other defaults.
+                if (builtin.Category.StartsWith("QuickLauncher/Default/Text operations",
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    var newPath = Path.Combine(folder, sanitisedName + ".md");
+                    var oldFolder = Path.Combine(PromptsDir, "QuickLauncher", "Text operations");
+                    var oldPath = Path.Combine(oldFolder, sanitisedName + ".md");
+                    if (!File.Exists(newPath) && File.Exists(oldPath))
+                    {
+                        try
+                        {
+                            var content = File.ReadAllText(oldPath);
+                            if (content.Contains("built_in: true"))
+                            {
+                                Directory.CreateDirectory(folder);
+                                File.Move(oldPath, newPath);
+                                // Clean up empty old folder
+                                try
+                                {
+                                    if (Directory.Exists(oldFolder) &&
+                                        Directory.GetFiles(oldFolder).Length == 0 &&
+                                        Directory.GetDirectories(oldFolder).Length == 0)
+                                        Directory.Delete(oldFolder);
+                                }
+                                catch { }
+                            }
+                        }
+                        catch { /* ignore — file locked or permissions */ }
+                    }
+                }
+
                 // Clean up duplicate when the sanitised filename differs from the
                 // original name stripped of invalid chars (e.g. "What file is this
                 // segment from?" → sanitised "from_" vs old "from" without the '?').
@@ -1419,7 +1452,7 @@ Format the entire output as a single Markdown document that can be copied and pa
                 {
                     Name = "Strip U+2028",
                     Description = "Removes invisible Unicode LINE SEPARATOR (U+2028) and PARAGRAPH SEPARATOR (U+2029) characters from the target segment, replacing them with spaces",
-                    Category = "QuickLauncher/Text operations",
+                    Category = "QuickLauncher/Default/Text operations",
                     Type = "transform",
                     IsBuiltIn = true,
                     SortOrder = 10,
