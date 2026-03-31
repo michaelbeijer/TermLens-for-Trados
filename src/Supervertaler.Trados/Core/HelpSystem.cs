@@ -39,6 +39,7 @@ namespace Supervertaler.Trados.Core
             public const string AiProofreaderReports = "features/batch-operations/ai-proofreader#reports-tab";
             public const string PromptLogging       = "settings/ai-settings#prompt-logging";
             public const string AiCostGuide         = "reference/ai-cost-guide";
+            public const string ClipboardMode       = "features/batch-operations/clipboard-mode";
             public const string GeneratePrompt      = "features/batch-operations/generate-prompt";
             public const string MultiTermSupport   = "features/multiterm-support";
             public const string TermbaseEditor     = "terminology/termbase-management";

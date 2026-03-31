@@ -172,8 +172,9 @@ namespace Supervertaler.Trados.Controls
             _chkClipboardMode.CheckedChanged += OnClipboardModeChanged;
             var clipTip = new ToolTip { AutoPopDelay = 10000, InitialDelay = 300 };
             clipTip.SetToolTip(_chkClipboardMode,
-                "Copy segments to clipboard for use with any web-based AI\r\n" +
-                "(ChatGPT, Claude, Gemini, etc.). Paste translations back when done.");
+                "Copy a ready-to-use prompt with segments, instructions, terminology,\r\n" +
+                "and context to the clipboard. Paste into any web-based AI (ChatGPT,\r\n" +
+                "Claude, Gemini, etc.), then paste translations back when done.");
             Controls.Add(_chkClipboardMode);
             y += 24;
 

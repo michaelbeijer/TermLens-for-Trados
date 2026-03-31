@@ -2,7 +2,7 @@
 
 **Terminology insight and AI translation for Trados Studio**
 
-Supervertaler for Trados is a Trados Studio plugin (.sdlplugin) that brings key features from [Supervertaler Workbench](https://supervertaler.com/workbench/) into the Trados ecosystem. It includes the **TermLens** glossary panel and **AI-powered batch and single-segment translation** using OpenAI, Anthropic, and Google LLMs. It relates to Supervertaler Workbench as follows:
+Supervertaler for Trados is a Trados Studio plugin (.sdlplugin) that brings key features from [Supervertaler Workbench](https://supervertaler.com/workbench/) into the Trados ecosystem. It includes the **TermLens** glossary panel, **AI-powered batch and single-segment translation** using OpenAI, Anthropic, and Google LLMs, and **Clipboard Mode** for using any web-based AI without an API key. It relates to Supervertaler Workbench as follows:
 
 - Supervertaler Workbench – free, open-source, standalone tool (Windows/Mac/Linux)
 - Supervertaler for Trados – paid plugin (Windows-based, but can run on Mac/Linux via virtualisation, e.g., using Parallels Desktop)
@@ -125,6 +125,27 @@ Supervertaler for Trados includes built-in AI translation powered by OpenAI, Ant
 - **AutoPrompt** — analyses your document's content, terminology, and TM data to automatically generate a comprehensive domain-specific translation prompt using AI; TermScan automatically filters your termbase to only the terms that appear in the document (e.g. 123 relevant from 2,680 total); the result appears in the AI Assistant chat for iterative refinement, then save it to your prompt library with right-click → "Save as Prompt…"
 - **Configurable settings** — provider, model, API key, and temperature are set in the AI Settings panel and persist across sessions
 - **Real-time progress** — batch translations show segment-by-segment progress in a scrollable log panel, with cancel support
+
+## Clipboard Mode — use any web-based AI
+
+Clipboard Mode lets you translate or proofread segments using **any web-based AI** — ChatGPT, Claude, Gemini, DeepSeek, or any other LLM with a chat interface — without needing an API key.
+
+### How it works
+
+1. Tick the **Clipboard Mode** checkbox in the Batch Operations tab
+2. Click **Copy to Clipboard** — Supervertaler builds a ready-to-use prompt with system instructions, your selected prompt, terminology, document context, and numbered bilingual segments with status annotations
+3. Paste into your preferred AI chat and send it
+4. Copy the AI's response and click **Paste from Clipboard** — translations are written back with full tag reconstruction and validation
+
+### Features
+
+- **Works with any LLM** — ChatGPT, Claude, Gemini, DeepSeek, or any other web-based AI with a chat interface
+- **No API key required** — uses your existing AI chat subscription
+- **Full prompt generation** — not just segments, but a complete prompt including system instructions, terminology, document context, and translation/proofreading guidelines
+- **Status annotations** — each segment includes its status ([new], [fuzzy, 85%], [translated, 100%], [machine translated], [draft]) so the AI can respond appropriately
+- **Tag preservation** — inline tags are serialised as numbered placeholders (`<t1>`, `</t1>`, `<t2/>`); the AI preserves them and Supervertaler reconstructs the original Trados tags on import
+- **Works in both modes** — available for both Translate and Proofread workflows
+- **Same quality controls** — uses the same prompts, terminology injection, document context, and tag handling as API-based batch operations
 
 ## Requirements
 

@@ -575,7 +575,12 @@ namespace Supervertaler.Trados.Controls
             switch (_tabControl.SelectedIndex)
             {
                 case 1:
-                    if (_batchTranslateControl.CurrentMode == BatchMode.Proofread)
+                    if (_batchTranslateControl.IsClipboardMode)
+                    {
+                        topic = HelpSystem.Topics.ClipboardMode;
+                        label = "Clipboard Mode Help";
+                    }
+                    else if (_batchTranslateControl.CurrentMode == BatchMode.Proofread)
                     {
                         topic = HelpSystem.Topics.AiProofreader;
                         label = "AI Proofreader Help";
@@ -615,9 +620,11 @@ namespace Supervertaler.Trados.Controls
                 string topic;
                 switch (_tabControl.SelectedIndex)
                 {
-                    case 1: topic = _batchTranslateControl.CurrentMode == BatchMode.Proofread
-                                ? HelpSystem.Topics.AiProofreader
-                                : HelpSystem.Topics.BatchTranslate; break;
+                    case 1: topic = _batchTranslateControl.IsClipboardMode
+                                ? HelpSystem.Topics.ClipboardMode
+                                : _batchTranslateControl.CurrentMode == BatchMode.Proofread
+                                    ? HelpSystem.Topics.AiProofreader
+                                    : HelpSystem.Topics.BatchTranslate; break;
                     case 2: topic = HelpSystem.Topics.AiProofreaderReports; break;
                     default: topic = HelpSystem.Topics.AiAssistantChat; break;
                 }

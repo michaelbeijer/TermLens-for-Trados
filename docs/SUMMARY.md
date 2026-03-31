@@ -21,6 +21,7 @@
 * [Batch Operations](batch-operations.md)
   * [Batch Translate](batch-translate.md)
   * [AI Proofreader](ai-proofreader.md)
+  * [Clipboard Mode](clipboard-mode.md)
   * [AutoPrompt](generate-prompt.md)
 
 ## Terminology

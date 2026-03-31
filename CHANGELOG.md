@@ -1,6 +1,6 @@
 # Changelog
 
-## [4.18.29] — 2026-03-31
+## [4.18.30] — 2026-04-01
 
 ### Added
 - **Clipboard Mode** – new workflow for translating and proofreading via any web-based LLM (ChatGPT, Claude, Gemini, etc.) without an API key; tick the "Clipboard Mode" checkbox in Batch Operations, click "Copy to Clipboard" to get a fully formatted prompt with numbered bilingual segments (including status annotations, terminology, and document context), paste into any LLM chat, then click "Paste from Clipboard" to import the translations back into Trados with full tag reconstruction and validation

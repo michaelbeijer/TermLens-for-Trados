@@ -76,6 +76,10 @@ The AI Proofreader uses the same context sources as Batch Translate from your [A
 
 TM matches and surrounding segments are **not** included in proofreading – these are Chat & QuickLauncher features only. See the [AI Settings](settings/ai-settings.md) page for a full comparison table.
 
+## Clipboard Mode
+
+If you prefer to use a web-based AI (ChatGPT, Claude, Gemini, etc.) instead of an API, tick the **Clipboard Mode** checkbox. Supervertaler builds a complete proofreading prompt with both source and target text for each segment and copies it to your clipboard. See [Clipboard Mode](clipboard-mode.md) for full details.
+
 ## Tips
 
 ### Start with Confirmed Segments
@@ -98,6 +102,7 @@ Use Trados display filters to isolate specific segments (e.g., segments containi
 
 ## See Also
 
+* [Clipboard Mode](clipboard-mode.md)
 * [Batch Translate](batch-translate.md)
 * [Prompts](settings/prompts.md)
 * [Supervertaler Assistant](ai-assistant.md)

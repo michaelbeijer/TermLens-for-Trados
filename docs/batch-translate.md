@@ -75,6 +75,10 @@ Batch Translate uses several context sources from your [AI Settings](settings/ai
 
 TM matches and surrounding segments are **not** included in Batch Translate – these are Chat & QuickLauncher features only. See the [AI Settings](settings/ai-settings.md) page for a full comparison table.
 
+## Clipboard Mode
+
+If you prefer to use a web-based AI (ChatGPT, Claude, Gemini, etc.) instead of an API, tick the **Clipboard Mode** checkbox. This replaces the Provider and Translate button with **Copy to Clipboard** and **Paste from Clipboard** buttons. Supervertaler builds a complete, ready-to-use prompt — including your selected prompt, terminology, document context, and numbered bilingual segments — and copies it to your clipboard. See [Clipboard Mode](clipboard-mode.md) for full details.
+
 ## Tips
 
 ### Translate Empty Segments First
@@ -105,6 +109,7 @@ AI translation is a first draft. After a batch run:
 
 ## See Also
 
+* [Clipboard Mode](clipboard-mode.md)
 * [AutoPrompt](generate-prompt.md)
 * [AI Proofreader](ai-proofreader.md)
 * [Supervertaler Assistant](ai-assistant.md)
