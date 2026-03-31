@@ -43,6 +43,10 @@ namespace Supervertaler.Trados
         private IStudioDocument _activeDocument;
         private TermLensSettings _settings;
 
+        // Cached language pair — ActiveFile can be null when the AI panel has focus
+        private string _cachedSourceLang;
+        private string _cachedTargetLang;
+
         // Chat state
         private readonly List<ChatMessage> _chatHistory = new List<ChatMessage>();
         private CancellationTokenSource _chatCts;
@@ -104,6 +108,8 @@ namespace Supervertaler.Trados
                     _activeDocument = _editorController.ActiveDocument;
                     _activeDocument.ActiveSegmentChanged += OnActiveSegmentChanged;
                     _activeDocument.DocumentFilterChanged += OnDocumentFilterChanged;
+                    GetDocumentSourceLanguage();
+                    GetDocumentTargetLanguage();
                 }
             }
 
@@ -167,11 +173,16 @@ namespace Supervertaler.Trados
             }
 
             _activeDocument = _editorController?.ActiveDocument;
+            _cachedSourceLang = null;
+            _cachedTargetLang = null;
 
             if (_activeDocument != null)
             {
                 _activeDocument.ActiveSegmentChanged += OnActiveSegmentChanged;
                 _activeDocument.DocumentFilterChanged += OnDocumentFilterChanged;
+                // Pre-cache language pair while ActiveFile is likely available
+                GetDocumentSourceLanguage();
+                GetDocumentTargetLanguage();
                 SafeInvoke(UpdateContextDisplay);
                 UpdateBatchSegmentCounts();
             }
@@ -187,6 +198,9 @@ namespace Supervertaler.Trados
 
         private void OnActiveSegmentChanged(object sender, EventArgs e)
         {
+            // Refresh language cache while ActiveFile is available
+            GetDocumentSourceLanguage();
+            GetDocumentTargetLanguage();
             SafeInvoke(UpdateContextDisplay);
         }
 
@@ -2389,11 +2403,14 @@ namespace Supervertaler.Trados
                 {
                     var lang = file.SourceFile?.Language;
                     if (lang != null)
-                        return lang.DisplayName;
+                    {
+                        _cachedSourceLang = lang.DisplayName;
+                        return _cachedSourceLang;
+                    }
                 }
             }
             catch (Exception) { }
-            return null;
+            return _cachedSourceLang;
         }
 
         private string GetDocumentTargetLanguage()
@@ -2405,11 +2422,14 @@ namespace Supervertaler.Trados
                 {
                     var lang = file.Language;
                     if (lang != null)
-                        return lang.DisplayName;
+                    {
+                        _cachedTargetLang = lang.DisplayName;
+                        return _cachedTargetLang;
+                    }
                 }
             }
             catch (Exception) { }
-            return null;
+            return _cachedTargetLang;
         }
 
         private static string Truncate(string text, int maxLength)

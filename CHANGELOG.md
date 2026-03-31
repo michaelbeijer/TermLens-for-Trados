@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.18.28] — 2026-03-31
+
+### Fixed
+- **Batch Translate/Proofread no longer fails with "Cannot determine source/target language"** – the language pair is now cached when a document is opened and when segments are navigated, so the AI Assistant can still resolve languages even when the editor's ActiveFile is temporarily unavailable
+
+---
+
 ## [4.18.27] — 2026-03-30
 
 ### Added
