@@ -18,6 +18,7 @@ namespace Supervertaler.Trados.Controls
         private ComboBox _cboApp;
         private CheckBox _chkShowInMenu;
         private TextBox _txtContent;
+        private Label _lblDefault;
         private Button _btnOK;
         private Button _btnCancel;
         private ContextMenuStrip _varMenu;
@@ -138,6 +139,18 @@ namespace Supervertaler.Trados.Controls
                 Visible = false // shown only for QuickLauncher prompts
             };
             Controls.Add(_chkShowInMenu);
+
+            // ─── Default prompt indicator ────────────────
+            _lblDefault = new Label
+            {
+                Text = "Default prompt \u2014 use Clone to modify",
+                Location = new Point(100, y + 2),
+                AutoSize = true,
+                ForeColor = Color.FromArgb(130, 130, 130),
+                Font = new Font("Segoe UI", 8f, FontStyle.Italic),
+                Visible = false // shown only for default prompts
+            };
+            Controls.Add(_lblDefault);
             y += 26;
 
             // ─── Content label + variable hint ────────────
@@ -270,7 +283,7 @@ namespace Supervertaler.Trados.Controls
             }
             else if (_prompt.IsDefault)
             {
-                // Built-in prompts: content is immutable, but visibility can be changed.
+                // Default prompts: content is immutable, but visibility can be changed.
                 // To modify content, use Clone.
                 _txtName.ReadOnly = true;
                 _txtDescription.ReadOnly = true;
@@ -278,6 +291,7 @@ namespace Supervertaler.Trados.Controls
                 _cboApp.Enabled = false;
                 _txtContent.ReadOnly = true;
                 // _chkShowInMenu stays enabled — users can hide default prompts
+                _lblDefault.Visible = true;
                 Text += " (default \u2014 use Clone to modify)";
             }
         }
