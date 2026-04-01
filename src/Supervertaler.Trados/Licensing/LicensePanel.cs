@@ -13,7 +13,8 @@ namespace Supervertaler.Trados.Licensing
     public class LicensePanel : UserControl
     {
         private const string PurchaseTier1Url = "https://supervertaler-for-trados.lemonsqueezy.com/checkout/buy/7adf2c47-cc43-4f2c-b57d-8f3e6f04fb09";
-        private const string PurchaseTier2Url = "https://supervertaler-for-trados.lemonsqueezy.com/checkout/buy/86e8dcb3-2a38-4396-aa38-9a67e5c72204?enabled=1442046";
+        private const string PurchaseAssistantUrl = "https://supervertaler-for-trados.lemonsqueezy.com/checkout/buy/c7a00ea8-40fa-4070-a7dd-302c16d843e0";
+        private const string PurchaseTier2Url = "https://supervertaler-for-trados.lemonsqueezy.com/checkout/buy/86e8dcb3-2a38-4396-aa38-9a67e5c72204";
         private const string ManageUrl = "https://supervertaler-for-trados.lemonsqueezy.com/billing";
 
         private Label _lblStatus;
