@@ -972,11 +972,26 @@ namespace Supervertaler.Trados
                 }
                 else
                 {
-                    // First time encountering this project — snapshot current settings
-                    // so the user's configuration is remembered for this project.
-                    System.Diagnostics.Debug.WriteLine($"[TermLens] No project settings found — creating initial snapshot");
-                    var newPs = _settings.ExtractProjectSettings(projectPath, projectName);
+                    // First time encountering this project — create clean defaults.
+                    // We must NOT snapshot _settings here because it still carries
+                    // the previous project's overlay (write IDs, project termbase, etc.).
+                    System.Diagnostics.Debug.WriteLine($"[TermLens] No project settings found — creating clean defaults");
+                    var newPs = new ProjectSettings
+                    {
+                        ProjectPath = projectPath ?? "",
+                        ProjectName = projectName ?? "",
+                        TermbasePath = _settings.TermbasePath ?? "",
+                        WriteTermbaseIds = new List<long>(),
+                        ProjectTermbaseId = -1,
+                        DisabledTermbaseIds = new List<long>(),
+                        DisabledMultiTermIds = new List<long>(),
+                        DisabledAiTermbaseIds = new List<long>(),
+                    };
+                    _settings.ApplyProjectOverlay(newPs);
                     ProjectSettings.Save(projectPath, newPs);
+
+                    // Reload termbase with clean state
+                    LoadTermbase(forceReload: true);
                 }
             }
             catch

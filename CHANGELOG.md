@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.18.31] — 2026-04-01
+
+### Fixed
+- **Per-project termbase selection no longer carries over to new projects** – when opening a Trados project for the first time, TermLens now starts with clean defaults (all termbases enabled, no Write or Project flags) instead of inheriting the previous project's selections
+
+---
+
 ## [4.18.30] — 2026-04-01
 
 ### Added
