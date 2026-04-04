@@ -24,6 +24,13 @@
   * [Clipboard Mode](clipboard-mode.md)
   * [AutoPrompt](generate-prompt.md)
 * [SuperMemory](supermemory.md)
+  * [Quick Add](supermemory/quick-add.md)
+  * [Process Inbox](supermemory/process-inbox.md)
+  * [Health Check](supermemory/health-check.md)
+  * [Distill](supermemory/distill.md)
+  * [Active Prompt](supermemory/active-prompt.md)
+  * [AI Integration](supermemory/ai-integration.md)
+  * [Obsidian Setup](supermemory/obsidian-setup.md)
 
 ## Terminology
 

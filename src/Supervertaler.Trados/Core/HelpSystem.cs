@@ -54,6 +54,11 @@ namespace Supervertaler.Trados.Core
             public const string KeyboardShortcuts  = "reference/keyboard-shortcuts";
             public const string Troubleshooting    = "reference/troubleshooting";
             public const string SuperMemory        = "features/supermemory";
+            public const string SuperMemoryQuickAdd = "features/supermemory/quick-add";
+            public const string SuperMemoryInbox    = "features/supermemory/process-inbox";
+            public const string SuperMemoryHealth   = "features/supermemory/health-check";
+            public const string SuperMemoryDistill  = "features/supermemory/distill";
+            public const string SuperMemoryObsidian = "features/supermemory/obsidian-setup";
         }
 
         /// <summary>
