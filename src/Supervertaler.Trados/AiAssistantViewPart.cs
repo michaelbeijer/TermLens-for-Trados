@@ -67,6 +67,9 @@ namespace Supervertaler.Trados
         // Prompt library
         private PromptLibrary _promptLibrary;
 
+        // SuperMemory inbox watcher
+        private FileSystemWatcher _inboxWatcher;
+
         protected override IUIControl GetContentControl()
         {
             return _control.Value;
@@ -158,6 +161,7 @@ namespace Supervertaler.Trados
             // Wire SuperMemory toolbar events
             _control.Value.ProcessInboxRequested += OnProcessInbox;
             _control.Value.HealthCheckRequested += OnHealthCheck;
+            _control.Value.SuperMemoryRefreshRequested += (s, e) => RefreshSuperMemoryInboxCount();
 
             // Initial context update
             UpdateContextDisplay();
@@ -166,6 +170,7 @@ namespace Supervertaler.Trados
             UpdateBatchSegmentCounts();
             PopulateBatchPromptDropdown();
             RefreshSuperMemoryInboxCount();
+            StartInboxWatcher();
 
             // Restore persisted chat history
             LoadChatHistory();
@@ -985,6 +990,50 @@ namespace Supervertaler.Trados
             }
         }
 
+        /// <summary>
+        /// Watches the SuperMemory 00_INBOX folder for file changes and auto-refreshes the count.
+        /// </summary>
+        private void StartInboxWatcher()
+        {
+            try
+            {
+                var inboxDir = Path.Combine(UserDataPath.SuperMemoryDir, "00_INBOX");
+                if (!Directory.Exists(inboxDir)) return;
+
+                _inboxWatcher = new FileSystemWatcher(inboxDir, "*.md")
+                {
+                    NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
+                    IncludeSubdirectories = false,
+                    EnableRaisingEvents = true
+                };
+
+                // Debounce: FileSystemWatcher fires multiple events per file operation.
+                // Use a timer to coalesce them into a single refresh.
+                var debounceTimer = new System.Windows.Forms.Timer { Interval = 500 };
+                debounceTimer.Tick += (s, e) =>
+                {
+                    debounceTimer.Stop();
+                    RefreshSuperMemoryInboxCount();
+                };
+
+                EventHandler triggerRefresh = (s, e) =>
+                {
+                    if (_control.Value.InvokeRequired)
+                        _control.Value.BeginInvoke(new Action(() => { debounceTimer.Stop(); debounceTimer.Start(); }));
+                    else
+                    { debounceTimer.Stop(); debounceTimer.Start(); }
+                };
+
+                _inboxWatcher.Created += (s, e) => triggerRefresh(s, e);
+                _inboxWatcher.Deleted += (s, e) => triggerRefresh(s, e);
+                _inboxWatcher.Renamed += (s, e) => triggerRefresh(s, e);
+            }
+            catch
+            {
+                // Non-critical — toolbar still works via manual refresh
+            }
+        }
+
         private static string ReadFileHead(string path, int maxChars)
         {
             using (var sr = new StreamReader(path))
@@ -1373,10 +1422,11 @@ namespace Supervertaler.Trados
         {
             if (string.IsNullOrEmpty(response)) return;
 
-            // Parse "### FILE:" markers — same format as compile
             var vaultDir = UserDataPath.SuperMemoryDir;
-            var writtenFiles = new List<string>();
+            // Track files with their status (new vs updated)
+            var fileResults = new List<Tuple<string, bool>>(); // (path, isNew)
 
+            // Parse "### FILE:" markers
             var lines = response.Split('\n');
             string currentPath = null;
             var currentContent = new System.Text.StringBuilder();
@@ -1387,7 +1437,7 @@ namespace Supervertaler.Trados
                 if (line.StartsWith("### FILE:", StringComparison.OrdinalIgnoreCase))
                 {
                     if (currentPath != null)
-                        WriteVaultFile(vaultDir, currentPath, currentContent.ToString().Trim(), writtenFiles);
+                        WriteVaultFileTracked(vaultDir, currentPath, currentContent.ToString().Trim(), fileResults);
                     currentPath = line.Substring("### FILE:".Length).Trim();
                     currentContent.Clear();
                 }
@@ -1397,21 +1447,54 @@ namespace Supervertaler.Trados
                 }
             }
             if (currentPath != null)
-                WriteVaultFile(vaultDir, currentPath, currentContent.ToString().Trim(), writtenFiles);
+                WriteVaultFileTracked(vaultDir, currentPath, currentContent.ToString().Trim(), fileResults);
 
-            if (writtenFiles.Count > 0)
+            if (fileResults.Count > 0)
             {
+                int newCount = 0, updatedCount = 0;
+                foreach (var r in fileResults)
+                    if (r.Item2) newCount++; else updatedCount++;
+
                 var summary = new System.Text.StringBuilder();
-                summary.AppendLine($"**Health Check: applied {writtenFiles.Count} fix{(writtenFiles.Count != 1 ? "es" : "")}**\n");
-                foreach (var f in writtenFiles)
-                    summary.AppendLine($"- `{f}`");
-                summary.AppendLine("\nReview the changes in Obsidian or with `git diff`. You can revert with `git checkout` if needed.");
+                summary.AppendLine($"**Health Check: applied {fileResults.Count} change{(fileResults.Count != 1 ? "s" : "")}**\n");
+
+                if (updatedCount > 0)
+                {
+                    summary.AppendLine($"Updated {updatedCount} file{(updatedCount != 1 ? "s" : "")}:");
+                    foreach (var r in fileResults)
+                        if (!r.Item2) summary.AppendLine($"- \u270F `{r.Item1}`");
+                    summary.AppendLine();
+                }
+                if (newCount > 0)
+                {
+                    summary.AppendLine($"Created {newCount} new file{(newCount != 1 ? "s" : "")}:");
+                    foreach (var r in fileResults)
+                        if (r.Item2) summary.AppendLine($"- \u2728 `{r.Item1}`");
+                    summary.AppendLine();
+                }
+
+                summary.AppendLine("Scroll up for the full report. Open Obsidian to review the changes.");
 
                 var msg = new ChatMessage { Role = ChatRole.Assistant, Content = summary.ToString() };
                 _chatHistory.Add(msg);
                 _control.Value.AddMessage(msg);
                 SaveChatHistory();
             }
+        }
+
+        private void WriteVaultFileTracked(string vaultDir, string relativePath,
+            string content, List<Tuple<string, bool>> results)
+        {
+            try
+            {
+                relativePath = relativePath.Replace('/', '\\');
+                var fullPath = Path.Combine(vaultDir, relativePath);
+                bool isNew = !File.Exists(fullPath);
+                Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
+                File.WriteAllText(fullPath, content);
+                results.Add(Tuple.Create(relativePath, isNew));
+            }
+            catch { }
         }
 
         private void WriteVaultFile(string vaultDir, string relativePath, string content, List<string> writtenFiles)
@@ -3445,6 +3528,13 @@ namespace Supervertaler.Trados
                 _batchProofreader.SegmentProofread -= OnProofreadSegmentResult;
                 _batchProofreader.Completed -= OnProofreadCompleted;
                 _batchProofreader = null;
+            }
+
+            if (_inboxWatcher != null)
+            {
+                _inboxWatcher.EnableRaisingEvents = false;
+                _inboxWatcher.Dispose();
+                _inboxWatcher = null;
             }
 
             if (_editorController != null)

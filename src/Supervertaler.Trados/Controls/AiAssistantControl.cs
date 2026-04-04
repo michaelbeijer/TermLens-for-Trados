@@ -110,6 +110,9 @@ namespace Supervertaler.Trados.Controls
         /// <summary>Raised when the user clicks "Health Check" in the SuperMemory toolbar.</summary>
         public event EventHandler HealthCheckRequested;
 
+        /// <summary>Raised when the user clicks the refresh button in the SuperMemory toolbar.</summary>
+        public event EventHandler SuperMemoryRefreshRequested;
+
         /// <summary>
         /// Fired when the user changes chat font size via the A+/A- buttons.
         /// The ViewPart should persist the new size.
@@ -303,6 +306,8 @@ namespace Supervertaler.Trados.Controls
                 ProcessInboxRequested?.Invoke(this, EventArgs.Empty);
             _superMemoryToolbar.HealthCheckRequested += (s, e) =>
                 HealthCheckRequested?.Invoke(this, EventArgs.Empty);
+            _superMemoryToolbar.RefreshRequested += (s, e) =>
+                SuperMemoryRefreshRequested?.Invoke(this, EventArgs.Empty);
 
             // ─── Input panel (bottom) ─────────────────────────────
             _inputPanel = new Panel

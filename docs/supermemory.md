@@ -140,7 +140,11 @@ The **Health Check** button scans your entire knowledge base for problems and fi
 The AI produces a detailed report in the chat and automatically applies safe fixes (creating stub articles, updating indexes, fixing broken references). Changes that need human judgement are flagged for review.
 
 {% hint style="warning" %}
-**Important:** SuperMemory is a living, AI-maintained knowledge base. The AI can and will modify your vault files when you run Process Inbox or Health Check. Do not store your only copy of important reference material in the vault — keep originals elsewhere. Use version control (git) or regular backups so you can review and revert changes if needed.
+**Important:** SuperMemory is a living, AI-maintained knowledge base. The AI can and will create, update, and reorganise your vault files when you run Process Inbox or Health Check. To stay safe:
+
+* **Keep originals elsewhere.** Don't put your only copy of a glossary or style guide in the vault — keep the original in its own folder.
+* **Back up your vault regularly.** Copy the entire `supermemory` folder to a backup location before running Health Check for the first time, and periodically after that. If something goes wrong, you can simply replace the vault folder with your backup.
+* **Review changes in Obsidian.** After running Process Inbox or Health Check, open Obsidian and browse the recently modified files to verify the AI made sensible changes. Obsidian's search and graph view make this easy.
 {% endhint %}
 
 ## Integration with Supervertaler

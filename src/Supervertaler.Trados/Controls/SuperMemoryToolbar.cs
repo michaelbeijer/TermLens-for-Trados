@@ -14,6 +14,7 @@ namespace Supervertaler.Trados.Controls
     {
         private Button _btnProcessInbox;
         private Button _btnHealthCheck;
+        private Button _btnRefresh;
         private Label _lblInboxCount;
 
         /// <summary>Raised when the user clicks "Process Inbox".</summary>
@@ -21,6 +22,9 @@ namespace Supervertaler.Trados.Controls
 
         /// <summary>Raised when the user clicks "Health Check".</summary>
         public event EventHandler HealthCheckRequested;
+
+        /// <summary>Raised when the user clicks the refresh button.</summary>
+        public event EventHandler RefreshRequested;
 
         public SuperMemoryToolbar()
         {
@@ -98,6 +102,26 @@ namespace Supervertaler.Trados.Controls
                 Padding = new Padding(UiScale.Pixels(4), 0, 0, 0)
             };
 
+            // ─── Refresh button ─────────────────────────────────────
+            _btnRefresh = new Button
+            {
+                Text = "\u21BB", // ↻ clockwise arrow
+                Font = new Font("Segoe UI", UiScale.FontSize(8.5f)),
+                FlatStyle = FlatStyle.Flat,
+                ForeColor = Color.FromArgb(140, 140, 140),
+                BackColor = Color.Transparent,
+                Cursor = Cursors.Hand,
+                Size = new Size(UiScale.Pixels(24), UiScale.Pixels(24)),
+                TabStop = false,
+                UseCompatibleTextRendering = true
+            };
+            _btnRefresh.FlatAppearance.BorderSize = 0;
+            _btnRefresh.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 232, 245);
+            _btnRefresh.Click += (s, e) => RefreshRequested?.Invoke(this, EventArgs.Empty);
+
+            tip.SetToolTip(_btnRefresh,
+                "Refresh the inbox count.\nUse this after adding files via the\nObsidian Web Clipper or file explorer.");
+
             // Separator line at bottom
             var sep = new Panel
             {
@@ -107,6 +131,7 @@ namespace Supervertaler.Trados.Controls
             };
 
             Controls.Add(sep);
+            Controls.Add(_btnRefresh);
             Controls.Add(_lblInboxCount);
             Controls.Add(_btnHealthCheck);
             Controls.Add(_btnProcessInbox);
@@ -131,6 +156,10 @@ namespace Supervertaler.Trados.Controls
 
             _lblInboxCount.Location = new Point(x,
                 (Height - _lblInboxCount.Height) / 2);
+            x += _lblInboxCount.Width + UiScale.Pixels(2);
+
+            _btnRefresh.Location = new Point(x,
+                (Height - _btnRefresh.Height) / 2);
         }
 
         /// <summary>
