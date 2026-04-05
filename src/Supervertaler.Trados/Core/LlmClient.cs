@@ -1232,6 +1232,322 @@ namespace Supervertaler.Trados.Core
             return 180_000;
         }
 
+        // ─── Tool Use Support ────────────────────────────────────────
+
+        /// <summary>
+        /// Callback delegate for tool execution. The caller provides a function
+        /// that takes a tool name and input JSON, and returns a result JSON string.
+        /// </summary>
+        public delegate string ToolExecutor(string toolName, string inputJson);
+
+        /// <summary>
+        /// Sends a multi-turn chat to Claude with tool definitions.
+        /// When Claude returns a tool_use response, the executor callback is invoked
+        /// and the result is sent back automatically. This loops until Claude returns
+        /// a final text response (max 5 tool rounds to prevent infinite loops).
+        ///
+        /// Only supported for the Claude provider — other providers fall back to
+        /// regular SendChatAsync (no tool use).
+        /// </summary>
+        /// <param name="toolStatusCallback">Optional callback invoked on the UI thread
+        /// when a tool is being called, with the tool name as argument.</param>
+        public async Task<string> SendChatWithToolsAsync(
+            List<ChatMessage> messages,
+            string systemPrompt,
+            string toolDefinitionsJson,
+            ToolExecutor executor,
+            int? maxTokens = null,
+            CancellationToken cancellationToken = default,
+            PromptLogFeature? feature = null,
+            string promptName = null,
+            Action<string> toolStatusCallback = null)
+        {
+            // Tool use is only supported for Claude
+            if (_provider != LlmModels.ProviderClaude)
+                return await SendChatAsync(messages, systemPrompt, maxTokens, cancellationToken, feature, promptName);
+
+            var sw = Stopwatch.StartNew();
+            string result = null;
+            string errorMsg = null;
+
+            try
+            {
+                result = await CallClaudeChatWithToolsAsync(
+                    messages, systemPrompt, toolDefinitionsJson, executor,
+                    maxTokens, cancellationToken, toolStatusCallback);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                errorMsg = ex.Message;
+                throw;
+            }
+            finally
+            {
+                sw.Stop();
+                if (feature.HasValue && feature.Value != PromptLogFeature.ConnectionTest)
+                    RaisePromptCompleted(feature.Value, systemPrompt, null, messages, result, errorMsg, sw.Elapsed, promptName);
+            }
+        }
+
+        private async Task<string> CallClaudeChatWithToolsAsync(
+            List<ChatMessage> messages,
+            string systemPrompt,
+            string toolDefinitionsJson,
+            ToolExecutor executor,
+            int? maxTokens,
+            CancellationToken ct,
+            Action<string> toolStatusCallback)
+        {
+            var url = "https://api.anthropic.com/v1/messages";
+            var tokens = maxTokens ?? _maxTokens;
+            const int maxToolRounds = 5;
+
+            // Build mutable conversation for tool loop
+            var conversation = new List<ConversationTurn>();
+            foreach (var m in messages)
+            {
+                conversation.Add(new ConversationTurn
+                {
+                    Role = m.Role == ChatRole.User ? "user" : "assistant",
+                    ContentJson = m.HasImages && m.Role == ChatRole.User
+                        ? BuildClaudeImageContent(m)
+                        : JsonString(m.Content)
+                });
+            }
+
+            for (int round = 0; round < maxToolRounds; round++)
+            {
+                // Build request JSON
+                var sb = new StringBuilder(4096);
+                sb.Append("{\"model\":").Append(JsonString(_model));
+                sb.Append(",\"max_tokens\":").Append(tokens);
+
+                if (!string.IsNullOrEmpty(systemPrompt))
+                    sb.Append(",\"system\":").Append(JsonString(systemPrompt));
+
+                // Tools
+                sb.Append(",\"tools\":").Append(toolDefinitionsJson);
+
+                // Messages
+                sb.Append(",\"messages\":[");
+                for (int i = 0; i < conversation.Count; i++)
+                {
+                    if (i > 0) sb.Append(",");
+                    sb.Append("{\"role\":").Append(JsonString(conversation[i].Role));
+                    sb.Append(",\"content\":").Append(conversation[i].ContentJson);
+                    sb.Append("}");
+                }
+                sb.Append("]}");
+
+                // Calculate timeout
+                var totalLen = (systemPrompt?.Length ?? 0) + sb.Length;
+                int timeoutMs;
+                if (totalLen > 50000) timeoutMs = 300_000;
+                else if (totalLen > 20000) timeoutMs = 180_000;
+                else timeoutMs = 120_000;
+                if (tokens > 8192) timeoutMs = Math.Max(timeoutMs, 600_000);
+
+                string body;
+                using (var request = new HttpRequestMessage(HttpMethod.Post, url))
+                {
+                    request.Content = new StringContent(sb.ToString(), Encoding.UTF8, "application/json");
+                    request.Headers.Add("x-api-key", _apiKey);
+                    request.Headers.Add("anthropic-version", "2023-06-01");
+
+                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ct))
+                    {
+                        cts.CancelAfter(timeoutMs);
+                        var response = await Http.SendAsync(request, cts.Token);
+                        body = await response.Content.ReadAsStringAsync();
+
+                        if (!response.IsSuccessStatusCode)
+                            throw new HttpRequestException(EnrichErrorMessage("Claude", (int)response.StatusCode, body, _model));
+                    }
+                }
+
+                // Check stop_reason
+                var stopReason = ExtractJsonFieldStatic(body, "stop_reason");
+
+                if (stopReason == "tool_use")
+                {
+                    // Extract tool calls from content array
+                    var toolCalls = ExtractToolUseCalls(body);
+                    if (toolCalls.Count == 0)
+                        throw new InvalidOperationException("Claude indicated tool_use but no tool calls found in response.");
+
+                    // Add assistant message with full content (text + tool_use blocks)
+                    var assistantContent = ExtractContentArray(body);
+                    conversation.Add(new ConversationTurn
+                    {
+                        Role = "assistant",
+                        ContentJson = assistantContent
+                    });
+
+                    // Execute each tool and build tool_result content blocks
+                    var resultSb = new StringBuilder();
+                    resultSb.Append("[");
+                    for (int t = 0; t < toolCalls.Count; t++)
+                    {
+                        var tc = toolCalls[t];
+
+                        // Notify UI about tool execution
+                        toolStatusCallback?.Invoke(tc.Name);
+
+                        // Execute the tool
+                        var toolResult = executor(tc.Name, tc.InputJson);
+
+                        if (t > 0) resultSb.Append(",");
+                        resultSb.Append("{\"type\":\"tool_result\"");
+                        resultSb.Append(",\"tool_use_id\":").Append(JsonString(tc.Id));
+                        resultSb.Append(",\"content\":").Append(JsonString(toolResult ?? ""));
+                        resultSb.Append("}");
+                    }
+                    resultSb.Append("]");
+
+                    // Add user message with tool results
+                    conversation.Add(new ConversationTurn
+                    {
+                        Role = "user",
+                        ContentJson = resultSb.ToString()
+                    });
+
+                    // Continue the loop — Claude will process the tool results
+                    continue;
+                }
+
+                // stop_reason is "end_turn" or similar — extract final text
+                return ExtractClaudeTextFromContent(body);
+            }
+
+            throw new InvalidOperationException("Tool use loop exceeded maximum rounds.");
+        }
+
+        /// <summary>
+        /// Builds a Claude content array JSON for a message with images.
+        /// </summary>
+        private static string BuildClaudeImageContent(ChatMessage msg)
+        {
+            var sb = new StringBuilder();
+            sb.Append("[");
+            if (msg.HasImages)
+            {
+                foreach (var img in msg.Images)
+                {
+                    sb.Append("{\"type\":\"image\",\"source\":{\"type\":\"base64\",\"media_type\":")
+                      .Append(JsonString(img.MimeType))
+                      .Append(",\"data\":\"").Append(ToBase64(img.Data)).Append("\"}},");
+                }
+            }
+            sb.Append("{\"type\":\"text\",\"text\":").Append(JsonString(msg.Content)).Append("}");
+            sb.Append("]");
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Extracts tool_use blocks from Claude's response content array.
+        /// </summary>
+        private static List<ToolCall> ExtractToolUseCalls(string json)
+        {
+            var calls = new List<ToolCall>();
+
+            // Find all tool_use blocks in the content array
+            // Pattern: {"type":"tool_use","id":"...","name":"...","input":{...}}
+            var pattern = @"\{""type""\s*:\s*""tool_use""\s*,\s*""id""\s*:\s*""([^""]+)""\s*,\s*""name""\s*:\s*""([^""]+)""\s*,\s*""input""\s*:\s*(\{[^}]*\})\s*\}";
+            var matches = Regex.Matches(json, pattern, RegexOptions.Singleline);
+
+            foreach (Match m in matches)
+            {
+                calls.Add(new ToolCall
+                {
+                    Id = m.Groups[1].Value,
+                    Name = m.Groups[2].Value,
+                    InputJson = m.Groups[3].Value
+                });
+            }
+
+            return calls;
+        }
+
+        /// <summary>
+        /// Extracts the raw "content" JSON array from a Claude response.
+        /// </summary>
+        private static string ExtractContentArray(string json)
+        {
+            // Find "content" : [ ... ] — we need the full array including tool_use blocks
+            var match = Regex.Match(json, @"""content""\s*:\s*(\[.*?\])\s*[,}]",
+                RegexOptions.Singleline);
+            if (match.Success)
+                return match.Groups[1].Value;
+
+            // Fallback: try to find content array with nested objects
+            var start = json.IndexOf("\"content\"");
+            if (start < 0) return "[]";
+
+            var bracketStart = json.IndexOf('[', start);
+            if (bracketStart < 0) return "[]";
+
+            // Count brackets to find matching close
+            int depth = 0;
+            for (int i = bracketStart; i < json.Length; i++)
+            {
+                if (json[i] == '[') depth++;
+                else if (json[i] == ']') depth--;
+                if (depth == 0)
+                    return json.Substring(bracketStart, i - bracketStart + 1);
+            }
+
+            return "[]";
+        }
+
+        /// <summary>
+        /// Extracts text content from Claude's content array, skipping tool_use blocks.
+        /// </summary>
+        private static string ExtractClaudeTextFromContent(string json)
+        {
+            // Find all text blocks in the content array
+            var pattern = @"\{""type""\s*:\s*""text""\s*,\s*""text""\s*:\s*""((?:[^""\\]|\\.)*)""";
+            var matches = Regex.Matches(json, pattern, RegexOptions.Singleline);
+
+            if (matches.Count > 0)
+            {
+                var sb = new StringBuilder();
+                foreach (Match m in matches)
+                {
+                    if (sb.Length > 0) sb.Append("\n");
+                    sb.Append(UnescapeJson(m.Groups[1].Value));
+                }
+                return sb.ToString();
+            }
+
+            // Fallback to standard extraction
+            return ExtractClaudeContent(json);
+        }
+
+        private static string ExtractJsonFieldStatic(string json, string fieldName)
+        {
+            var pattern = $"\"{Regex.Escape(fieldName)}\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"";
+            var match = Regex.Match(json, pattern);
+            return match.Success ? match.Groups[1].Value : null;
+        }
+
+        private class ConversationTurn
+        {
+            public string Role;
+            /// <summary>
+            /// Either a JSON string literal (for text messages) or a JSON array
+            /// (for tool_use/tool_result content blocks).
+            /// </summary>
+            public string ContentJson;
+        }
+
+        private class ToolCall
+        {
+            public string Id;
+            public string Name;
+            public string InputJson;
+        }
+
         public void Dispose()
         {
             // HttpClient is static and shared — do not dispose it here

@@ -1267,6 +1267,29 @@ namespace Supervertaler.Trados.Controls
         /// Uses an animated bubble in the chat flow so it stays visible regardless of
         /// dock layout changes. The bubble cycles through reassuring status messages.
         /// </summary>
+        /// <summary>
+        /// Overload that sets a custom status message on the thinking bubble.
+        /// Call with isThinking=true and a message like "Checking Trados projects..."
+        /// to update the bubble text mid-flight (e.g. during tool use).
+        /// </summary>
+        public void SetThinking(bool isThinking, string statusMessage)
+        {
+            if (isThinking && _thinkingBubble != null && !string.IsNullOrEmpty(statusMessage))
+            {
+                // Update the existing thinking bubble text without recreating it
+                var lbl = _thinkingBubble.Controls.Count > 0
+                    ? _thinkingBubble.Controls[0] as Label : null;
+                if (lbl != null)
+                {
+                    lbl.Text = "  " + statusMessage;
+                    _chatPanel.ScrollControlIntoView(_thinkingBubble);
+                }
+                return;
+            }
+
+            SetThinking(isThinking);
+        }
+
         public void SetThinking(bool isThinking)
         {
             _isThinking = isThinking;

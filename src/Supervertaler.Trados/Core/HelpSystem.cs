@@ -32,6 +32,7 @@ namespace Supervertaler.Trados.Core
             public const string AddTermDialog      = "features/termlens/adding-terms";
             public const string TermPickerDialog   = "features/termlens/term-picker";
             public const string AiAssistantChat    = "features/ai-assistant";
+            public const string StudioTools        = "features/ai-assistant/studio-tools";
             public const string QuickLauncher      = "features/quicklauncher";
             public const string BatchOperations    = "features/batch-operations";
             public const string BatchTranslate     = "features/batch-operations/batch-translate";

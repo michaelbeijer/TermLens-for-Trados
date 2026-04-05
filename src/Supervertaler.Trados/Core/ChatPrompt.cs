@@ -60,6 +60,13 @@ namespace Supervertaler.Trados.Core
             sb.AppendLine("You help translators with their work by answering questions about translations,");
             sb.AppendLine("suggesting improvements, explaining terminology, and providing context.");
             sb.AppendLine();
+            sb.AppendLine("# TRADOS STUDIO TOOLS");
+            sb.AppendLine("You have access to tools that can query the user's Trados Studio installation.");
+            sb.AppendLine("Use these tools when the user asks about their projects, translation memories,");
+            sb.AppendLine("or project templates. The tools read local Trados data — you do not need to");
+            sb.AppendLine("ask the user for file paths or other details. Just call the appropriate tool.");
+            sb.AppendLine("Present tool results in a clear, well-formatted table or summary.");
+            sb.AppendLine();
             sb.AppendLine("# FORMATTING");
             sb.AppendLine("Use proper Markdown formatting in your responses. When presenting tabular data,");
             sb.AppendLine("always use valid Markdown table syntax with pipe delimiters and a separator row:");

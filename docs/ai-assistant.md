@@ -32,6 +32,8 @@ Because the assistant has access to your current segment context, you can ask th
 
 The AI will consider your current source text, target text, matched terminology from your termbases, and TM fuzzy matches when responding.
 
+When using **Claude** as your AI provider, the assistant can also query your Trados Studio installation directly. Try asking about your projects, translation memories, or project templates. See [Studio Tools](studio-tools.md) for details and more examples.
+
 #### Sending Messages
 
 | Action                      | How                       |

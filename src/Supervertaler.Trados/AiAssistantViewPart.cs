@@ -580,16 +580,35 @@ namespace Supervertaler.Trados
                 }
             }
 
+            // Capture tool settings — only Claude supports tool use
+            var useTools = capturedProvider == LlmModels.ProviderClaude;
+            var toolDefsJson = useTools ? TradosTools.GetToolDefinitionsJson() : null;
+
             Task.Run(async () =>
             {
                 try
                 {
                     var client = new LlmClient(capturedProvider, capturedModel, capturedKey, capturedBaseUrl,
                         ollamaTimeoutMinutes: aiSettings.OllamaTimeoutMinutes);
-                    var response = await client.SendChatAsync(
-                        capturedMessages, capturedSystemPrompt,
-                        maxTokens: capturedMaxTokens, cancellationToken: ct,
-                        feature: capturedFeature, promptName: capturedPromptName);
+
+                    string response;
+                    if (useTools)
+                    {
+                        response = await client.SendChatWithToolsAsync(
+                            capturedMessages, capturedSystemPrompt,
+                            toolDefsJson, TradosTools.ExecuteTool,
+                            maxTokens: capturedMaxTokens, cancellationToken: ct,
+                            feature: capturedFeature, promptName: capturedPromptName,
+                            toolStatusCallback: toolName =>
+                                SafeInvoke(() => _control.Value.SetThinking(true, FormatToolStatus(toolName))));
+                    }
+                    else
+                    {
+                        response = await client.SendChatAsync(
+                            capturedMessages, capturedSystemPrompt,
+                            maxTokens: capturedMaxTokens, cancellationToken: ct,
+                            feature: capturedFeature, promptName: capturedPromptName);
+                    }
 
                     var assistantMsg = new ChatMessage
                     {
@@ -3452,6 +3471,21 @@ date: <today's date YYYY-MM-DD>
                 // Segment properties may not be accessible during transitions
             }
             return matches;
+        }
+
+        /// <summary>
+        /// Maps a tool name to a user-friendly status message shown in the thinking indicator.
+        /// </summary>
+        private static string FormatToolStatus(string toolName)
+        {
+            switch (toolName)
+            {
+                case "studio_list_projects": return "Checking Trados projects\u2026";
+                case "studio_get_project": return "Looking up project details\u2026";
+                case "studio_list_tms": return "Listing translation memories\u2026";
+                case "studio_list_project_templates": return "Listing project templates\u2026";
+                default: return "Querying Trados Studio\u2026";
+            }
         }
 
         private void AddErrorMessage(string text)

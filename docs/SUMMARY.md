@@ -16,6 +16,7 @@
   * [Term Picker](termlens/term-picker.md)
 * [MultiTerm Support](multiterm-support.md)
 * [Supervertaler Assistant](ai-assistant.md)
+  * [Studio Tools](studio-tools.md)
 * [QuickLauncher](quicklauncher.md)
 * [Text Transforms](text-transforms.md)
 * [Batch Operations](batch-operations.md)
