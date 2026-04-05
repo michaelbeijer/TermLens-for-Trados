@@ -16,6 +16,7 @@ namespace Supervertaler.Trados.Controls
         private LinkLabel _lnkHelp;
         private Button _btnProcessInbox;
         private Button _btnHealthCheck;
+        private Button _btnDistill;
         private Button _btnRefresh;
         private Label _lblInboxCount;
 
@@ -24,6 +25,9 @@ namespace Supervertaler.Trados.Controls
 
         /// <summary>Raised when the user clicks "Health Check".</summary>
         public event EventHandler HealthCheckRequested;
+
+        /// <summary>Raised when the user clicks "Distill".</summary>
+        public event EventHandler DistillRequested;
 
         /// <summary>Raised when the user clicks the refresh button.</summary>
         public event EventHandler RefreshRequested;
@@ -117,6 +121,29 @@ namespace Supervertaler.Trados.Controls
                 "conflicting terminology, broken links, stale or duplicate\n" +
                 "content. Fixes what it can and flags the rest for review.");
 
+            // ─── Distill button ─────────────────────────────────────
+            _btnDistill = new Button
+            {
+                Text = "\u2697 Distill", // ⚗ alembic
+                Font = btnFont,
+                FlatStyle = FlatStyle.Flat,
+                ForeColor = Color.FromArgb(30, 90, 158),
+                BackColor = Color.Transparent,
+                Cursor = Cursors.Hand,
+                AutoSize = true,
+                Padding = new Padding(UiScale.Pixels(4), 0, UiScale.Pixels(4), 0),
+                Height = UiScale.Pixels(24),
+                TabStop = false,
+                UseCompatibleTextRendering = true
+            };
+            _btnDistill.FlatAppearance.BorderSize = 0;
+            _btnDistill.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 232, 245);
+            _btnDistill.Click += (s, e) => DistillRequested?.Invoke(this, EventArgs.Empty);
+
+            tip.SetToolTip(_btnDistill,
+                "Extract knowledge from translation files (TMX, DOCX, PDF,\n" +
+                "termbases) into SuperMemory knowledge base articles.");
+
             // ─── Inbox count label ───────────────────────────────────
             _lblInboxCount = new Label
             {
@@ -159,6 +186,7 @@ namespace Supervertaler.Trados.Controls
             Controls.Add(sep);
             Controls.Add(_btnRefresh);
             Controls.Add(_lblInboxCount);
+            Controls.Add(_btnDistill);
             Controls.Add(_btnHealthCheck);
             Controls.Add(_btnProcessInbox);
             Controls.Add(_lnkHelp);
@@ -188,7 +216,10 @@ namespace Supervertaler.Trados.Controls
             x += _btnProcessInbox.Width + UiScale.Pixels(2);
 
             _btnHealthCheck.Location = new Point(x, y);
-            x += _btnHealthCheck.Width + UiScale.Pixels(6);
+            x += _btnHealthCheck.Width + UiScale.Pixels(2);
+
+            _btnDistill.Location = new Point(x, y);
+            x += _btnDistill.Width + UiScale.Pixels(6);
 
             _lblInboxCount.Location = new Point(x,
                 (Height - _lblInboxCount.Height) / 2);
@@ -220,16 +251,19 @@ namespace Supervertaler.Trados.Controls
         {
             _btnProcessInbox.Enabled = !busy;
             _btnHealthCheck.Enabled = !busy;
+            _btnDistill.Enabled = !busy;
             if (!busy)
             {
                 _btnProcessInbox.ForeColor = _btnProcessInbox.Enabled
                     ? Color.FromArgb(30, 90, 158)
                     : Color.FromArgb(170, 170, 170);
+                _btnDistill.ForeColor = Color.FromArgb(30, 90, 158);
             }
             else
             {
                 _btnProcessInbox.ForeColor = Color.FromArgb(170, 170, 170);
                 _btnHealthCheck.ForeColor = Color.FromArgb(170, 170, 170);
+                _btnDistill.ForeColor = Color.FromArgb(170, 170, 170);
             }
         }
     }

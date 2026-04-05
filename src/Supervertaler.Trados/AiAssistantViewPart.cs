@@ -164,6 +164,7 @@ namespace Supervertaler.Trados
             // Wire SuperMemory toolbar events
             _control.Value.ProcessInboxRequested += OnProcessInbox;
             _control.Value.HealthCheckRequested += OnHealthCheck;
+            _control.Value.DistillRequested += OnDistill;
             _control.Value.SuperMemoryRefreshRequested += (s, e) => RefreshSuperMemoryInboxCount();
 
             // Initial context update
@@ -284,6 +285,9 @@ namespace Supervertaler.Trados
             {
                 using (var form = new TermLensSettingsForm(_settings, _promptLibrary, defaultTab: 2))
                 {
+                    form.DistillTermbaseRequested += (ds, de) =>
+                        DistillTermbase(de.TermbaseName, de.FormattedTerms);
+
                     var parent = _control.Value.FindForm();
                     var result = parent != null
                         ? form.ShowDialog(parent)
@@ -1580,6 +1584,217 @@ namespace Supervertaler.Trados
             _chatHistory.Add(new ChatMessage { Role = ChatRole.Assistant, Content = text });
             _control.Value.AddMessage(new ChatMessage { Role = ChatRole.Assistant, Content = text });
             SaveChatHistory();
+        }
+
+        // ─── Distill ────────────────────────────────────────────────
+
+        private const string DistillSystemPrompt =
+@"You are a translation knowledge extraction specialist. Your job is to analyse source material provided by a professional translator and distil it into structured SuperMemory knowledge base articles.
+
+## Your task
+
+1. **Identify the source type**: translation memory (TMX), termbase/glossary, style guide, client brief, reference document, or mixed.
+2. **Extract knowledge** that is valuable for future translation work:
+   - **Terminology decisions** with reasoning (why this term, not that one)
+   - **Domain knowledge** (industry concepts, product names, regulatory terms)
+   - **Client preferences** (tone, register, specific phrasings, forbidden terms)
+   - **Style patterns** (sentence structure, punctuation conventions, number formatting)
+   - **Translation pitfalls** (false friends, tricky constructions, common mistakes)
+
+## Source-specific guidance
+
+- **TMX / translation memory**: Focus on *patterns* across segments, not individual translations. Look for consistent terminology choices, recurring constructions, client-specific style. Group findings by theme.
+- **Termbases / glossaries**: Organise by domain or client. Include definitions, usage notes, and any context that helps a translator pick the right term. Flag ambiguous or overlapping terms.
+- **Documents / style guides**: Extract domain knowledge, preferred phrasing, style conventions, and any rules that should be followed.
+- **Mixed / other**: Use your best judgement to categorise and extract.
+
+## Output format
+
+Output one or more knowledge base articles using `### FILE: <relative-path>` markers. Each article is a Markdown file with YAML frontmatter.
+
+**IMPORTANT:** Always write articles to the `00_INBOX/` folder. The user will review them before moving them to the correct vault location using Process Inbox.
+
+Use these vault paths:
+- `00_INBOX/<filename>.md` — ALL distilled articles go here for review
+
+Each article must have this frontmatter structure:
+```
+---
+title: <descriptive title>
+tags: [<relevant tags>]
+source: distilled
+distilled_from: <original filename(s)>
+date: <today's date YYYY-MM-DD>
+---
+```
+
+## Guidelines
+
+- Keep articles **focused and concise** — one topic per article where possible.
+- Use bullet points and tables for terminology lists.
+- Include the *reasoning* behind translation choices, not just the choices themselves.
+- When in doubt, create separate articles rather than one huge article.
+- Write in English (the knowledge base language), but include source/target examples in their original languages.
+- If the source material is too large to fully process, prioritise the most valuable and non-obvious knowledge.";
+
+        private void OnDistill(object sender, EventArgs e)
+        {
+            string[] selectedFiles;
+            using (var dlg = new OpenFileDialog())
+            {
+                dlg.Title = "Select files to distill into knowledge base articles";
+                dlg.Filter = "Translation files|*.tmx;*.docx;*.pdf;*.xlsx;*.csv;*.tsv;*.tbx;*.xml;*.txt|All files|*.*";
+                dlg.Multiselect = true;
+                if (dlg.ShowDialog() != DialogResult.OK || dlg.FileNames.Length == 0)
+                    return;
+                selectedFiles = dlg.FileNames;
+            }
+
+            var vaultDir = UserDataPath.SuperMemoryDir;
+            if (!Directory.Exists(vaultDir))
+            {
+                ShowSuperMemoryMessage("Your SuperMemory vault folder does not exist yet.\n\n" +
+                    $"Create it at:\n`{vaultDir}`");
+                return;
+            }
+
+            // Extract text from each file
+            var fileContents = new List<Tuple<string, string>>(); // (filename, extractedText)
+            var errors = new List<string>();
+
+            foreach (var filePath in selectedFiles)
+            {
+                try
+                {
+                    var text = DocumentTextExtractor.ExtractText(filePath);
+                    fileContents.Add(Tuple.Create(Path.GetFileName(filePath), text));
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"{Path.GetFileName(filePath)}: {ex.Message}");
+                }
+            }
+
+            if (fileContents.Count == 0)
+            {
+                ShowSuperMemoryMessage("Could not extract text from any of the selected files.\n\n" +
+                    string.Join("\n", errors));
+                return;
+            }
+
+            // Build user message with all file contents
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"Distill the following {fileContents.Count} file(s) into structured knowledge base articles:\n");
+            foreach (var item in fileContents)
+            {
+                sb.AppendLine($"## File: {item.Item1}");
+                sb.AppendLine(item.Item2);
+                sb.AppendLine();
+            }
+            var userMessage = sb.ToString();
+
+            // Cap the message to avoid exceeding token limits (~400K chars ~ 100K tokens)
+            if (userMessage.Length > 400000)
+            {
+                userMessage = userMessage.Substring(0, 400000) +
+                    "\n\n[Truncated — files too large to process in one pass. The above is a partial extraction.]";
+            }
+
+            // Show status in chat
+            var fileNames = new List<string>();
+            foreach (var item in fileContents)
+                fileNames.Add(item.Item1);
+            var displayText = $"\u2697 **SuperMemory: Distill** \u2014 {fileContents.Count} file{(fileContents.Count != 1 ? "s" : "")}: {string.Join(", ", fileNames)}";
+
+            if (errors.Count > 0)
+            {
+                displayText += $"\n\n\u26A0 Could not read {errors.Count} file{(errors.Count != 1 ? "s" : "")}: {string.Join("; ", errors)}";
+            }
+
+            RunSuperMemoryAgent(DistillSystemPrompt, userMessage, displayText,
+                PromptLogFeature.SuperMemory, "SuperMemory: Distill",
+                response => PostProcessDistillResponse(response, fileNames));
+        }
+
+        /// <summary>
+        /// Distils knowledge from termbase terms into SuperMemory articles.
+        /// Called from the termbase context menu via <see cref="DistillTermbase"/>.
+        /// </summary>
+        public void DistillTermbase(string termbaseName, string formattedTerms)
+        {
+            var vaultDir = UserDataPath.SuperMemoryDir;
+            if (!Directory.Exists(vaultDir))
+            {
+                ShowSuperMemoryMessage("Your SuperMemory vault folder does not exist yet.\n\n" +
+                    $"Create it at:\n`{vaultDir}`");
+                return;
+            }
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"Distill the following termbase into structured knowledge base articles:\n");
+            sb.AppendLine($"## File: {termbaseName}");
+            sb.AppendLine(formattedTerms);
+            var userMessage = sb.ToString();
+
+            if (userMessage.Length > 400000)
+            {
+                userMessage = userMessage.Substring(0, 400000) +
+                    "\n\n[Truncated — termbase too large to process in one pass.]";
+            }
+
+            var displayText = $"\u2697 **SuperMemory: Distill Termbase** \u2014 {termbaseName}";
+            var fileNames = new List<string> { termbaseName };
+
+            RunSuperMemoryAgent(DistillSystemPrompt, userMessage, displayText,
+                PromptLogFeature.SuperMemory, "SuperMemory: Distill",
+                response => PostProcessDistillResponse(response, fileNames));
+        }
+
+        private void PostProcessDistillResponse(string response, List<string> sourceFileNames)
+        {
+            if (string.IsNullOrEmpty(response)) return;
+
+            var vaultDir = UserDataPath.SuperMemoryDir;
+            var writtenFiles = new List<string>();
+
+            // Parse "### FILE: path" markers (same format as compile)
+            var lines = response.Split('\n');
+            string currentPath = null;
+            var currentContent = new System.Text.StringBuilder();
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var line = lines[i];
+                if (line.StartsWith("### FILE:", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (currentPath != null)
+                        WriteVaultFile(vaultDir, currentPath, currentContent.ToString().Trim(), writtenFiles);
+                    currentPath = line.Substring("### FILE:".Length).Trim();
+                    currentContent.Clear();
+                }
+                else
+                {
+                    currentContent.AppendLine(line);
+                }
+            }
+            if (currentPath != null)
+                WriteVaultFile(vaultDir, currentPath, currentContent.ToString().Trim(), writtenFiles);
+
+            // Show summary
+            if (writtenFiles.Count > 0)
+            {
+                var summary = new System.Text.StringBuilder();
+                summary.AppendLine("**SuperMemory: Distill complete**\n");
+                summary.AppendLine($"Distilled {string.Join(", ", sourceFileNames)} into {writtenFiles.Count} article{(writtenFiles.Count != 1 ? "s" : "")}:");
+                foreach (var f in writtenFiles)
+                    summary.AppendLine($"- `{f}`");
+                summary.AppendLine("\nOpen Obsidian to review the new articles.");
+
+                var msg = new ChatMessage { Role = ChatRole.Assistant, Content = summary.ToString() };
+                _chatHistory.Add(msg);
+                _control.Value.AddMessage(msg);
+                SaveChatHistory();
+            }
         }
 
         // ─── Batch Translate ────────────────────────────────────────

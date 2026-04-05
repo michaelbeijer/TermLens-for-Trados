@@ -20,10 +20,26 @@ description: Extract knowledge from translation files using AI
 
 ## How to use
 
+### From the SuperMemory toolbar
+
 1. Click the **Distill** button (⚗) on the SuperMemory toolbar in the Supervertaler Assistant panel
 2. Select one or more files in the file picker dialog
 3. The AI analyses the content and creates draft articles in your `00_INBOX` folder
 4. Review the draft articles in Obsidian, then click **[Process Inbox](process-inbox.md)** to compile them into your knowledge base
+
+### From the termbase list (shortcut)
+
+You can distil a termbase directly from the [termbase settings](../termbase-management.md) without exporting it first:
+
+1. Open **Settings → TermLens** to see your termbase list
+2. Right-click any Supervertaler or MultiTerm termbase
+3. Select **⚗ Distill to SuperMemory** from the context menu
+
+The plugin reads all terms from the termbase, formats them as a structured table, and sends them straight to the Distill pipeline. Draft articles appear in your `00_INBOX` folder — review them in Obsidian, then run **[Process Inbox](process-inbox.md)** as usual.
+
+{% hint style="info" %}
+This shortcut is especially useful for MultiTerm termbases attached to your Trados project. Instead of exporting to a file first, you can distil them in one click.
+{% endhint %}
 
 ## What the AI produces
 

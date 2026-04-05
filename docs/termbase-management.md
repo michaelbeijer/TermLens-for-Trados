@@ -99,6 +99,15 @@ For full editing capabilities, double-click a termbase in the list to open the *
 **Mac users (Parallels):** On a Mac, Supervertaler Workbench runs natively on macOS while the Trados plugin runs inside Parallels (Windows). The two products cannot share the same `.db` file directly because the Trados plugin must store its data on the Windows side (`C:\Users\...`) — not on the Mac-side shared folder (`\\Mac\Home\...`). To keep your termbases in sync, export from one side and import on the other after making changes. This is a limitation of Parallels' virtual network filesystem, not of the termbase format itself.
 {% endhint %}
 
+## Distill to SuperMemory
+
+You can extract knowledge from any termbase and add it to your [SuperMemory](supermemory.md) knowledge base using the **Distill** feature:
+
+1. Right-click a termbase in the list
+2. Select **⚗ Distill to SuperMemory**
+
+The AI analyses all terms in the termbase and creates structured articles (terminology decisions, domain knowledge) in your SuperMemory inbox. See [Distill](supermemory/distill.md) for full details.
+
 ---
 
 ## See Also
@@ -106,4 +115,5 @@ For full editing capabilities, double-click a termbase in the list to open the *
 - [MultiTerm Support](multiterm-support.md)
 - [TermLens Settings](settings/termlens.md)
 - [Adding & Editing Terms](termlens/adding-terms.md)
+- [Distill](supermemory/distill.md)
 - [Glossary Basics (Workbench)](https://supervertaler.gitbook.io/supervertaler/glossaries/basics)

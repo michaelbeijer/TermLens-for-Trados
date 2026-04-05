@@ -16,6 +16,12 @@ namespace Supervertaler.Trados.Settings
     /// </summary>
     public class TermLensSettingsForm : Form
     {
+        /// <summary>
+        /// Raised when the user requests "Distill to SuperMemory" for a termbase.
+        /// The event args carry the termbase name and formatted term text.
+        /// </summary>
+        public event EventHandler<DistillTermbaseEventArgs> DistillTermbaseRequested;
+
         private readonly TermLensSettings _settings;
         private readonly Core.PromptLibrary _promptLibrary;
 
@@ -559,6 +565,10 @@ namespace Supervertaler.Trados.Settings
             openMenuItem.Click += (s, ev) => OnOpenTermbaseClick(s, ev);
             termbaseContextMenu.Items.Add(openMenuItem);
             termbaseContextMenu.Items.Add(renameMenuItem);
+            termbaseContextMenu.Items.Add(new ToolStripSeparator());
+            var distillMenuItem = new ToolStripMenuItem("\u2697 Distill to SuperMemory");
+            distillMenuItem.Click += (s, ev) => OnDistillTermbaseClick();
+            termbaseContextMenu.Items.Add(distillMenuItem);
             _dgvTermbases.ContextMenuStrip = termbaseContextMenu;
             _dgvTermbases.CellMouseDown += (s, ev) =>
             {
@@ -944,6 +954,60 @@ namespace Supervertaler.Trados.Settings
             // Refresh the list — term counts may have changed
             UpdateTermbaseInfo(dbPath);
             PopulateTermbaseList(dbPath);
+        }
+
+        private void OnDistillTermbaseClick()
+        {
+            if (_dgvTermbases.SelectedRows.Count == 0) return;
+            var rowIndex = _dgvTermbases.SelectedRows[0].Index;
+            if (rowIndex < 0 || rowIndex >= _termbases.Count) return;
+
+            var dbPath = _txtTermbasePath.Text.Trim();
+            if (string.IsNullOrEmpty(dbPath) || !File.Exists(dbPath))
+            {
+                MessageBox.Show("Please select or create a database file first.",
+                    "TermLens", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var termbase = _termbases[rowIndex];
+            List<TermEntry> terms;
+            try
+            {
+                terms = TermbaseReader.GetAllTermsByTermbaseId(dbPath, termbase.Id);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not read termbase: {ex.Message}",
+                    "TermLens", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (terms.Count == 0)
+            {
+                MessageBox.Show("This termbase is empty — nothing to distill.",
+                    "TermLens", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // Format terms as structured text for the AI
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"Termbase: {termbase.Name}");
+            sb.AppendLine($"Languages: {termbase.SourceLang} → {termbase.TargetLang}");
+            sb.AppendLine($"Term count: {terms.Count}");
+            sb.AppendLine();
+            sb.AppendLine("| Source | Target | Definition | Notes | Domain |");
+            sb.AppendLine("|--------|--------|------------|-------|--------|");
+            foreach (var t in terms)
+            {
+                var def = (t.Definition ?? "").Replace("|", "\\|").Replace("\n", " ").Trim();
+                var notes = (t.Notes ?? "").Replace("|", "\\|").Replace("\n", " ").Trim();
+                var domain = (t.Domain ?? "").Replace("|", "\\|").Replace("\n", " ").Trim();
+                sb.AppendLine($"| {t.SourceTerm} | {t.TargetTerm} | {def} | {notes} | {domain} |");
+            }
+
+            DistillTermbaseRequested?.Invoke(this,
+                new DistillTermbaseEventArgs(termbase.Name, sb.ToString()));
         }
 
         private void PopulateFromSettings()
@@ -1680,6 +1744,21 @@ namespace Supervertaler.Trados.Settings
                 return true;
             }
             return base.ProcessCmdKey(ref msg, keyData);
+        }
+    }
+
+    /// <summary>
+    /// Event arguments for the "Distill to SuperMemory" termbase context menu action.
+    /// </summary>
+    public class DistillTermbaseEventArgs : EventArgs
+    {
+        public string TermbaseName { get; }
+        public string FormattedTerms { get; }
+
+        public DistillTermbaseEventArgs(string termbaseName, string formattedTerms)
+        {
+            TermbaseName = termbaseName;
+            FormattedTerms = formattedTerms;
         }
     }
 }
