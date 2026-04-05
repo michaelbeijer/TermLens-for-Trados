@@ -60,6 +60,7 @@ namespace Supervertaler.Trados.Core
             public const string SuperMemoryHealth   = "features/supermemory/health-check";
             public const string SuperMemoryDistill  = "features/supermemory/distill";
             public const string SuperMemoryObsidian = "features/supermemory/obsidian-setup";
+            public const string SuperSearch         = "features/supersearch";
         }
 
         /// <summary>

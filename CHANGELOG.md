@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.18.48] — 2026-04-05
+
+### Added
+- **SuperSearch** — new dockable ViewPart (View > Supervertaler SuperSearch) for cross-file search, find & replace, and segment navigation across all SDLXLIFF files in a project. Features include source/target/both search scope, case sensitivity, regex support, confirmation status display, click-to-navigate (opens files automatically), and Replace / Replace All in target text
+
+---
+
 ## [4.18.47] — 2026-04-05
 
 ### Added

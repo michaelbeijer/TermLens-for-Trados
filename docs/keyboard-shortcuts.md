@@ -51,6 +51,12 @@ Assign prompts to slots in **Settings → Prompts**. Select a QuickLauncher prom
 |---------------------|----------------|--------|
 | `Ctrl+Alt+M` | `Control+Option+M` | Add to SuperMemory – quick-add a term or correction to your knowledge base |
 
+## SuperSearch
+
+| Shortcut (Windows) | Shortcut (Mac) | Action |
+|---------------------|----------------|--------|
+| `Ctrl+Shift+F` | `Control+Shift+F` | Open SuperSearch -- searches for the selected source/target text across all project files |
+
 ## Navigation and Display
 
 | Shortcut (Windows) | Shortcut (Mac) | Action |
@@ -101,5 +107,6 @@ Terms beyond 45 have no keyboard shortcut. Use the **Term Picker** (`Ctrl+Alt+Do
 
 - [TermLens](termlens.md)
 - [Supervertaler Assistant](ai-assistant.md)
+- [SuperSearch](supersearch.md)
 - [Batch Translate](batch-translate.md)
 - [SuperMemory](supermemory.md)

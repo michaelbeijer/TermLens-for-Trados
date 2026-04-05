@@ -21,6 +21,7 @@
   * [Studio Tools](ai-assistant/studio-tools.md)
   * [Incognito Mode](ai-assistant/incognito-mode.md)
   * [Providers and Models](ai-assistant/providers.md)
+* [SuperSearch](supersearch.md)
 * [QuickLauncher](quicklauncher.md)
 * [Text Transforms](text-transforms.md)
 * [Batch Operations](batch-operations.md)
