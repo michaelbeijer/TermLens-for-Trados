@@ -81,40 +81,17 @@ namespace Supervertaler.Trados.Licensing
             }
         }
 
-        /// <summary>True if the user has at least Tier 1 (TermLens) access.</summary>
-        public bool HasTier1Access
-        {
-            get
-            {
-                var tier = CurrentTier;
-                return tier == LicenseTier.Trial
-                    || tier == LicenseTier.Tier1
-                    || tier == LicenseTier.Tier2;
-            }
-        }
+        /// <summary>True if the user has an active license or trial — all features unlocked.</summary>
+        public bool IsLicensed => CurrentTier != LicenseTier.None;
 
-        /// <summary>True if the user has Tier 2 (TermLens + Assistant) access – the full bundle.</summary>
-        public bool HasTier2Access
-        {
-            get
-            {
-                var tier = CurrentTier;
-                return tier == LicenseTier.Trial
-                    || tier == LicenseTier.Tier2;
-            }
-        }
+        /// <summary>Backward-compatible alias for IsLicensed. All paid tiers now grant full access.</summary>
+        public bool HasTier1Access => IsLicensed;
 
-        /// <summary>True if the user has access to AI features (Trial, AssistantOnly, or Tier2).</summary>
-        public bool HasAssistantAccess
-        {
-            get
-            {
-                var tier = CurrentTier;
-                return tier == LicenseTier.Trial
-                    || tier == LicenseTier.AssistantOnly
-                    || tier == LicenseTier.Tier2;
-            }
-        }
+        /// <summary>Backward-compatible alias for IsLicensed. All paid tiers now grant full access.</summary>
+        public bool HasTier2Access => IsLicensed;
+
+        /// <summary>Backward-compatible alias for IsLicensed. All paid tiers now grant full access.</summary>
+        public bool HasAssistantAccess => IsLicensed;
 
         /// <summary>Days remaining in the trial (0 if expired or licensed).</summary>
         public int TrialDaysRemaining => _info?.TrialDaysRemaining ?? 0;
@@ -122,7 +99,7 @@ namespace Supervertaler.Trados.Licensing
         /// <summary>Whether the user is currently on a trial (no license key entered).</summary>
         public bool IsOnTrial => CurrentTier == LicenseTier.Trial;
 
-        /// <summary>The variant name for display ("TermLens", "Supervertaler Assistant", or "TermLens + Supervertaler Assistant").</summary>
+        /// <summary>The variant name from Lemon Squeezy for display (legacy — all variants now grant full access).</summary>
         public string VariantName => _info?.VariantName ?? "";
 
         /// <summary>The license status string ("active", "expired", etc.).</summary>
@@ -318,7 +295,7 @@ namespace Supervertaler.Trados.Licensing
             {
                 // Check that the cached validation is still within the offline window
                 if (IsCacheValid())
-                    return MapVariantToTier(_info.VariantName);
+                    return LicenseTier.Licensed;
             }
 
             // 2. If we have an activated license but the cache is stale
@@ -352,21 +329,14 @@ namespace Supervertaler.Trados.Licensing
             return (DateTime.UtcNow - _info.LastValidatedAt).TotalDays < OfflineCacheDays;
         }
 
+        /// <summary>
+        /// Maps a Lemon Squeezy variant name to a license tier.
+        /// Since v4.18.48, all variants grant full access (single-tier model).
+        /// The variant name is still stored for display but no longer affects feature gating.
+        /// </summary>
         private static LicenseTier MapVariantToTier(string variantName)
         {
-            if (string.IsNullOrWhiteSpace(variantName))
-                return LicenseTier.Tier1; // Default to Tier 1 if variant is unknown
-
-            // Order matters: check the combined tier BEFORE the standalone Assistant tier,
-            // because "TermLens + Supervertaler Assistant" also contains "Assistant".
-            if (variantName.IndexOf("TermLens", StringComparison.OrdinalIgnoreCase) >= 0
-                && variantName.IndexOf("Assistant", StringComparison.OrdinalIgnoreCase) >= 0)
-                return LicenseTier.Tier2;
-
-            if (variantName.IndexOf("Assistant", StringComparison.OrdinalIgnoreCase) >= 0)
-                return LicenseTier.AssistantOnly;
-
-            return LicenseTier.Tier1;
+            return LicenseTier.Licensed;
         }
 
         // ─── Lemon Squeezy Response Parsing ─────────────────────────
@@ -451,17 +421,10 @@ namespace Supervertaler.Trados.Licensing
         }
 
         /// <summary>
-        /// Shows a MessageBox informing the user that an upgrade is required for AI features.
+        /// Backward-compatible alias for ShowLicenseRequiredMessage.
+        /// The single-tier model has no upgrade concept.
         /// </summary>
-        public static void ShowUpgradeMessage()
-        {
-            MessageBox.Show(
-                "The Supervertaler Assistant requires a \"Supervertaler Assistant\" or \"TermLens + Supervertaler Assistant\" license.\n\n" +
-                "You can upgrade your subscription at supervertaler.com/trados/ or in Settings \u2192 License.",
-                "Upgrade Required",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
-        }
+        public static void ShowUpgradeMessage() => ShowLicenseRequiredMessage();
 
         // ─── Lemon Squeezy response DTOs ────────────────────────────
 

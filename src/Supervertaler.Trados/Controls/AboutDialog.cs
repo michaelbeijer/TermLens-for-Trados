@@ -131,23 +131,15 @@ namespace Supervertaler.Trados.Controls
             switch (tier)
             {
                 case LicenseTier.Trial:
-                    licenseText = $"License: Trial ({mgr.TrialDaysRemaining} days remaining)";
+                    licenseText = $"Licence: Trial ({mgr.TrialDaysRemaining} days remaining)";
                     licenseColor = Color.FromArgb(30, 80, 160);
                     break;
-                case LicenseTier.Tier1:
-                    licenseText = "License: TermLens (active)";
-                    licenseColor = Color.FromArgb(40, 120, 40);
-                    break;
-                case LicenseTier.Tier2:
-                    licenseText = "License: TermLens + Supervertaler Assistant (active)";
-                    licenseColor = Color.FromArgb(40, 120, 40);
-                    break;
-                case LicenseTier.AssistantOnly:
-                    licenseText = "License: Supervertaler Assistant (active)";
+                case LicenseTier.Licensed:
+                    licenseText = "Licence: Active";
                     licenseColor = Color.FromArgb(40, 120, 40);
                     break;
                 default:
-                    licenseText = "License: No active license";
+                    licenseText = "Licence: No active licence";
                     licenseColor = Color.FromArgb(180, 40, 40);
                     break;
             }

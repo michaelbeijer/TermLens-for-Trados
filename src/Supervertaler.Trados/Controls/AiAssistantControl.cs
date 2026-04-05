@@ -1563,7 +1563,7 @@ namespace Supervertaler.Trados.Controls
 
             var lbl = new Label
             {
-                Text = "The Supervertaler Assistant requires a\n\"TermLens + Supervertaler Assistant\" license.\n\nClick the \u2699 button above to open Settings \u2192 License.",
+                Text = "A licence is required to use this feature.\n\nClick the \u2699 button above to open Settings \u2192 Licence.",
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Dock = DockStyle.Fill,

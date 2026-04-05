@@ -49,11 +49,9 @@ MultiTerm termbases appear at the bottom of the termbase list in the **Supervert
 
 To add or remove MultiTerm termbases from your project, use Trados Studio's **Project Settings > Language Pairs > Termbases**.
 
-## MultiTerm with the Supervertaler Assistant Plan
+## MultiTerm and AI Terminology Injection
 
-If you subscribe to the **Supervertaler Assistant** plan (without TermLens), your MultiTerm termbases are still loaded and used for **AI terminology injection**. This means the AI Assistant, Batch Translate, and Ctrl+T all receive your MultiTerm terminology in their prompts, helping the AI use the correct approved terms.
-
-The TermLens panel itself (blue/green chips, Alt+digit shortcuts, Term Picker) requires the TermLens plan, but the terminology data from your MultiTerm termbases is available to the AI regardless of plan – as long as the termbases are enabled in Trados Project Settings.
+Your MultiTerm termbases are loaded and used for **AI terminology injection**. This means the AI Assistant, Batch Translate, and Ctrl+T all receive your MultiTerm terminology in their prompts, helping the AI use the correct approved terms – as long as the termbases are enabled in Trados Project Settings.
 
 ## Technical Details
 

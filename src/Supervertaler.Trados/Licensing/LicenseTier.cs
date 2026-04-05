@@ -1,24 +1,34 @@
+using System;
+
 namespace Supervertaler.Trados.Licensing
 {
     /// <summary>
-    /// Represents the active license tier.
-    /// Ordered so that higher tiers have higher numeric values.
+    /// Represents the active license state.
+    /// Since v4.18.48, all paid licenses grant full access (single-tier model).
     /// </summary>
     public enum LicenseTier
     {
         /// <summary>No valid license — trial expired, subscription lapsed.</summary>
         None = 0,
 
-        /// <summary>14-day free trial — grants full access (TermLens + Assistant).</summary>
+        /// <summary>14-day free trial — grants full access.</summary>
         Trial = 1,
 
-        /// <summary>TermLens only — terminology panel features.</summary>
-        Tier1 = 2,
+        /// <summary>Any active paid license — all features unlocked.</summary>
+        Licensed = 2,
 
-        /// <summary>TermLens + Supervertaler Assistant — all features.</summary>
-        Tier2 = 3,
+        // ── Legacy tiers (kept for backward compatibility with cached license.json) ──
 
-        /// <summary>Supervertaler Assistant only — AI features without the TermLens panel.</summary>
-        AssistantOnly = 4,
+        /// <summary>Obsolete. Previously: TermLens only. Now treated as Licensed.</summary>
+        [Obsolete("Use Licensed. Single-tier model since v4.18.48.")]
+        Tier1 = 3,
+
+        /// <summary>Obsolete. Previously: TermLens + Assistant bundle. Now treated as Licensed.</summary>
+        [Obsolete("Use Licensed. Single-tier model since v4.18.48.")]
+        Tier2 = 4,
+
+        /// <summary>Obsolete. Previously: Assistant only. Now treated as Licensed.</summary>
+        [Obsolete("Use Licensed. Single-tier model since v4.18.48.")]
+        AssistantOnly = 5,
     }
 }

@@ -178,13 +178,11 @@ Source-available license (not MIT). Source code viewable/forkable for personal u
 
 - Source code is open on GitHub (source-available license)
 - 14-day free trial (no credit card required), full feature access
-- Three paid tiers:
-  - **TermLens** — €10/month or €100/year (terminology features)
-  - **Supervertaler Assistant** — €15/month or €150/year (AI features, termbases for AI context)
-  - **TermLens + Supervertaler Assistant** — €20/month or €200/year (all features)
+- Single paid tier: **Supervertaler for Trados** — €20/month or €200/year (all features)
 - Payment platform: Lemon Squeezy (handles EU VAT)
 - License key validation: key entered in plugin settings, validated against Lemon Squeezy API
 - Annual plans include 2 months free (equivalent discount)
+- Legacy: old TermLens (€10) and Assistant (€15) variant names from Lemon Squeezy are still accepted and grant full access
 
 ---
 

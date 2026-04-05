@@ -2,29 +2,29 @@
 You are viewing help for **Supervertaler for Trados** – the Trados Studio plugin. Looking for help with the standalone app? Visit [Supervertaler Workbench help](https://help.supervertaler.com).
 {% endhint %}
 
-Supervertaler for Trados uses a subscription-based licensing model with a free trial to get started.
+Supervertaler for Trados uses a simple subscription model: one product, one price, everything included.
 
 ## Free Trial
 
-When you first install Supervertaler for Trados, a **14-day free trial** starts automatically. During the trial, all features are unlocked – both TermLens terminology features and the AI-powered Supervertaler Assistant.
+When you first install Supervertaler for Trados, a **14-day free trial** starts automatically. During the trial, all features are unlocked – TermLens, AI Assistant, SuperSearch, SuperMemory, Studio Tools, and everything else.
 
 No sign-up or credit card is required to start the trial. The remaining days are shown in the **Licence** tab in Settings and in the About dialogue.
 
-## Plans
+## Pricing
 
-| Plan | Monthly | Annual | What's included |
-|------|---------|--------|-----------------|
-| **TermLens** | €10/month | €100/year | TermLens panel, termbases, MultiTerm support, Term Picker, quick-add shortcuts, non-translatable management, Termbase Editor, TSV import/export |
-| **Supervertaler Assistant** | €15/month | €150/year | AI Assistant chat panel, Batch Translate, Prompt Library, multimodal image support, TM match injection, termbases for AI context |
-| **TermLens + Supervertaler Assistant** | €20/month | €200/year | Everything in both plans – full terminology + AI features |
+| | Monthly | Annual |
+|---|---------|--------|
+| **Supervertaler for Trados** | €20/month | €200/year |
+
+One plan, all features included: TermLens inline terminology, AI Assistant & Batch Translate, SuperSearch cross-file search & replace, SuperMemory knowledge base, Studio Tools, Clipboard Mode, QuickLauncher, Prompt Library, MultiTerm support, Incognito Mode, and all future features.
 
 {% hint style="info" %}
-All plans include future updates and new features within their tier. Annual plans include **2 months free** compared to monthly billing.
+Annual plans include **2 months free** compared to monthly billing.
 {% endhint %}
 
 ## Purchasing a Licence
 
-1. Visit [supervertaler.com/trados](https://supervertaler.com/trados/) and choose a plan
+1. Visit [supervertaler.com/trados](https://supervertaler.com/trados/) and click **Subscribe**
 2. Complete the checkout – you will receive a **licence key** by email
 3. Open Trados Studio → **Settings → Licence** tab
 4. Paste your licence key and click **Activate**
@@ -51,7 +51,7 @@ From the **Licence** tab in Settings, you can:
 
 - **Verify Now** – manually check your licence status with the server
 - **Deactivate** – remove the licence from this machine (frees up an activation slot)
-- **Manage subscription →** – opens the Lemon Squeezy billing portal where you can update payment details, change plans, or cancel
+- **Manage subscription →** – opens the Lemon Squeezy billing portal where you can update payment details or cancel
 
 ## Offline Use
 
@@ -59,14 +59,12 @@ After activation, the plugin caches your licence status locally. You can work of
 
 ## What Happens When the Trial Expires
 
-After the 14-day trial ends, features are locked based on your plan:
+After the 14-day trial ends:
 
-- **No licence** – both TermLens and Supervertaler Assistant show a "licence required" overlay
-- **TermLens plan** – TermLens panel is fully functional; Supervertaler Assistant shows an "upgrade required" overlay
-- **Supervertaler Assistant plan** – AI features are fully functional; termbases (including [MultiTerm](multiterm-support.md)) are loaded for AI context so your terminology is injected into AI prompts. The TermLens panel (chips, shortcuts, Term Picker) shows a "licence required" overlay
-- **TermLens + Supervertaler Assistant plan** – all features unlocked
+- **No licence** – all features show a "licence required" overlay. Your termbases, settings, and prompt library are preserved.
+- **Active licence** – all features are unlocked.
 
-Your termbases, settings, and prompt library are preserved regardless of plan. Activating or upgrading a licence immediately unlocks the corresponding features.
+Activating a licence immediately unlocks all features.
 
 ## Changing Machines
 

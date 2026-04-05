@@ -12,9 +12,7 @@ namespace Supervertaler.Trados.Licensing
     /// </summary>
     public class LicensePanel : UserControl
     {
-        private const string PurchaseTier1Url = "https://supervertaler-for-trados.lemonsqueezy.com/checkout/buy/7adf2c47-cc43-4f2c-b57d-8f3e6f04fb09";
-        private const string PurchaseAssistantUrl = "https://supervertaler-for-trados.lemonsqueezy.com/checkout/buy/c7a00ea8-40fa-4070-a7dd-302c16d843e0";
-        private const string PurchaseTier2Url = "https://supervertaler-for-trados.lemonsqueezy.com/checkout/buy/86e8dcb3-2a38-4396-aa38-9a67e5c72204";
+        private const string PurchaseUrl = "https://supervertaler-for-trados.lemonsqueezy.com/checkout/buy/86e8dcb3-2a38-4396-aa38-9a67e5c72204";
         private const string ManageUrl = "https://supervertaler-for-trados.lemonsqueezy.com/billing";
 
         private Label _lblStatus;
@@ -40,9 +38,7 @@ namespace Supervertaler.Trados.Licensing
         private Button _btnDeactivate;
         private Button _btnRefresh;
         private LinkLabel _lnkManage;
-        private LinkLabel _lnkUpgrade;
-
-        private bool _isProcessing;
+            private bool _isProcessing;
 
         public LicensePanel()
         {
@@ -152,7 +148,7 @@ namespace Supervertaler.Trados.Licensing
             };
             _lnkBuy.LinkClicked += (s, e) =>
             {
-                try { Process.Start(new ProcessStartInfo(PurchaseTier1Url) { UseShellExecute = true }); }
+                try { Process.Start(new ProcessStartInfo(PurchaseUrl) { UseShellExecute = true }); }
                 catch { }
             };
 
@@ -278,22 +274,6 @@ namespace Supervertaler.Trados.Licensing
                 catch { }
             };
 
-            _lnkUpgrade = new LinkLabel
-            {
-                Text = "Upgrade to TermLens + Supervertaler Assistant \u2192",
-                Location = new Point(0, ly + 22),
-                AutoSize = true,
-                Font = font,
-                LinkColor = Color.FromArgb(40, 100, 180),
-                ActiveLinkColor = Color.FromArgb(30, 80, 160),
-                Visible = false
-            };
-            _lnkUpgrade.LinkClicked += (s, e) =>
-            {
-                try { Process.Start(new ProcessStartInfo(PurchaseTier2Url) { UseShellExecute = true }); }
-                catch { }
-            };
-
             _licensedPanel.Controls.AddRange(new Control[]
             {
                 _lblTierLabel, _lblTierValue,
@@ -301,7 +281,7 @@ namespace Supervertaler.Trados.Licensing
                 _lblStatusLabel, _lblStatusValue,
                 _lblValidatedLabel, _lblValidatedValue,
                 _btnRefresh, _btnDeactivate,
-                _lnkManage, _lnkUpgrade
+                _lnkManage
             });
             Controls.Add(_licensedPanel);
         }
@@ -319,9 +299,7 @@ namespace Supervertaler.Trados.Licensing
                     ShowTrialState(mgr.TrialDaysRemaining);
                     break;
 
-                case LicenseTier.Tier1:
-                case LicenseTier.Tier2:
-                case LicenseTier.AssistantOnly:
+                case LicenseTier.Licensed:
                     ShowLicensedState(mgr);
                     break;
 
@@ -353,7 +331,11 @@ namespace Supervertaler.Trados.Licensing
             _statusText.Text = "\u2705  License active";
             _statusText.ForeColor = Color.FromArgb(40, 120, 40);
 
-            _lblTierValue.Text = mgr.VariantName;
+            // Show the Lemon Squeezy variant name if available, otherwise generic label
+            var displayName = !string.IsNullOrWhiteSpace(mgr.VariantName)
+                ? mgr.VariantName
+                : "Supervertaler for Trados";
+            _lblTierValue.Text = displayName;
             _lblKeyValue.Text = mgr.MaskedLicenseKey;
             _lblStatusValue.Text = "Active";
             _lblStatusValue.ForeColor = Color.FromArgb(40, 120, 40);
@@ -375,11 +357,6 @@ namespace Supervertaler.Trados.Licensing
             {
                 _lblValidatedValue.Text = "Never";
             }
-
-            // Show upgrade link for users on partial tiers
-            var currentTier = mgr.CurrentTier;
-            _lnkUpgrade.Visible = currentTier == LicenseTier.Tier1
-                               || currentTier == LicenseTier.AssistantOnly;
 
             _activationPanel.Visible = false;
             _licensedPanel.Visible = true;
