@@ -166,6 +166,8 @@ SuperMemory is a self-organising translation knowledge base that replaces tradit
 
 Instead of rigid fuzzy matching, SuperMemory gives the AI full contextual understanding of your clients, terminology decisions, domain conventions, and style preferences.
 
+<img alt="SuperMemory knowledge graph in Obsidian showing interconnected clients, terminology, and domain knowledge" src="screenshots/Sv_SuperMemory-Graph.png" />
+
 ### How it works
 
 1. **Ingest** – drop raw material into the inbox: client briefs, style guides, glossaries, feedback notes, or previous translations. Use **Quick Add** (Ctrl+Alt+M) to capture terms while translating, or **Distill** to extract knowledge from TMX files, Word documents, PDFs, and termbases.
