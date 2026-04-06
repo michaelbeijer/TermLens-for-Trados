@@ -229,6 +229,18 @@ namespace Supervertaler.Trados.Core
             },
             new LlmModelInfo
             {
+                Id = "google/gemma-4-31b-it", DisplayName = "Gemma 4 31B",
+                Description = "Open-source — strong multilingual quality, 256K context",
+                Provider = LlmProvider.OpenRouter
+            },
+            new LlmModelInfo
+            {
+                Id = "google/gemma-4-26b-a4b-it", DisplayName = "Gemma 4 26B MoE",
+                Description = "Open-source — near-31B quality at a fraction of the cost",
+                Provider = LlmProvider.OpenRouter
+            },
+            new LlmModelInfo
+            {
                 Id = "mistralai/mistral-small-2603", DisplayName = "Mistral Small 4",
                 Description = "Very fast and cheap — good multilingual support",
                 Provider = LlmProvider.OpenRouter

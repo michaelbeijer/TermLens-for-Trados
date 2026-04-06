@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.18.53] — 2026-04-06
+
+### Added
+- **Gemma 4 on OpenRouter** — added Gemma 4 31B and 26B MoE to the OpenRouter provider list for users who prefer that route
+
+---
+
 ## [4.18.52] — 2026-04-06
 
 ### Added
