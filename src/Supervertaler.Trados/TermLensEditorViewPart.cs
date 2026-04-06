@@ -25,7 +25,7 @@ namespace Supervertaler.Trados
     /// </summary>
     [ViewPart(
         Id = "TermLensEditorViewPart",
-        Name = "Supervertaler TermLens",
+        Name = "TermLens",
         Description = "Terminology display for Trados Studio",
         Icon = "TermLensIcon"
     )]

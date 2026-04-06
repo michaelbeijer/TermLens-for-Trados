@@ -19,13 +19,13 @@ using Supervertaler.Trados.Core;
 namespace Supervertaler.Trados
 {
     /// <summary>
-    /// Dockable ViewPart for Supervertaler SuperSearch.
+    /// Dockable ViewPart for SuperSearch.
     /// Provides cross-file search, find &amp; replace, and click-to-navigate
     /// across all SDLXLIFF files in a Trados project.
     /// </summary>
     [ViewPart(
         Id = "SuperSearchViewPart",
-        Name = "Supervertaler SuperSearch",
+        Name = "SuperSearch",
         Description = "Cross-file search and replace for Trados projects",
         Icon = "TermLensIcon"
     )]
