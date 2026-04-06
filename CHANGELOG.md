@@ -1,5 +1,15 @@
 # Changelog
 
+## [4.18.56] — 2026-04-06
+
+### Added
+- **SuperSearch resizable preview** — the preview pane below the results grid can now be dragged up or down to resize via a splitter bar (with hover highlight)
+
+### Improved
+- **SuperSearch preview divider** — added a visible vertical line between the Source and Target preview boxes, and refined the header background colour for better visual separation
+
+---
+
 ## [4.18.55] — 2026-04-06
 
 ### Fixed

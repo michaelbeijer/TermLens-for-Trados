@@ -361,19 +361,33 @@ namespace Supervertaler.Trados.Controls
                 Padding = new Padding(0)
             };
 
+            // ── Resize splitter (drag handle between grid and preview) ──
+            var splitter = new Splitter
+            {
+                Dock = DockStyle.Bottom,
+                Height = 4,
+                BackColor = Color.FromArgb(230, 230, 230),
+                MinExtra = 40,   // minimum grid height
+                MinSize = 60     // minimum preview height
+            };
+            // Subtle hover effect on the drag bar
+            splitter.MouseEnter += (s, ev) => splitter.BackColor = Color.FromArgb(180, 200, 220);
+            splitter.MouseLeave += (s, ev) => splitter.BackColor = Color.FromArgb(230, 230, 230);
+
             // Thin top border line
             var previewBorder = new Panel
             {
                 Dock = DockStyle.Top,
                 Height = 1,
-                BackColor = BorderColor
+                BackColor = Color.FromArgb(200, 200, 200)
             };
 
             // Use a TableLayoutPanel for reliable side-by-side layout
+            // 3 columns: source | vertical divider | target
             var previewTable = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 2,
+                ColumnCount = 3,
                 RowCount = 2,
                 BackColor = Color.White,
                 Margin = new Padding(0),
@@ -381,9 +395,18 @@ namespace Supervertaler.Trados.Controls
                 CellBorderStyle = TableLayoutPanelCellBorderStyle.None
             };
             previewTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+            previewTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 1f));
             previewTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
             previewTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 22f));
             previewTable.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+
+            // Vertical divider between source and target (spans both rows)
+            var verticalDivider = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(210, 210, 210),
+                Margin = new Padding(0)
+            };
 
             // Source header + text
             _lblPreviewSource = new Label
@@ -393,7 +416,7 @@ namespace Supervertaler.Trados.Controls
                 Font = new Font("Segoe UI", 8f, FontStyle.Bold),
                 ForeColor = SubtleColor,
                 Padding = new Padding(4, 2, 0, 0),
-                BackColor = Color.FromArgb(252, 252, 252)
+                BackColor = Color.FromArgb(248, 249, 250)
             };
             _rtbPreviewSource = new RichTextBox
             {
@@ -416,7 +439,7 @@ namespace Supervertaler.Trados.Controls
                 Font = new Font("Segoe UI", 8f, FontStyle.Bold),
                 ForeColor = SubtleColor,
                 Padding = new Padding(4, 2, 0, 0),
-                BackColor = Color.FromArgb(252, 252, 252)
+                BackColor = Color.FromArgb(248, 249, 250)
             };
             _rtbPreviewTarget = new RichTextBox
             {
@@ -432,9 +455,12 @@ namespace Supervertaler.Trados.Controls
             };
 
             previewTable.Controls.Add(_lblPreviewSource, 0, 0);
-            previewTable.Controls.Add(_lblPreviewTarget, 1, 0);
+            previewTable.Controls.Add(_lblPreviewTarget, 2, 0);
             previewTable.Controls.Add(_rtbPreviewSource, 0, 1);
-            previewTable.Controls.Add(_rtbPreviewTarget, 1, 1);
+            previewTable.Controls.Add(_rtbPreviewTarget, 2, 1);
+            // Vertical divider spans both rows
+            previewTable.Controls.Add(verticalDivider, 1, 0);
+            previewTable.SetRowSpan(verticalDivider, 2);
 
             _previewPanel.Controls.Add(previewTable);
             _previewPanel.Controls.Add(previewBorder);
@@ -442,6 +468,7 @@ namespace Supervertaler.Trados.Controls
             // Add controls in correct order for WinForms docking z-order:
             // Grid (Fill) must be added LAST / be in FRONT of z-order
             Controls.Add(_grid);
+            Controls.Add(splitter);
             Controls.Add(_previewPanel);
 
             // Z-order for WinForms docking: back = docks first.
