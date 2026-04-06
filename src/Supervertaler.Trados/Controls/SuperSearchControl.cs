@@ -345,6 +345,7 @@ namespace Supervertaler.Trados.Controls
             });
 
             _grid.CellDoubleClick += OnGridDoubleClick;
+            _grid.CellClick += (s, ev) => { if (ev.RowIndex >= 0) UpdatePreview(); };
             _grid.KeyDown += OnGridKeyDown;
             _grid.CellPainting += OnCellPainting;
             _grid.SelectionChanged += OnGridSelectionChanged;
@@ -381,7 +382,7 @@ namespace Supervertaler.Trados.Controls
             };
             previewTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
             previewTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-            previewTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 18f));
+            previewTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 22f));
             previewTable.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
             // Source header + text
@@ -758,14 +759,10 @@ namespace Supervertaler.Trados.Controls
             // Let the grid paint the background and borders
             e.PaintBackground(e.ClipBounds, true);
 
-            // Measure and paint text with highlights
             var font = e.CellStyle.Font ?? _grid.Font;
             var cellBounds = e.CellBounds;
-            var textColor = e.CellStyle.SelectionForeColor;
             var isSelected = (e.State & DataGridViewElementStates.Selected) != 0;
             var fgColor = isSelected ? e.CellStyle.SelectionForeColor : e.CellStyle.ForeColor;
-            var highlightBrush = new SolidBrush(Color.FromArgb(255, 235, 120)); // warm yellow
-            var textBrush = new SolidBrush(fgColor);
 
             // Text area (account for padding)
             var textRect = new Rectangle(
@@ -775,60 +772,59 @@ namespace Supervertaler.Trados.Controls
             var flags = TextFormatFlags.Left | TextFormatFlags.VerticalCenter |
                         TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix |
                         TextFormatFlags.SingleLine;
-            // Same flags but without EndEllipsis — used for highlight overlay so
-            // match text is clipped cleanly instead of showing "Da..." for "Dawn"
-            var highlightFlags = TextFormatFlags.Left | TextFormatFlags.VerticalCenter |
-                                 TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine;
 
-            // First, draw the full text
-            TextRenderer.DrawText(e.Graphics, cellText, font, textRect, fgColor, flags);
+            // ── Paint yellow highlight backgrounds FIRST, then draw text once on
+            //    top.  This avoids all text-on-text overlap and width mismatch
+            //    issues that the previous overlay approach suffered from.
 
-            // Now overlay highlights on each match
-            int pos = 0;
-            while (pos < cellText.Length)
+            // Use NoPadding for accurate character-level measurement
+            var measureFlags = TextFormatFlags.Left | TextFormatFlags.VerticalCenter |
+                               TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine |
+                               TextFormatFlags.NoPadding;
+
+            using (var highlightBrush = new SolidBrush(Color.FromArgb(255, 235, 120)))
             {
-                int idx = cellText.IndexOf(_highlightQuery, pos, comparison);
-                if (idx < 0) break;
-
-                // Measure the text before the match to get X offset
-                var before = cellText.Substring(0, idx);
-                var matchText = cellText.Substring(idx, _highlightQuery.Length);
-
-                var beforeSize = TextRenderer.MeasureText(e.Graphics, before, font,
-                    new Size(int.MaxValue, textRect.Height), flags);
-                var matchSize = TextRenderer.MeasureText(e.Graphics, matchText, font,
-                    new Size(int.MaxValue, textRect.Height), flags);
-
-                // Adjust for TextRenderer's internal padding
-                int xOffset = beforeSize.Width - 4; // TextRenderer adds ~4px padding
-                if (idx == 0) xOffset = 0;
-
-                var highlightRect = new Rectangle(
-                    textRect.X + xOffset, textRect.Y,
-                    matchSize.Width - 4, textRect.Height);
-
-                // Clip to cell bounds
-                highlightRect.Intersect(textRect);
-
-                if (highlightRect.Width > 0)
+                int pos = 0;
+                while (pos < cellText.Length)
                 {
-                    e.Graphics.FillRectangle(highlightBrush, highlightRect);
-                    TextRenderer.DrawText(e.Graphics, matchText, font, highlightRect,
-                        Color.FromArgb(50, 50, 50), highlightFlags);
-                }
+                    int idx = cellText.IndexOf(_highlightQuery, pos, comparison);
+                    if (idx < 0) break;
 
-                pos = idx + _highlightQuery.Length;
+                    // Measure text-before and text-through-match to get pixel span
+                    var before = idx > 0 ? cellText.Substring(0, idx) : "";
+                    var through = cellText.Substring(0, idx + _highlightQuery.Length);
+
+                    int xBefore = idx > 0
+                        ? TextRenderer.MeasureText(e.Graphics, before, font,
+                              new Size(int.MaxValue, textRect.Height), measureFlags).Width
+                        : 0;
+                    int xThrough = TextRenderer.MeasureText(e.Graphics, through, font,
+                        new Size(int.MaxValue, textRect.Height), measureFlags).Width;
+
+                    var highlightRect = new Rectangle(
+                        textRect.X + xBefore, textRect.Y,
+                        xThrough - xBefore, textRect.Height);
+
+                    highlightRect.Intersect(textRect);
+
+                    if (highlightRect.Width > 0)
+                        e.Graphics.FillRectangle(highlightBrush, highlightRect);
+
+                    pos = idx + _highlightQuery.Length;
+                }
             }
 
-            highlightBrush.Dispose();
-            textBrush.Dispose();
+            // Draw the full text once — it renders on top of the yellow rects
+            TextRenderer.DrawText(e.Graphics, cellText, font, textRect, fgColor, flags);
 
             e.Handled = true;
         }
 
         // ─── Preview Pane ────────────────────────────────────────
 
-        private void OnGridSelectionChanged(object sender, EventArgs e)
+        private void OnGridSelectionChanged(object sender, EventArgs e) => UpdatePreview();
+
+        private void UpdatePreview()
         {
             var result = GetSelectedResult();
             if (result == null)

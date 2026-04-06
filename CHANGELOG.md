@@ -1,5 +1,14 @@
 # Changelog
 
+## [4.18.55] — 2026-04-06
+
+### Fixed
+- **SuperSearch highlight rendering** — rewrote the highlight painting to draw yellow backgrounds first, then render text once on top, eliminating the "documentsare" word-collision and truncation artefacts from the previous overlay approach
+- **SuperSearch preview pane** — preview now also updates on cell click (not just selection change), making it more reliable when clicking between results
+- **SuperSearch "Target" label clipped** — increased the preview header row height so descenders (g, y, p) are no longer cut off
+
+---
+
 ## [4.18.54] — 2026-04-06
 
 ### Fixed
