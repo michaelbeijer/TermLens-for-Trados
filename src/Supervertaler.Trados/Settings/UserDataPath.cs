@@ -106,6 +106,25 @@ namespace Supervertaler.Trados.Settings
         public const string DefaultMemoryBankName = "default";
 
         /// <summary>
+        /// Full spec-standard folder skeleton created inside every freshly made
+        /// memory bank. Mirrors <c>SKELETON_FOLDERS</c> in the Python
+        /// <c>supervertaler_assistant.memory_bank</c> module exactly — deviating
+        /// would silently break cross-product compatibility because banks are
+        /// shared between Workbench, the Python Assistant and this plugin via
+        /// the same <c>memory-banks/</c> root.
+        /// </summary>
+        public static readonly string[] SkeletonFolders = new[]
+        {
+            "00_INBOX",
+            "01_CLIENTS",
+            "02_TERMINOLOGY",
+            "03_DOMAINS",
+            "04_STYLE",
+            "05_INDICES",
+            "06_TEMPLATES",
+        };
+
+        /// <summary>
         /// Root folder containing all memory banks: <c>&lt;Root&gt;/memory-banks/</c>.
         /// Individual banks live in subfolders named after their sanitized bank name.
         /// </summary>
@@ -263,6 +282,57 @@ namespace Supervertaler.Trados.Settings
             catch (Exception ex)
             {
                 error = "Could not move\n  " + src + "\nto\n  " + dst + "\n\n" + ex.Message;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Creates a fresh memory bank at <c>&lt;Root&gt;/memory-banks/&lt;name&gt;/</c>
+        /// with the full <see cref="SkeletonFolders"/> layout. The user-supplied
+        /// name is sanitised via <see cref="SanitizeBankName"/>, and the resulting
+        /// identifier is returned via <paramref name="sanitisedName"/> so the
+        /// caller can pre-select it in the toolbar dropdown afterwards.
+        /// </summary>
+        /// <param name="rawName">Name typed by the user; may contain spaces, mixed case, etc.</param>
+        /// <param name="sanitisedName">
+        /// On success, the filesystem-safe identifier actually used for the
+        /// folder name. On failure, an empty string.
+        /// </param>
+        /// <param name="error">Human-readable error message on failure, otherwise null.</param>
+        /// <returns>True if the bank folder and its skeleton were created; false otherwise.</returns>
+        public static bool TryCreateMemoryBank(string rawName, out string sanitisedName, out string error)
+        {
+            sanitisedName = string.Empty;
+            error = null;
+
+            var safeName = SanitizeBankName(rawName);
+            if (string.IsNullOrEmpty(safeName))
+            {
+                error = "The name must contain at least one lowercase letter, digit, hyphen or underscore.";
+                return false;
+            }
+
+            var target = GetMemoryBankDir(safeName);
+            if (Directory.Exists(target))
+            {
+                error = "A memory bank named '" + safeName + "' already exists at:\n  " + target;
+                return false;
+            }
+
+            try
+            {
+                Directory.CreateDirectory(MemoryBanksRoot);
+                Directory.CreateDirectory(target);
+                foreach (var folder in SkeletonFolders)
+                {
+                    Directory.CreateDirectory(Path.Combine(target, folder));
+                }
+                sanitisedName = safeName;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = "Could not create memory bank at\n  " + target + "\n\n" + ex.Message;
                 return false;
             }
         }

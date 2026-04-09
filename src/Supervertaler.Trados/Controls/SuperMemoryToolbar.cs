@@ -46,6 +46,24 @@ namespace Supervertaler.Trados.Controls
         /// </summary>
         public event EventHandler<MemoryBankChangedEventArgs> MemoryBankChanged;
 
+        /// <summary>
+        /// Raised when the user picks the "+ New memory bank…" sentinel entry at
+        /// the end of the dropdown. The parent view part is expected to prompt
+        /// the user for a name, create the bank on disk, and then call
+        /// <see cref="SetMemoryBanks"/> to repopulate the combo with the new
+        /// bank selected. The dropdown reverts its own selection back to the
+        /// previously active bank before firing this event so the sentinel
+        /// never appears as the "current" selection.
+        /// </summary>
+        public event EventHandler NewMemoryBankRequested;
+
+        /// <summary>
+        /// Sentinel display text for the "create new bank" entry. Kept as a
+        /// constant so the change handler can reliably recognise the row
+        /// without depending on string literals sprinkled through the file.
+        /// </summary>
+        private const string NewBankSentinel = "+ New memory bank\u2026"; // ellipsis
+
         public SuperMemoryToolbar()
         {
             BuildUI();
@@ -329,9 +347,16 @@ namespace Supervertaler.Trados.Controls
 
                 if (banks == null || banks.Count == 0)
                 {
+                    // Even with no banks on disk we still want the user to be
+                    // able to create one, so the "New memory bank…" sentinel is
+                    // added as the only usable row. The placeholder above it
+                    // is disabled-looking via the text itself — ComboBox has no
+                    // per-item enabled state, so we rely on the change handler
+                    // ignoring the placeholder.
                     _cmbMemoryBank.Items.Add("(no memory banks)");
+                    _cmbMemoryBank.Items.Add(NewBankSentinel);
                     _cmbMemoryBank.SelectedIndex = 0;
-                    _cmbMemoryBank.Enabled = false;
+                    _cmbMemoryBank.Enabled = true;
                     LayoutControls();
                     return;
                 }
@@ -345,7 +370,14 @@ namespace Supervertaler.Trados.Controls
                     if (string.Equals(banks[i], activeBank, System.StringComparison.Ordinal))
                         selected = i;
                 }
+
+                // Append the "create new bank" sentinel as the last entry.
+                // It is not selectable in the normal sense — OnMemoryBankComboChanged
+                // fires NewMemoryBankRequested and reverts the combo instead.
+                _cmbMemoryBank.Items.Add(NewBankSentinel);
+
                 _cmbMemoryBank.SelectedIndex = selected;
+                _lastRealSelection = banks[selected];
             }
             finally
             {
@@ -364,17 +396,86 @@ namespace Supervertaler.Trados.Controls
                 var item = _cmbMemoryBank.SelectedItem as string;
                 if (string.IsNullOrEmpty(item)) return null;
                 if (item == "(no memory banks)") return null;
+                if (item == NewBankSentinel) return null;
                 return item;
             }
+        }
+
+        /// <summary>
+        /// Finds the combo index of the bank named <paramref name="name"/>, or
+        /// -1 if not present. Used to revert the selection after the user
+        /// clicks the sentinel entry.
+        /// </summary>
+        private int IndexOfBank(string name)
+        {
+            if (_cmbMemoryBank == null || string.IsNullOrEmpty(name)) return -1;
+            for (int i = 0; i < _cmbMemoryBank.Items.Count; i++)
+            {
+                var text = _cmbMemoryBank.Items[i] as string;
+                if (string.Equals(text, name, System.StringComparison.Ordinal))
+                    return i;
+            }
+            return -1;
         }
 
         private void OnMemoryBankComboChanged(object sender, EventArgs e)
         {
             if (_suppressComboChange) return;
+            if (_cmbMemoryBank == null) return;
+
+            var rawItem = _cmbMemoryBank.SelectedItem as string;
+
+            // Intercept the sentinel row: instead of firing MemoryBankChanged,
+            // revert the combo to the previously selected bank and ask the
+            // view part to prompt for a new bank name.
+            if (rawItem == NewBankSentinel)
+            {
+                // Revert selection so the sentinel never appears as "active".
+                // Prefer the bank we were on when the dropdown opened; fall
+                // back to the first real row if that is somehow gone.
+                var revertTo = _lastRealSelection;
+                int idx = IndexOfBank(revertTo);
+                if (idx < 0)
+                {
+                    // Find the first entry that isn't a placeholder/sentinel.
+                    for (int i = 0; i < _cmbMemoryBank.Items.Count; i++)
+                    {
+                        var text = _cmbMemoryBank.Items[i] as string;
+                        if (text != null && text != NewBankSentinel && text != "(no memory banks)")
+                        {
+                            idx = i;
+                            break;
+                        }
+                    }
+                }
+
+                _suppressComboChange = true;
+                try
+                {
+                    if (idx >= 0) _cmbMemoryBank.SelectedIndex = idx;
+                }
+                finally
+                {
+                    _suppressComboChange = false;
+                }
+
+                NewMemoryBankRequested?.Invoke(this, EventArgs.Empty);
+                return;
+            }
+
             var name = SelectedMemoryBank;
             if (string.IsNullOrEmpty(name)) return;
+
+            _lastRealSelection = name;
             MemoryBankChanged?.Invoke(this, new MemoryBankChangedEventArgs(name));
         }
+
+        /// <summary>
+        /// Tracks the last bank name the user actually settled on, so we can
+        /// revert the combo to that row when they click the sentinel entry.
+        /// Updated on every real selection change and by <see cref="SetMemoryBanks"/>.
+        /// </summary>
+        private string _lastRealSelection;
     }
 
     /// <summary>

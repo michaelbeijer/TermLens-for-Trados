@@ -197,6 +197,7 @@ namespace Supervertaler.Trados
             _control.Value.DistillRequested += OnDistill;
             _control.Value.SuperMemoryRefreshRequested += (s, e) => RefreshSuperMemoryInboxCount();
             _control.Value.MemoryBankChanged += OnMemoryBankChanged;
+            _control.Value.NewMemoryBankRequested += OnNewMemoryBankRequested;
 
             // Initial context update
             UpdateContextDisplay();
@@ -1166,6 +1167,164 @@ namespace Supervertaler.Trados
             catch (Exception ex)
             {
                 AddErrorMessage($"Could not switch memory bank: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Handles the "+ New memory bank…" sentinel selection from the toolbar
+        /// dropdown. Prompts the user for a name, sanitises it, creates the
+        /// bank on disk (with the full <see cref="UserDataPath.SkeletonFolders"/>
+        /// layout), refreshes the dropdown with the new bank visible, and
+        /// switches to it by reusing <see cref="OnMemoryBankChanged"/>.
+        /// </summary>
+        private void OnNewMemoryBankRequested(object sender, EventArgs e)
+        {
+            var parent = _control.Value.FindForm();
+            string rawName;
+
+            // Retry on validation errors (empty / invalid / already exists)
+            // until the user either gives us something usable or cancels.
+            while (true)
+            {
+                rawName = PromptForNewBankName(parent);
+                if (rawName == null)
+                {
+                    // User cancelled. Dropdown has already been reverted to
+                    // the previously active bank by the toolbar, so there is
+                    // nothing else to undo here.
+                    return;
+                }
+
+                string sanitised;
+                string error;
+                if (UserDataPath.TryCreateMemoryBank(rawName, out sanitised, out error))
+                {
+                    try
+                    {
+                        // Repopulate the dropdown so the new bank is visible,
+                        // pre-selected as the active bank. We do NOT fire
+                        // MemoryBankChanged from SetMemoryBanks (it is
+                        // suppressed), so we drive the switch ourselves via
+                        // OnMemoryBankChanged.
+                        var banks = UserDataPath.ListMemoryBanks();
+                        _control.Value.SuperMemoryToolbar?.SetMemoryBanks(banks, sanitised);
+
+                        OnMemoryBankChanged(this, new MemoryBankChangedEventArgs(sanitised));
+
+                        // Replace the generic "Switched to…" banner that
+                        // OnMemoryBankChanged just added with one that makes
+                        // the creation explicit, so the user sees confirmation
+                        // of what actually happened.
+                        _control.Value.AddMessage(new ChatMessage
+                        {
+                            Role = ChatRole.Assistant,
+                            Content = $"Created memory bank **{sanitised}** with the standard folder layout (00_INBOX, 01_CLIENTS, 02_TERMINOLOGY, 03_DOMAINS, 04_STYLE, 05_INDICES, 06_TEMPLATES) and switched to it."
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        AddErrorMessage($"Bank created but could not be activated: {ex.Message}");
+                    }
+                    return;
+                }
+
+                // Creation failed — tell the user why and loop back to the
+                // prompt so they can adjust the name without losing their
+                // typing flow.
+                MessageBox.Show(
+                    parent,
+                    error ?? "Could not create the memory bank.",
+                    "Create memory bank",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+        }
+
+        /// <summary>
+        /// Shows a small modal dialog asking the user to name a new memory
+        /// bank, with a live sanitisation preview underneath the text box so
+        /// they can see what folder name will actually be created.
+        /// </summary>
+        /// <returns>The raw user input, or null if the dialog was cancelled.</returns>
+        private string PromptForNewBankName(IWin32Window parent)
+        {
+            using (var dlg = new Form())
+            {
+                dlg.Text = "Create new memory bank";
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dlg.MinimizeBox = false;
+                dlg.MaximizeBox = false;
+                dlg.StartPosition = FormStartPosition.CenterParent;
+                dlg.ClientSize = new System.Drawing.Size(420, 170);
+                dlg.ShowInTaskbar = false;
+
+                var lblInstructions = new Label
+                {
+                    Text = "Short name for the new bank (lowercase letters, digits,\nhyphens or underscores). Example: legal, medical, eu-procurement.",
+                    Location = new System.Drawing.Point(12, 12),
+                    Size = new System.Drawing.Size(396, 34),
+                    AutoSize = false
+                };
+
+                var txtName = new TextBox
+                {
+                    Location = new System.Drawing.Point(12, 54),
+                    Size = new System.Drawing.Size(396, 22),
+                };
+
+                var lblPreview = new Label
+                {
+                    Text = "Folder name: —",
+                    Location = new System.Drawing.Point(12, 82),
+                    Size = new System.Drawing.Size(396, 18),
+                    ForeColor = System.Drawing.Color.FromArgb(120, 120, 120)
+                };
+
+                var btnOk = new Button
+                {
+                    Text = "Create",
+                    DialogResult = DialogResult.OK,
+                    Location = new System.Drawing.Point(232, 125),
+                    Size = new System.Drawing.Size(85, 28),
+                    Enabled = false
+                };
+
+                var btnCancel = new Button
+                {
+                    Text = "Cancel",
+                    DialogResult = DialogResult.Cancel,
+                    Location = new System.Drawing.Point(323, 125),
+                    Size = new System.Drawing.Size(85, 28)
+                };
+
+                txtName.TextChanged += (s, e) =>
+                {
+                    var safe = UserDataPath.SanitizeBankName(txtName.Text);
+                    if (string.IsNullOrEmpty(safe))
+                    {
+                        lblPreview.Text = "Folder name: —";
+                        lblPreview.ForeColor = System.Drawing.Color.FromArgb(120, 120, 120);
+                        btnOk.Enabled = false;
+                    }
+                    else
+                    {
+                        lblPreview.Text = "Folder name: " + safe;
+                        lblPreview.ForeColor = System.Drawing.Color.FromArgb(30, 90, 158);
+                        btnOk.Enabled = true;
+                    }
+                };
+
+                dlg.Controls.Add(lblInstructions);
+                dlg.Controls.Add(txtName);
+                dlg.Controls.Add(lblPreview);
+                dlg.Controls.Add(btnOk);
+                dlg.Controls.Add(btnCancel);
+                dlg.AcceptButton = btnOk;
+                dlg.CancelButton = btnCancel;
+
+                var result = parent != null ? dlg.ShowDialog(parent) : dlg.ShowDialog();
+                if (result != DialogResult.OK) return null;
+                return txtName.Text;
             }
         }
 
