@@ -1704,54 +1704,116 @@ namespace Supervertaler.Trados
                     $"`{templatePath}`\n\nMake sure memory bank **{bankName}** contains the `06_TEMPLATES/lint.md` file.");
                 return;
             }
-            var systemPrompt = File.ReadAllText(templatePath);
-
-            // Collect vault content (skip .obsidian, .git, 06_TEMPLATES, 00_INBOX/_archive)
-            var sb = new System.Text.StringBuilder();
-            int fileCount = 0;
-            var skipDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                { ".obsidian", ".git", "06_TEMPLATES" };
-
-            foreach (var dir in Directory.GetDirectories(vaultDir))
+            // Show the progress message IMMEDIATELY before the vault scan.
+            // The scan below reads every .md file in the bank and can take
+            // multiple seconds on a mature bank — if we did it synchronously
+            // before adding a chat bubble (as the original code did), the
+            // user would click Health Check and see absolutely nothing
+            // until the scan finished. Adding an upfront bubble, plus
+            // calling SetThinking so the Stop button replaces Send, gives
+            // the user immediate visual confirmation that the click was
+            // received.
+            //
+            // The scan itself is moved to Task.Run so the UI stays
+            // responsive while it runs. Once the scan completes we hop
+            // back onto the UI thread via SafeInvoke and hand the scanned
+            // content to RunSuperMemoryAgent with an empty displayText so
+            // it does not add a duplicate chat bubble (see the displayText
+            // null check there).
+            _control.Value.AddMessage(new ChatMessage
             {
-                var dirName = Path.GetFileName(dir);
-                if (skipDirs.Contains(dirName)) continue;
-                CollectVaultFiles(dir, vaultDir, sb, ref fileCount, "_archive");
-            }
-            // Also collect any top-level .md files
-            foreach (var f in Directory.GetFiles(vaultDir, "*.md", SearchOption.TopDirectoryOnly))
+                Role = ChatRole.Assistant,
+                Content = $"\U0001F3E5 **SuperMemory: Health Check** \u2014 scanning memory bank **{bankName}**\u2026"
+            });
+            _control.Value.SetThinking(true);
+            _control.Value.SetSuperMemoryBusy(true);
+            SaveChatHistory();
+
+            // Capture state for the background task.
+            var capturedVaultDir = vaultDir;
+            var capturedBankName = bankName;
+            var capturedTemplatePath = templatePath;
+
+            Task.Run(() =>
             {
                 try
                 {
-                    var relPath = f.Substring(vaultDir.Length).TrimStart('\\', '/');
-                    sb.AppendLine($"## File: {relPath}");
-                    sb.AppendLine(File.ReadAllText(f));
-                    sb.AppendLine();
-                    fileCount++;
+                    var systemPrompt = File.ReadAllText(capturedTemplatePath);
+
+                    // Collect vault content (skip .obsidian, .git,
+                    // 06_TEMPLATES, 00_INBOX/_archive)
+                    var sb = new System.Text.StringBuilder();
+                    int fileCount = 0;
+                    var skipDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                        { ".obsidian", ".git", "06_TEMPLATES" };
+
+                    foreach (var dir in Directory.GetDirectories(capturedVaultDir))
+                    {
+                        var dirName = Path.GetFileName(dir);
+                        if (skipDirs.Contains(dirName)) continue;
+                        CollectVaultFiles(dir, capturedVaultDir, sb, ref fileCount, "_archive");
+                    }
+                    // Also collect any top-level .md files
+                    foreach (var f in Directory.GetFiles(capturedVaultDir, "*.md", SearchOption.TopDirectoryOnly))
+                    {
+                        try
+                        {
+                            var relPath = f.Substring(capturedVaultDir.Length).TrimStart('\\', '/');
+                            sb.AppendLine($"## File: {relPath}");
+                            sb.AppendLine(File.ReadAllText(f));
+                            sb.AppendLine();
+                            fileCount++;
+                        }
+                        catch { }
+                    }
+
+                    var capturedFileCount = fileCount;
+                    var userMessage = $"Perform a health check on the following knowledge base ({capturedFileCount} files):\n\n{sb}";
+
+                    // Cap the message to avoid exceeding token limits
+                    // (~400K chars ≈ 100K tokens)
+                    if (userMessage.Length > 400000)
+                    {
+                        userMessage = userMessage.Substring(0, 400000) +
+                            "\n\n[Truncated \u2014 vault too large to scan in one pass. The above is a partial scan.]";
+                    }
+
+                    var capturedUserMessage = userMessage;
+                    var capturedSystemPrompt = systemPrompt;
+
+                    SafeInvoke(() =>
+                    {
+                        if (capturedFileCount == 0)
+                        {
+                            // Bank is empty after all — roll back the
+                            // progress state and show the "nothing to
+                            // check" message.
+                            _control.Value.SetThinking(false);
+                            _control.Value.SetSuperMemoryBusy(false);
+                            ShowSuperMemoryMessage($"Memory bank **{capturedBankName}** is empty \u2014 nothing to check.\n\n" +
+                                "Start by adding content via **Process Inbox** or the **Quick Add** shortcut (Ctrl+Alt+M).");
+                            return;
+                        }
+
+                        // Empty displayText because we already showed the
+                        // progress message above — RunSuperMemoryAgent
+                        // will skip its own AddMessage call.
+                        RunSuperMemoryAgent(capturedSystemPrompt, capturedUserMessage, "",
+                            PromptLogFeature.SuperMemory, "SuperMemory: Health Check",
+                            response => PostProcessHealthCheckResponse(response));
+                    });
                 }
-                catch { }
-            }
-
-            if (fileCount == 0)
-            {
-                ShowSuperMemoryMessage($"Memory bank **{bankName}** is empty \u2014 nothing to check.\n\n" +
-                    "Start by adding content via **Process Inbox** or the **Quick Add** shortcut (Ctrl+Alt+M).");
-                return;
-            }
-
-            var userMessage = $"Perform a health check on the following knowledge base ({fileCount} files):\n\n{sb}";
-            var displayText = $"\U0001F3E5 **SuperMemory: Health Check** \u2014 scanning {fileCount} file{(fileCount != 1 ? "s" : "")}";
-
-            // Cap the message to avoid exceeding token limits (~400K chars ≈ 100K tokens)
-            if (userMessage.Length > 400000)
-            {
-                userMessage = userMessage.Substring(0, 400000) +
-                    "\n\n[Truncated — vault too large to scan in one pass. The above is a partial scan.]";
-            }
-
-            RunSuperMemoryAgent(systemPrompt, userMessage, displayText,
-                PromptLogFeature.SuperMemory, "SuperMemory: Health Check",
-                response => PostProcessHealthCheckResponse(response));
+                catch (Exception ex)
+                {
+                    var capturedError = ex.Message;
+                    SafeInvoke(() =>
+                    {
+                        _control.Value.SetThinking(false);
+                        _control.Value.SetSuperMemoryBusy(false);
+                        AddErrorMessage($"Health Check scan failed: {capturedError}");
+                    });
+                }
+            });
         }
 
         private void CollectVaultFiles(string dir, string vaultRoot,
@@ -1827,12 +1889,22 @@ namespace Supervertaler.Trados
                 return;
             }
 
-            // Switch to Chat tab and show status message
-            _control.Value.AddMessage(new ChatMessage
+            // Show status message — unless the caller has already displayed
+            // its own progress bubble (in which case displayText is left
+            // empty). This lets slow operations like OnHealthCheck, which
+            // need to scan the vault before the displayText would know how
+            // many files it is going to process, show an upfront "scanning
+            // memory bank..." bubble before calling into us. SetThinking is
+            // idempotent so it is safe to call even if the caller already
+            // set thinking.
+            if (!string.IsNullOrEmpty(displayText))
             {
-                Role = ChatRole.Assistant,
-                Content = displayText
-            });
+                _control.Value.AddMessage(new ChatMessage
+                {
+                    Role = ChatRole.Assistant,
+                    Content = displayText
+                });
+            }
             _control.Value.SetThinking(true);
             _control.Value.SetSuperMemoryBusy(true);
 

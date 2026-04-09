@@ -780,6 +780,11 @@ namespace Supervertaler.Trados.Controls
                 var bubble = ctrl as ChatBubble;
                 bubble?.RecalculateSize(w);
             }
+            // Recompute the manual AutoScrollMinSize to reflect the new
+            // bubble heights. Without this, widening the chat panel (which
+            // makes bubbles shorter) would leave the scroll range pointing
+            // at the previous taller state — the ghost white space bug.
+            UpdateChatScrollRange();
         }
 
         private void OnInputKeyDown(object sender, KeyEventArgs e)
@@ -1262,25 +1267,86 @@ namespace Supervertaler.Trados.Controls
         }
 
         /// <summary>
-        /// Scrolls the chat panel so that the most recently added bubble is
-        /// visible. Uses <see cref="Panel.ScrollControlIntoView"/> on the
-        /// last child of the message flow, which is the WinForms-recommended
-        /// API for "make this control visible". It handles all the
-        /// coordinate-space conversions (parent padding, dock offsets) and
-        /// clamps to the actual scroll range — both of which my previous
-        /// hand-rolled <c>AutoScrollPosition = Math.Max(0, _messageFlow.Height
-        /// - _chatPanel.ClientSize.Height)</c> got wrong, because
-        /// <c>_messageFlow.Height</c> is inflated whenever the chat panel
-        /// has been resized smaller during the session and bubbles got
-        /// re-laid out at greater heights (a separate fix changes the
-        /// panel's <see cref="AutoSizeMode"/> from <c>GrowOnly</c> to
-        /// <c>GrowAndShrink</c> to address that root cause too).
+        /// Reentry guard for <see cref="UpdateChatScrollRange"/> — the
+        /// <see cref="Panel.AutoScrollMinSize"/> setter can trigger layout
+        /// events which in turn call back into this method.
+        /// </summary>
+        private bool _updatingScrollRange;
+
+        /// <summary>
+        /// Manually computes and sets <see cref="Panel.AutoScrollMinSize"/>
+        /// on the chat panel based on the actual positions of child bubbles
+        /// in the message flow. This bypasses WinForms' automatic AutoScroll
+        /// range computation, which has repeatedly been shown to get out of
+        /// sync with the real content — sometimes because AutoSize does not
+        /// recompute in time, sometimes because a docked-Top child with
+        /// AutoSize inherits stale dimensions from an earlier layout at a
+        /// different chat panel width, and sometimes for reasons I still
+        /// cannot fully explain. The symptom is ghost white space below the
+        /// last bubble that the user can scroll through.
         ///
-        /// The previous "chat bounces back when I scroll to the bottom" bug
-        /// was caused by the thinking-bubble animation timer calling this
-        /// method every 2 seconds. With that per-tick re-scroll removed
-        /// (see <see cref="SetThinking(bool)"/>), single-shot
-        /// <c>ScrollControlIntoView</c> works correctly.
+        /// Call this after any add / remove / resize of children in
+        /// <c>_messageFlow</c>. <see cref="ScrollChatToBottom"/> calls it
+        /// internally before scrolling so the scroll target is always
+        /// computed against an up-to-date scroll range.
+        /// </summary>
+        private void UpdateChatScrollRange()
+        {
+            if (_chatPanel == null || _messageFlow == null) return;
+            if (_updatingScrollRange) return;
+
+            _updatingScrollRange = true;
+            _suppressScrollEvent = true;
+            try
+            {
+                // Force a layout pass so child bubble positions are accurate.
+                _messageFlow.PerformLayout();
+
+                // Find the actual bottom of the content (the last child's
+                // Bottom, in _messageFlow's local coord space). Using the
+                // max across all children is defensive against any out-of-
+                // order layout; in practice with TopDown/WrapContents=false
+                // the last child always has the greatest Bottom.
+                int maxChildBottom = 0;
+                foreach (Control ctrl in _messageFlow.Controls)
+                {
+                    if (ctrl.Bottom > maxChildBottom)
+                        maxChildBottom = ctrl.Bottom;
+                }
+
+                // Translate into _chatPanel's coord space. _messageFlow is
+                // docked to the top of _chatPanel, so its Top is the panel's
+                // top padding (usually 4). Add a few pixels of bottom
+                // breathing room so the last bubble is not flush against
+                // the bottom of the viewport.
+                int totalHeight = _messageFlow.Top + maxChildBottom + 4;
+
+                // Override WinForms' automatic AutoScrollMinSize calculation.
+                // Zero width means the horizontal dimension is computed
+                // normally; we only care about the vertical range.
+                _chatPanel.AutoScrollMinSize = new Size(0, Math.Max(0, totalHeight));
+            }
+            finally
+            {
+                _updatingScrollRange = false;
+                // Re-enable user-scroll detection on the next message pump
+                // cycle so any Scroll events fired by the AutoScrollMinSize
+                // setter above are processed first under the suppression.
+                if (_chatPanel.IsHandleCreated)
+                    _chatPanel.BeginInvoke(new Action(() => _suppressScrollEvent = false));
+                else
+                    _suppressScrollEvent = false;
+            }
+        }
+
+        /// <summary>
+        /// Scrolls the chat panel so that the most recently added bubble is
+        /// visible. Calls <see cref="UpdateChatScrollRange"/> first so the
+        /// scroll target is computed against an accurate range, then uses
+        /// <see cref="Panel.ScrollControlIntoView"/> on the last child of
+        /// the message flow — the WinForms-recommended "make this control
+        /// visible" API, which handles coordinate-space conversions and
+        /// clamps to the actual scroll range.
         ///
         /// Respects <see cref="_userScrolledUp"/> — if the user has manually
         /// scrolled away from the bottom by more than ~50 px, this is a
@@ -1297,6 +1363,10 @@ namespace Supervertaler.Trados.Controls
             {
                 if (_chatPanel == null || _messageFlow == null) return;
                 if (_messageFlow.Controls.Count == 0) return;
+
+                // Ensure AutoScrollMinSize reflects the actual content
+                // before we try to scroll to the bottom.
+                UpdateChatScrollRange();
 
                 _suppressScrollEvent = true;
                 try
@@ -1340,7 +1410,10 @@ namespace Supervertaler.Trados.Controls
 
             _messageFlow.Controls.Add(bubble);
 
-            // Auto-scroll to the bottom (respects _userScrolledUp).
+            // Update the manual AutoScrollMinSize override so the scroll
+            // range reflects the new content, then auto-scroll to the
+            // bottom (respects _userScrolledUp).
+            UpdateChatScrollRange();
             ScrollChatToBottom();
         }
 
@@ -1366,6 +1439,7 @@ namespace Supervertaler.Trados.Controls
                 Margin = new Padding(0, 0, 0, 4)
             };
             _messageFlow.Controls.Add(lbl);
+            UpdateChatScrollRange();
             ScrollChatToBottom();
         }
 
@@ -1379,6 +1453,7 @@ namespace Supervertaler.Trados.Controls
                 ctrl.Dispose();
             _messageFlow.Controls.Clear();
             _messageFlow.ResumeLayout();
+            UpdateChatScrollRange();
         }
 
         // Status messages shown while waiting for AI response
@@ -1424,6 +1499,29 @@ namespace Supervertaler.Trados.Controls
 
         public void SetThinking(bool isThinking)
         {
+            // Idempotent: if we are already in the requested state, just
+            // make sure the button/input state is consistent and return
+            // without touching the thinking bubble. Without this guard,
+            // a second SetThinking(true) call (e.g. when a caller pre-sets
+            // thinking before delegating to RunSuperMemoryAgent) would
+            // create a duplicate thinking bubble and leave the previous
+            // one orphaned in the message flow.
+            if (isThinking && _thinkingBubble != null)
+            {
+                _btnSend.Visible = false;
+                _btnStop.Visible = true;
+                _txtInput.Enabled = false;
+                return;
+            }
+            if (!isThinking && _thinkingBubble == null)
+            {
+                _btnSend.Visible = true;
+                _btnStop.Visible = false;
+                _txtInput.Enabled = true;
+                _isThinking = false;
+                return;
+            }
+
             _isThinking = isThinking;
             // Old docked label kept hidden — the thinking bubble in the chat flow
             // is more reliable and visible
@@ -1437,6 +1535,7 @@ namespace Supervertaler.Trados.Controls
                 // Add an animated thinking bubble to the chat flow
                 _thinkingBubble = CreateThinkingBubble();
                 _messageFlow.Controls.Add(_thinkingBubble);
+                UpdateChatScrollRange();
                 ScrollChatToBottom();
 
                 // Animate: cycle through status messages every ~8 seconds,
@@ -1482,6 +1581,9 @@ namespace Supervertaler.Trados.Controls
                     _thinkingBubble.Dispose();
                     _thinkingBubble = null;
                 }
+                // Recompute the manual AutoScrollMinSize now that the
+                // thinking bubble's height is no longer part of the flow.
+                UpdateChatScrollRange();
             }
         }
 
