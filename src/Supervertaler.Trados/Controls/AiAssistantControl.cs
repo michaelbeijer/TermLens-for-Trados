@@ -30,6 +30,15 @@ namespace Supervertaler.Trados.Controls
         private Label _lblContext;
         private Panel _chatPanel;
         private FlowLayoutPanel _messageFlow;
+
+        // Auto-scroll state. _userScrolledUp goes true when the user has
+        // manually scrolled away from the bottom of the chat by more than
+        // ~50px; while it is true, ScrollChatToBottom() is a no-op so the
+        // chat does not yank the user back when new messages arrive.
+        // _suppressScrollEvent is set briefly during programmatic scrolls
+        // so they do not get misinterpreted as user scrolls.
+        private bool _userScrolledUp;
+        private bool _suppressScrollEvent;
         private Panel _inputPanel;
         private TextBox _txtInput;
         private Button _btnSend;
@@ -564,6 +573,29 @@ namespace Supervertaler.Trados.Controls
                 Padding = new Padding(0)
             };
             _chatPanel.Controls.Add(_messageFlow);
+
+            // Track whether the user has manually scrolled away from the
+            // bottom of the chat. When they have, ScrollChatToBottom() is a
+            // no-op so reading older content during a long-running operation
+            // is not interrupted by progress messages or thinking-bubble
+            // animation ticks. The flag is reset to false when the user
+            // scrolls back to within ~50px of the bottom.
+            //
+            // Programmatic scrolls fire the same Scroll event, so we wrap
+            // them in _suppressScrollEvent to prevent them from being
+            // misinterpreted as the user scrolling away.
+            _chatPanel.Scroll += (s, e) =>
+            {
+                if (_suppressScrollEvent) return;
+                if (_chatPanel == null) return;
+                try
+                {
+                    var distanceFromBottom = _chatPanel.VerticalScroll.Maximum
+                        - (_chatPanel.VerticalScroll.Value + _chatPanel.ClientSize.Height);
+                    _userScrolledUp = distanceFromBottom > 50;
+                }
+                catch { }
+            };
 
             // Add controls to the tab page in correct dock order
             // (bottom first, then top, then fill)
@@ -1219,6 +1251,71 @@ namespace Supervertaler.Trados.Controls
         }
 
         /// <summary>
+        /// Scrolls the chat panel so that the most recently added bubble is
+        /// fully visible at the bottom of the viewport. The previous
+        /// implementation called <see cref="Panel.ScrollControlIntoView"/>
+        /// which only moves the minimum amount needed to make the target
+        /// visible — for a long bubble added below the viewport that meant
+        /// the user only saw the top of it. This helper computes the real
+        /// bottom of the message flow after a forced layout pass and sets
+        /// <see cref="Panel.AutoScrollPosition"/> directly.
+        ///
+        /// Respects <see cref="_userScrolledUp"/> — if the user has manually
+        /// scrolled away from the bottom by more than ~50px, this is a no-op
+        /// so reading older content is not interrupted by progress messages
+        /// or thinking-bubble animation ticks. The user can re-engage
+        /// auto-scroll by scrolling back to the bottom themselves.
+        /// </summary>
+        private void ScrollChatToBottom()
+        {
+            if (_chatPanel == null || _messageFlow == null) return;
+            if (_userScrolledUp) return;
+
+            Action scroll = () =>
+            {
+                if (_chatPanel == null || _messageFlow == null) return;
+
+                // Force the FlowLayoutPanel's AutoSize to recompute now —
+                // without this the new bubble's height is not yet reflected
+                // in _messageFlow.Height and the scroll target is stale.
+                _messageFlow.PerformLayout();
+
+                // AutoScrollPosition is one of the more confusing WinForms
+                // APIs: when read it returns negative values, but when
+                // written it expects positive values representing where in
+                // the virtual scroll area the visible viewport's top-left
+                // should be anchored. Setting Y to a value past the
+                // maximum just clamps to the maximum, which is the bottom.
+                var target = Math.Max(0, _messageFlow.Height - _chatPanel.ClientSize.Height);
+
+                _suppressScrollEvent = true;
+                try
+                {
+                    _chatPanel.AutoScrollPosition = new Point(0, target);
+                }
+                finally
+                {
+                    // Re-enable user-scroll detection on the next message
+                    // pump cycle so any Scroll events from the programmatic
+                    // scroll above are processed first under the suppression.
+                    if (_chatPanel.IsHandleCreated)
+                        _chatPanel.BeginInvoke(new Action(() => _suppressScrollEvent = false));
+                    else
+                        _suppressScrollEvent = false;
+                }
+            };
+
+            // Defer to BeginInvoke when possible so we run after any
+            // pending layout passes triggered by the caller's just-added
+            // control. Falls back to inline execution if the handle is
+            // not yet created (early initialisation path).
+            if (_chatPanel.IsHandleCreated)
+                _chatPanel.BeginInvoke(scroll);
+            else
+                scroll();
+        }
+
+        /// <summary>
         /// Adds a message bubble to the chat panel and scrolls to it.
         /// </summary>
         public void AddMessage(ChatMessage message)
@@ -1232,8 +1329,8 @@ namespace Supervertaler.Trados.Controls
 
             _messageFlow.Controls.Add(bubble);
 
-            // Auto-scroll to latest message
-            _chatPanel.ScrollControlIntoView(bubble);
+            // Auto-scroll to the bottom (respects _userScrolledUp).
+            ScrollChatToBottom();
         }
 
         /// <summary>
@@ -1258,7 +1355,7 @@ namespace Supervertaler.Trados.Controls
                 Margin = new Padding(0, 0, 0, 4)
             };
             _messageFlow.Controls.Add(lbl);
-            _chatPanel.ScrollControlIntoView(lbl);
+            ScrollChatToBottom();
         }
 
         /// <summary>
@@ -1306,7 +1403,7 @@ namespace Supervertaler.Trados.Controls
                 if (lbl != null)
                 {
                     lbl.Text = "  " + statusMessage;
-                    _chatPanel.ScrollControlIntoView(_thinkingBubble);
+                    ScrollChatToBottom();
                 }
                 return;
             }
@@ -1329,7 +1426,7 @@ namespace Supervertaler.Trados.Controls
                 // Add an animated thinking bubble to the chat flow
                 _thinkingBubble = CreateThinkingBubble();
                 _messageFlow.Controls.Add(_thinkingBubble);
-                _chatPanel.ScrollControlIntoView(_thinkingBubble);
+                ScrollChatToBottom();
 
                 // Animate: cycle through status messages every ~8 seconds,
                 // with animated dots within each message
@@ -1354,8 +1451,12 @@ namespace Supervertaler.Trados.Controls
                             baseText = baseText.Substring(0, baseText.Length - 1);
                         lbl.Text = "  " + baseText + dots;
 
-                        // Keep scrolled to the thinking bubble
-                        _chatPanel.ScrollControlIntoView(_thinkingBubble);
+                        // Note: deliberately do NOT call ScrollChatToBottom()
+                        // here. The bubble does not move (only its label
+                        // text changes), and re-scrolling on every animation
+                        // tick was the cause of the "chat bounces back when
+                        // I scroll to the bottom" bug. The initial scroll
+                        // when the bubble was first added is enough.
                     };
                 }
                 _thinkingTimer.Start();

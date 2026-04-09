@@ -1674,8 +1674,14 @@ namespace Supervertaler.Trados
                 fileNames.Add(Path.GetFileName(item.Item1));
             var displayText = $"\U0001F4E5 **SuperMemory: Process Inbox** \u2014 {inboxFiles.Count} file{(inboxFiles.Count != 1 ? "s" : "")}: {string.Join(", ", fileNames)}";
 
+            // The promptName is what the Reports tab labels each operation as.
+            // Earlier in this code's life Process Inbox was internally called
+            // "Compile" (the .md template file is still named compile.md, and
+            // the post-processor method is still PostProcessCompileResponse),
+            // but the user-facing button is "Process Inbox" everywhere else,
+            // so the Reports tab should match.
             RunSuperMemoryAgent(systemPrompt, userMessage, displayText,
-                PromptLogFeature.SuperMemory, "SuperMemory: Compile",
+                PromptLogFeature.SuperMemory, "SuperMemory: Process Inbox",
                 response => PostProcessCompileResponse(response, inboxFiles));
         }
 
@@ -1976,6 +1982,14 @@ namespace Supervertaler.Trados
                 }
                 if (archivedCount > 0)
                     summary.AppendLine($"\nArchived {archivedCount} inbox file{(archivedCount != 1 ? "s" : "")} to `00_INBOX/_archive/`.");
+
+                if (writtenFiles.Count > 0)
+                {
+                    summary.AppendLine();
+                    summary.AppendLine("**Next steps:**");
+                    summary.AppendLine("1. Click **Health Check** to scan the bank for inconsistencies, broken links, and missing cross-references introduced by the new articles.");
+                    summary.AppendLine("2. (Optional) Open the bank in Obsidian to browse the structured articles and the knowledge graph.");
+                }
 
                 var summaryMsg = new ChatMessage
                 {
@@ -2390,7 +2404,11 @@ date: <today's date YYYY-MM-DD>
                     summary.AppendLine($"\nArchived {archivedCount} source file{(archivedCount != 1 ? "s" : "")} from `00_INBOX/` to `00_INBOX/_archive/`: {string.Join(", ", archivedNames)}.");
                 }
 
-                summary.AppendLine("\nOpen Obsidian to review the new articles.");
+                summary.AppendLine();
+                summary.AppendLine("**Next steps:**");
+                summary.AppendLine("1. Click **Process Inbox** to compile these draft articles into structured client, terminology, domain, and style entries in the bank.");
+                summary.AppendLine("2. Click **Health Check** afterwards to scan the bank for inconsistencies, broken links, and missing cross-references.");
+                summary.AppendLine("3. (Optional) Open the bank in Obsidian if you want to review or edit the drafts before processing.");
 
                 var msg = new ChatMessage { Role = ChatRole.Assistant, Content = summary.ToString() };
                 _chatHistory.Add(msg);
