@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- **Long AI responses are now truncated in the chat.** Assistant messages longer than 1,500 characters are truncated to the first 1,000 characters in the chat bubble, with a note: *"Response truncated (N more characters). Right-click → Copy for the full text."* The full original text is always available via right-click → Copy and is preserved in the chat history. This is what finally makes long chat sessions usable — a single Health Check report can be 25,000+ characters (15 screens tall), and rendering that inline broke the scroll math in multiple subtle ways. With truncation, every bubble fits comfortably in the viewport.
 - **Chat scroll rewrite.** Disabled `FlowLayoutPanel.AutoSize` and switched to manual height management, fixing the long-standing "messages disappear into ghost white space" bug on long chat histories. Users no longer need to click **Clear** before every chat message.
 - **Health Check always shows a completion summary.** When the AI reports issues without auto-fixing any files (no `### FILE:` markers in the response), the chat now shows a clear *"Health Check complete — no changes applied"* message instead of leaving the user guessing whether the operation finished.
 - **User-initiated actions re-engage auto-scroll.** Clicking Send, Health Check, Process Inbox, Distill, or switching memory banks now resets the "user scrolled up" flag so the progress bubble and response land in view — even if the user had been scrolled up reading history.
