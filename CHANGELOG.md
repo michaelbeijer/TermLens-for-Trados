@@ -1,5 +1,19 @@
 # Changelog
 
+## [4.19.2] — 2026-04-11
+
+### Added
+
+- **Crash-recovery TMX backup.** Batch Translate now writes every translated segment to a TMX file as it arrives from the AI. If Trados crashes mid-run, the backup contains everything received so far — import it into any TM to recover. A pre-checked **"Auto-backup translations to TMX"** checkbox and an **"Open folder…"** link appear below the Translate button; untick to disable for a run. Files are saved to `Supervertaler\trados\batch_backups\` and are standard TMX 1.4 — compatible with Trados, memoQ, Wordfast, and any other CAT tool that imports TMX.
+
+### Fixed
+
+- **Reports tab now shows entries newest-first.** Prompt log cards are sorted by timestamp during relayout, so the most recent batch or chat call always appears at the top regardless of the order entries arrived.
+- **Termbase AI filtering — word-boundary matching.** `FilterRelevantTerms` now uses `\b` word-boundary regex instead of plain substring matching, so a term like "claim" no longer incorrectly matches "Disclaimer" or "Proclaim".
+- **Termbase AI filtering — initialisation flag.** A bug caused `DisabledAiTermbaseIds` to be reset on every settings save, so per-project termbase exclusions were not preserved correctly across saves. Fixed.
+
+---
+
 ## [4.19.1] — 2026-04-10
 
 ### Fixed
