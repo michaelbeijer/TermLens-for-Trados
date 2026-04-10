@@ -36,7 +36,7 @@ Choose a prompt to guide the AI translation style and domain. The prompt selecto
 * **Default Translation Prompt** – a general-purpose prompt that works well for most content types. Use it as-is or duplicate it in the Prompt Manager and customise it for your domain.
 * **Custom prompts** – your own prompts created in the Prompt Manager
 
-The **active prompt** for the current project is marked with a checkmark in the dropdown. When you open a project that has an active prompt set, it is automatically selected. See [Memory banks – Active Prompt](ai-assistant/memory-banks/active-prompt.md) for how to set the active prompt.
+The **active prompt** for the current project is marked with a checkmark in the dropdown. When you open a project that has an active prompt set, it is automatically selected. See [Memory banks – Active Prompt](ai-assistant/super-memory/active-prompt.md) for how to set the active prompt.
 
 {% hint style="success" %}
 **Tip:** If you save a prompt with the same name as your Trados project, the dropdown will auto-select it whenever you open that project. For example, a prompt called "HAYNESPRO" will be auto-selected when working in a project called HAYNESPRO.
@@ -162,5 +162,5 @@ AI translation is a first draft. After a batch run:
 * [AI Proofreader](ai-proofreader.md)
 * [Supervertaler Assistant](ai-assistant.md)
 * [TermLens](termlens.md)
-* [SuperMemory](ai-assistant/memory-banks.md)
+* [SuperMemory](ai-assistant/super-memory.md)
 * [Keyboard Shortcuts](keyboard-shortcuts.md)

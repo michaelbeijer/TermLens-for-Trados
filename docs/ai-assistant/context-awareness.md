@@ -50,7 +50,7 @@ Both Supervertaler termbases and MultiTerm .sdltb termbases attached to the Trad
 
 ### 7. SuperMemory context
 
-[**SuperMemory**](memory-banks.md) is Supervertaler's self-organising translation knowledge base system. If a memory bank is active, the assistant loads the most relevant articles from it before every AI call:
+[**SuperMemory**](super-memory.md) is Supervertaler's self-organising translation knowledge base system. If a memory bank is active, the assistant loads the most relevant articles from it before every AI call:
 
 - the **client profile** matching the current Trados project name, from `01_CLIENTS/`
 - the **domain article** matching the document type the AI just detected, from `03_DOMAINS/`
@@ -59,7 +59,7 @@ Both Supervertaler termbases and MultiTerm .sdltb termbases attached to the Trad
 
 Unlike a termbase – which gives the AI flat pairs of source and target terms – SuperMemory gives it the **reasoning** behind those pairs: the decisions, the caveats, and the client-specific overrides. The two are complementary, not competitive.
 
-Only articles from the **active** memory bank are loaded. If you keep separate banks per client or domain, switch to the relevant one from the Memory Bank dropdown in the toolbar before translating. See [SuperMemory → AI Integration](memory-banks/ai-integration.md) for the full loading algorithm and token budget.
+Only articles from the **active** memory bank are loaded. If you keep separate banks per client or domain, switch to the relevant one from the Memory Bank dropdown in the toolbar before translating. See [SuperMemory → AI Integration](super-memory/ai-integration.md) for the full loading algorithm and token budget.
 
 **Toggles:** AI Settings → *Include memory bank context* / *Use memory bank in AutoPrompt*.
 
@@ -101,7 +101,7 @@ You can control exactly what context the assistant receives. In the settings dia
 
 - [Supervertaler Assistant](../ai-assistant.md) – Overview
 - [AI Settings](../settings/ai-settings.md) – Configure context options
-- [SuperMemory](memory-banks.md) – Supervertaler's self-organising translation knowledge base system
-- [SuperMemory → AI Integration](memory-banks/ai-integration.md) – The loading algorithm and token budget for SuperMemory context
+- [SuperMemory](super-memory.md) – Supervertaler's self-organising translation knowledge base system
+- [SuperMemory → AI Integration](super-memory/ai-integration.md) – The loading algorithm and token budget for SuperMemory context
 - [File Attachments](file-attachments.md) – Add images and documents to a chat turn
 - [TermLens](../termlens.md) – How termbase terms are matched and loaded

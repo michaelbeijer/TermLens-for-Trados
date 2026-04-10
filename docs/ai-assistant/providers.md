@@ -40,7 +40,7 @@ Some features are provider-specific:
 | [Studio Tools](studio-tools.md) | All providers except Ollama |
 | Image attachments | All providers with vision support |
 | Document attachments | All providers |
-| [Memory bank](memory-banks/ai-integration.md) context | All providers |
+| [Memory bank](super-memory/ai-integration.md) context | All providers |
 
 ## See Also
 

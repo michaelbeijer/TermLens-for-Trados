@@ -41,4 +41,4 @@ When Health Check finishes, a summary bubble always appears at the bottom of the
 
 * [Process Inbox](process-inbox.md)
 * [Distill](distill.md)
-* [SuperMemory](../memory-banks.md)
+* [SuperMemory](../super-memory.md)

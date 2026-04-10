@@ -175,7 +175,7 @@ Batch Operations do not use this setting because each batch already contains a g
 
 ### SuperMemory context
 
-These two toggles control whether [SuperMemory](../ai-assistant/memory-banks.md) knowledge base articles are included in the AI context.
+These two toggles control whether [SuperMemory](../ai-assistant/super-memory.md) knowledge base articles are included in the AI context.
 
 #### Include memory bank in AI context
 

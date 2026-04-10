@@ -45,4 +45,4 @@ This mode is useful when:
 
 * [Active Prompt](active-prompt.md)
 * [Process Inbox](process-inbox.md)
-* [SuperMemory](../memory-banks.md)
+* [SuperMemory](../super-memory.md)

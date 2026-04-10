@@ -67,5 +67,5 @@ The restore is non-destructive: existing template files in the bank are never ov
 
 - [Distill](distill.md) – extract knowledge from translation files (TMX, DOCX, PDF, termbases)
 - [Health Check](health-check.md) – scan and repair the active memory bank
-- [SuperMemory](../memory-banks.md) – overview of SuperMemory and memory banks
+- [SuperMemory](../super-memory.md) – overview of SuperMemory and memory banks
 - [Obsidian Setup](obsidian-setup.md) – installing Obsidian and the Web Clipper

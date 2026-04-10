@@ -28,7 +28,7 @@ If no project-specific settings exist yet (first time opening a project), the cu
 | Project termbase (pink highlighting) | Yes | Different project termbase per project |
 | MultiTerm visibility | Yes | Different MultiTerm termbases enabled per project |
 | AI context termbase filters | Yes | Different termbases in AI prompts per project |
-| Active prompt | Yes | Each project remembers its [active prompt](../ai-assistant/memory-banks/active-prompt.md) for Quick Add and Batch Translate |
+| Active prompt | Yes | Each project remembers its [active prompt](../ai-assistant/super-memory/active-prompt.md) for Quick Add and Batch Translate |
 | API keys and provider settings | No | Shared across all projects |
 | Panel font size | No | UI preference, shared |
 | Term shortcut style | No | UI preference, shared |

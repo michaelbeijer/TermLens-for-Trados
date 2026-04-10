@@ -58,12 +58,12 @@ namespace Supervertaler.Trados.Core
             // Assistant section in the GitBook SUMMARY. C# identifier names kept as
             // SuperMemory* for backwards-compat with existing call sites; rename when the
             // Trados UI strings are updated to match the new memory bank terminology.
-            public const string SuperMemory        = "features/ai-assistant/memory-banks";
-            public const string SuperMemoryQuickAdd = "features/ai-assistant/memory-banks/quick-add";
-            public const string SuperMemoryInbox    = "features/ai-assistant/memory-banks/process-inbox";
-            public const string SuperMemoryHealth   = "features/ai-assistant/memory-banks/health-check";
-            public const string SuperMemoryDistill  = "features/ai-assistant/memory-banks/distill";
-            public const string SuperMemoryObsidian = "features/ai-assistant/memory-banks/obsidian-setup";
+            public const string SuperMemory        = "features/ai-assistant/super-memory";
+            public const string SuperMemoryQuickAdd = "features/ai-assistant/super-memory/quick-add";
+            public const string SuperMemoryInbox    = "features/ai-assistant/super-memory/process-inbox";
+            public const string SuperMemoryHealth   = "features/ai-assistant/super-memory/health-check";
+            public const string SuperMemoryDistill  = "features/ai-assistant/super-memory/distill";
+            public const string SuperMemoryObsidian = "features/ai-assistant/super-memory/obsidian-setup";
             public const string SuperSearch         = "features/supersearch";
         }
 

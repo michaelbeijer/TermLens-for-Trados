@@ -28,7 +28,7 @@ Every memory bank has the same seven-folder skeleton. The skeleton is created au
 | `05_INDICES`     | Auto-generated indexes and maps of content |
 | `06_TEMPLATES`   | Reusable templates for new articles |
 
-The assistant loads content from `01_CLIENTS`, `02_TERMINOLOGY`, `03_DOMAINS`, and `04_STYLE` as context before each AI call. `00_INBOX`, `05_INDICES`, and `06_TEMPLATES` are workflow folders – they do not feed the AI directly, they support the processing pipeline. See [AI Integration](memory-banks/ai-integration.md) for the full loading algorithm.
+The assistant loads content from `01_CLIENTS`, `02_TERMINOLOGY`, `03_DOMAINS`, and `04_STYLE` as context before each AI call. `00_INBOX`, `05_INDICES`, and `06_TEMPLATES` are workflow folders – they do not feed the AI directly, they support the processing pipeline. See [AI Integration](super-memory/ai-integration.md) for the full loading algorithm.
 
 ## Creating and switching banks
 
@@ -104,15 +104,15 @@ The shared folder also means you can keep your memory banks in a cloud-synced lo
 Once a bank exists, you fill it with knowledge in one of several ways:
 
 1. **Drop Markdown notes into `00_INBOX`** – client briefs, glossaries, feedback notes, style guides, reference articles you have written down as `.md` files. These are compiled by Process Inbox.
-2. **Use [Distill](memory-banks/distill.md)** for everything that is **not** plain Markdown – TMX translation memories, DOCX style guides, PDF reference documents, XLSX/CSV glossaries, MultiTerm termbases. Distill reads each file and writes draft Markdown articles into `00_INBOX/`, ready for Process Inbox to compile.
-3. **Use [Quick Add](memory-banks/quick-add.md)** (Ctrl+Alt+M) to capture a terminology decision or correction while translating. Quick Add appends a short note to the inbox so you can keep working without context-switching.
-4. **Run [Process Inbox](memory-banks/process-inbox.md)** periodically. The AI reads every Markdown file in `00_INBOX` and files it into `01_CLIENTS`, `02_TERMINOLOGY`, `03_DOMAINS`, or `04_STYLE` as structured articles, interlinked with backlinks.
-5. **Run [Health Check](memory-banks/health-check.md)** when the bank starts to feel stale. It scans for conflicting terminology, broken links, stale content, and missing cross-references – and heals what it can.
+2. **Use [Distill](super-memory/distill.md)** for everything that is **not** plain Markdown – TMX translation memories, DOCX style guides, PDF reference documents, XLSX/CSV glossaries, MultiTerm termbases. Distill reads each file and writes draft Markdown articles into `00_INBOX/`, ready for Process Inbox to compile.
+3. **Use [Quick Add](super-memory/quick-add.md)** (Ctrl+Alt+M) to capture a terminology decision or correction while translating. Quick Add appends a short note to the inbox so you can keep working without context-switching.
+4. **Run [Process Inbox](super-memory/process-inbox.md)** periodically. The AI reads every Markdown file in `00_INBOX` and files it into `01_CLIENTS`, `02_TERMINOLOGY`, `03_DOMAINS`, or `04_STYLE` as structured articles, interlinked with backlinks.
+5. **Run [Health Check](super-memory/health-check.md)** when the bank starts to feel stale. It scans for conflicting terminology, broken links, stale content, and missing cross-references – and heals what it can.
 
 The result is a knowledge graph that grows with your work and that the AI consults before every translation.
 
 {% hint style="info" %}
-**Markdown vs binary files in the inbox.** Process Inbox is a Markdown compiler – it reads `.md` files only. Distill is the feature that reads binary formats (TMX, DOCX, PDF, XLSX, termbases) and turns them into Markdown. If you drop a TMX or PDF in `00_INBOX/` directly, Process Inbox will spot it and tell you to run Distill on it instead, rather than silently ignoring the file. See [Process Inbox](memory-banks/process-inbox.md#markdown-only-use-distill-for-everything-else) for the full table.
+**Markdown vs binary files in the inbox.** Process Inbox is a Markdown compiler – it reads `.md` files only. Distill is the feature that reads binary formats (TMX, DOCX, PDF, XLSX, termbases) and turns them into Markdown. If you drop a TMX or PDF in `00_INBOX/` directly, Process Inbox will spot it and tell you to run Distill on it instead, rather than silently ignoring the file. See [Process Inbox](super-memory/process-inbox.md#markdown-only-use-distill-for-everything-else) for the full table.
 {% endhint %}
 
 ### Templates and the heal-on-activation prompt
@@ -125,18 +125,18 @@ If you activate an older bank that is missing one of these template files – fo
 
 | Feature | Description |
 |---------|-------------|
-| **[Quick Add](memory-banks/quick-add.md)** | Capture terms and corrections while translating (Ctrl+Alt+M) |
-| **[Process Inbox](memory-banks/process-inbox.md)** | Organise raw material into structured KB articles |
-| **[Health Check](memory-banks/health-check.md)** | Scan and repair the knowledge base |
-| **[Distill](memory-banks/distill.md)** | Extract knowledge from translation files (TMX, DOCX, PDF, termbases) |
-| **[Active Prompt](memory-banks/active-prompt.md)** | Per-project prompt that Quick Add appends terminology to |
-| **[AI Integration](memory-banks/ai-integration.md)** | How the memory bank enhances translations and chat |
-| **[Obsidian Setup](memory-banks/obsidian-setup.md)** | Installing Obsidian and the Web Clipper |
+| **[Quick Add](super-memory/quick-add.md)** | Capture terms and corrections while translating (Ctrl+Alt+M) |
+| **[Process Inbox](super-memory/process-inbox.md)** | Organise raw material into structured KB articles |
+| **[Health Check](super-memory/health-check.md)** | Scan and repair the knowledge base |
+| **[Distill](super-memory/distill.md)** | Extract knowledge from translation files (TMX, DOCX, PDF, termbases) |
+| **[Active Prompt](super-memory/active-prompt.md)** | Per-project prompt that Quick Add appends terminology to |
+| **[AI Integration](super-memory/ai-integration.md)** | How the memory bank enhances translations and chat |
+| **[Obsidian Setup](super-memory/obsidian-setup.md)** | Installing Obsidian and the Web Clipper |
 
 ## Related
 
 - **[Context Awareness](context-awareness.md)** – the full menu of context sources the assistant uses, with memory banks as one section among several.
-- **[AI Integration](memory-banks/ai-integration.md)** – the loading algorithm, token budget, and article prioritisation when a memory bank is consulted by the AI.
+- **[AI Integration](super-memory/ai-integration.md)** – the loading algorithm, token budget, and article prioritisation when a memory bank is consulted by the AI.
 - **[AI Settings](../settings/ai-settings.md)** – toggles for enabling or disabling memory bank context.
 
 ## Learn more

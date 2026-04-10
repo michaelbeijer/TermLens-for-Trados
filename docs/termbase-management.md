@@ -101,12 +101,12 @@ For full editing capabilities, double-click a termbase in the list to open the *
 
 ## Distill into a memory bank
 
-You can extract knowledge from any termbase and add it to a [memory bank](ai-assistant/memory-banks.md) using the **Distill** feature:
+You can extract knowledge from any termbase and add it to a [memory bank](ai-assistant/super-memory.md) using the **Distill** feature:
 
 1. Right-click a termbase in the list
 2. Select **⚗ Distill into memory bank**
 
-The AI analyses all terms in the termbase and creates structured articles (terminology decisions, domain knowledge) in the active memory bank's inbox. See [Distill](ai-assistant/memory-banks/distill.md) for full details.
+The AI analyses all terms in the termbase and creates structured articles (terminology decisions, domain knowledge) in the active memory bank's inbox. See [Distill](ai-assistant/super-memory/distill.md) for full details.
 
 ---
 
@@ -115,5 +115,5 @@ The AI analyses all terms in the termbase and creates structured articles (termi
 - [MultiTerm Support](multiterm-support.md)
 - [TermLens Settings](settings/termlens.md)
 - [Adding & Editing Terms](termlens/adding-terms.md)
-- [Distill](ai-assistant/memory-banks/distill.md)
+- [Distill](ai-assistant/super-memory/distill.md)
 - [Glossary Basics (Workbench)](https://supervertaler.gitbook.io/supervertaler/glossaries/basics)

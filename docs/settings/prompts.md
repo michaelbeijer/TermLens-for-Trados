@@ -14,7 +14,7 @@ Open the plugin **Settings** dialogueue and switch to the **Prompts** tab.
 
 #### Active prompt
 
-Right-click any translation prompt in the tree and choose **Set as active prompt for this project** to designate it as the active prompt. The active prompt is shown with a pin icon and bold blue text. It is used by [memory bank Quick Add](../ai-assistant/memory-banks/quick-add.md) when appending terminology, and is auto-selected in the [Batch Translate](../batch-translate.md) dropdown. The active prompt is saved [per project](project-settings.md).
+Right-click any translation prompt in the tree and choose **Set as active prompt for this project** to designate it as the active prompt. The active prompt is shown with a pin icon and bold blue text. It is used by [memory bank Quick Add](../ai-assistant/super-memory/quick-add.md) when appending terminology, and is auto-selected in the [Batch Translate](../batch-translate.md) dropdown. The active prompt is saved [per project](project-settings.md).
 
 #### What's in this section
 
@@ -32,5 +32,5 @@ Right-click any translation prompt in the tree and choose **Set as active prompt
 * [AI Settings](ai-settings.md)
 * [Batch Translate](../batch-translate.md)
 * [AI Proofreader](../ai-proofreader.md)
-* [SuperMemory](../ai-assistant/memory-banks.md)
+* [SuperMemory](../ai-assistant/super-memory.md)
 * [Keyboard Shortcuts](../keyboard-shortcuts.md)
