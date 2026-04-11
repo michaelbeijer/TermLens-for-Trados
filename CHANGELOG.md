@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.19.4] — 2026-04-11
+
+### Fixed
+
+- **Clipboard Mode now respects the Limit spinner.** Previously, clicking "Copy to Clipboard" ignored the Limit value and always copied every matching segment. Now it applies the same limit as the API batch path — set Limit to 20 to copy only the first 20 segments.
+
+---
+
 ## [4.19.3] — 2026-04-11
 
 ### Changed

@@ -2931,6 +2931,11 @@ date: <today's date YYYY-MM-DD>
                     return;
                 }
 
+                // Apply the Limit spinner — same as the API batch path
+                var clipLimit = batchControl.GetMaxSegments();
+                if (clipLimit > 0 && segments.Count > clipLimit)
+                    segments = segments.Take(clipLimit).ToList();
+
                 // Get termbase terms (filtered by AI-disabled list)
                 var allTerms = TermLensEditorViewPart.GetCurrentTermbaseTerms();
                 var batchDisabledIds = aiSettings?.DisabledAiTermbaseIds ?? new List<long>();
