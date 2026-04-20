@@ -48,3 +48,7 @@ _ReSharper*/
 # Example project (contains client data)
 Example project*/
 dist/Supervertaler-Example-Project.zip
+
+## Python (tools/)
+__pycache__/
+*.pyc

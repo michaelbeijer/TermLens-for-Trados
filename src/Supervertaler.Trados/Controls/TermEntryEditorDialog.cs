@@ -87,13 +87,21 @@ namespace Supervertaler.Trados.Controls
         /// <summary>
         /// Edit mode — opens an existing term with its synonyms.
         /// </summary>
+        /// <remarks>
+        /// Fields are always shown in termbase-declared direction (source on the left,
+        /// target on the right). The <paramref name="projectSourceLang"/> parameter is
+        /// retained for source compatibility but ignored — previously it triggered a
+        /// flip of the field layout when the project direction differed from the
+        /// termbase's, which made dialogs inconsistent depending on entry point and
+        /// magnified confusion around reversed-direction termbases.
+        /// </remarks>
         public TermEntryEditorDialog(TermEntry entry, string dbPath, TermbaseInfo termbase,
             string projectSourceLang = null)
         {
             _dbPath = dbPath;
             _termbase = termbase;
             _termId = entry?.Id ?? -1;
-            _isInverted = IsDirectionInverted(projectSourceLang, termbase?.SourceLang);
+            _isInverted = false;
 
             BuildUI(termbase);
             PopulateFromEntry(entry);
@@ -109,26 +117,11 @@ namespace Supervertaler.Trados.Controls
             _dbPath = dbPath;
             _termbase = termbase;
             _termId = -1;
-            _isInverted = IsDirectionInverted(projectSourceLang, termbase?.SourceLang);
+            _isInverted = false;
 
             BuildUI(termbase);
             _txtSource.Text = sourceTerm ?? "";
             _txtTarget.Text = targetTerm ?? "";
-        }
-
-        private static bool IsDirectionInverted(string projectSourceLang, string termbaseSourceLang)
-        {
-            if (string.IsNullOrEmpty(projectSourceLang) || string.IsNullOrEmpty(termbaseSourceLang))
-                return false;
-
-            // Normalize both to shortened form so that "English (United States)" and
-            // "English (US)" compare correctly — Trados returns full names, the DB may
-            // store either form.
-            var projNorm = LanguageUtils.ShortenLanguageName(projectSourceLang);
-            var tbNorm = LanguageUtils.ShortenLanguageName(termbaseSourceLang);
-
-            return !projNorm.StartsWith(tbNorm, StringComparison.OrdinalIgnoreCase)
-                && !tbNorm.StartsWith(projNorm, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -142,7 +135,6 @@ namespace Supervertaler.Trados.Controls
             foreach (var kv in entries)
             {
                 var entry = kv.Key;
-                var inverted = IsDirectionInverted(projectSourceLang, kv.Value?.SourceLang);
                 _allEntryData.Add(new EntryData
                 {
                     Entry = entry,
@@ -157,7 +149,7 @@ namespace Supervertaler.Trados.Controls
                     Url = entry.Url ?? "",
                     Client = entry.Client ?? "",
                     IsNonTranslatable = entry.IsNonTranslatable,
-                    IsInverted = inverted
+                    IsInverted = false
                 });
             }
 
@@ -165,7 +157,7 @@ namespace Supervertaler.Trados.Controls
             var primary = _allEntryData[0];
             _termbase = primary.Termbase;
             _termId = primary.Entry.Id;
-            _isInverted = primary.IsInverted;
+            _isInverted = false;
 
             BuildUI(primary.Termbase);
             PopulateFromEntry(primary.Entry);

@@ -203,6 +203,24 @@ namespace Supervertaler.Trados.Core
                 }
             }
 
+            // Load per-termbase declared direction (source_lang, target_lang). This is the
+            // canonical direction for the termbase — every entry inside it inherits this.
+            // Historically the inversion-decision used entry.source_lang, which is a copy
+            // that legacy write bugs (pre-v4.19.13) could get wrong. Using the termbase's
+            // declared direction here is resilient to those corrupted per-entry tags.
+            var termbaseDirection = new Dictionary<long, (string src, string tgt)>();
+            using (var dirCmd = new SqliteCommand("SELECT id, source_lang, target_lang FROM termbases", _connection))
+            using (var dirReader = dirCmd.ExecuteReader())
+            {
+                while (dirReader.Read())
+                {
+                    var tbId = dirReader.GetInt64(0);
+                    var src = dirReader.IsDBNull(1) ? "" : dirReader.GetString(1);
+                    var tgt = dirReader.IsDBNull(2) ? "" : dirReader.GetString(2);
+                    termbaseDirection[tbId] = (src, tgt);
+                }
+            }
+
             var ntCol = _hasNonTranslatableColumn ? ", t.is_nontranslatable" : "";
             var uuidCol = _hasTermUuidColumn ? ", t.term_uuid" : "";
             var abbrCol = _hasAbbreviationColumns ? ", t.source_abbreviation, t.target_abbreviation" : "";
@@ -276,13 +294,22 @@ namespace Supervertaler.Trados.Core
                 // If the project source language is the inverse of this termbase's source language
                 // (e.g. NL→EN project using an EN→NL termbase), swap source and target so that
                 // the TermMatcher indexes the correct language for segment lookup.
+                //
+                // Use the termbase's DECLARED source language (from the `termbases` table), not
+                // the per-entry `source_lang` column. The per-entry column is a copy that legacy
+                // write bugs could get wrong — trusting it here was the root cause of entries
+                // silently not matching even though their text was fine. The termbase declaration
+                // is the canonical direction every entry inherits by definition.
                 List<string> srcSynsForIndex;
                 // Normalize both to shortened form so that "English (United States)"
                 // and "English (US)" compare correctly.
                 var projNorm = LanguageUtils.ShortenLanguageName(projectSourceLang ?? "");
-                var tbNorm = LanguageUtils.ShortenLanguageName(entry.SourceLang ?? "");
+                string termbaseSrcLang = "";
+                if (termbaseDirection.TryGetValue(entry.TermbaseId, out var dir))
+                    termbaseSrcLang = dir.src ?? "";
+                var tbNorm = LanguageUtils.ShortenLanguageName(termbaseSrcLang);
                 bool isInverted = !string.IsNullOrEmpty(projectSourceLang)
-                    && !string.IsNullOrEmpty(entry.SourceLang)
+                    && !string.IsNullOrEmpty(termbaseSrcLang)
                     && !projNorm.StartsWith(tbNorm, StringComparison.OrdinalIgnoreCase)
                     && !tbNorm.StartsWith(projNorm, StringComparison.OrdinalIgnoreCase);
 
@@ -1093,6 +1120,92 @@ namespace Supervertaler.Trados.Core
                     return cmd.ExecuteNonQuery() > 0;
                 }
             }
+        }
+
+        /// <summary>
+        /// Atomically reverses the direction of one or more term entries:
+        /// swaps source_term ↔ target_term, source_lang ↔ target_lang,
+        /// source_abbreviation ↔ target_abbreviation, and flips the language
+        /// tag on every linked synonym ('source' ↔ 'target'). Runs in a single
+        /// transaction so partial failures leave the DB unchanged.
+        /// </summary>
+        /// <returns>Number of term rows whose direction was reversed.</returns>
+        public static int ReverseTermDirection(string dbPath, IEnumerable<long> termIds)
+        {
+            if (termIds == null) return 0;
+            var idList = new List<long>();
+            foreach (var id in termIds)
+                if (id > 0) idList.Add(id);
+            if (idList.Count == 0) return 0;
+
+            var connStr = new SqliteConnectionStringBuilder
+            {
+                DataSource = dbPath,
+                Mode = SqliteOpenMode.ReadWrite
+            }.ToString();
+
+            int reversed = 0;
+            using (var conn = new SqliteConnection(connStr))
+            {
+                conn.Open();
+                MigrateSchema(conn);
+
+                // Swap term columns. source_abbreviation / target_abbreviation are
+                // only present on DBs that were migrated — guarded by the optional
+                // column check done at connection open time.
+                var hasAbbr = HasColumn(conn, "termbase_terms", "source_abbreviation")
+                              && HasColumn(conn, "termbase_terms", "target_abbreviation");
+                var termSql = hasAbbr
+                    ? @"UPDATE termbase_terms
+                           SET source_term = target_term,
+                               target_term = source_term,
+                               source_lang = target_lang,
+                               target_lang = source_lang,
+                               source_abbreviation = target_abbreviation,
+                               target_abbreviation = source_abbreviation
+                         WHERE id = @id"
+                    : @"UPDATE termbase_terms
+                           SET source_term = target_term,
+                               target_term = source_term,
+                               source_lang = target_lang,
+                               target_lang = source_lang
+                         WHERE id = @id";
+
+                // Flip synonym language tags: 'source' ↔ 'target'. A CASE expression
+                // keeps this atomic and avoids needing two passes.
+                const string synSql = @"
+                    UPDATE termbase_synonyms
+                       SET language = CASE language
+                                        WHEN 'source' THEN 'target'
+                                        WHEN 'target' THEN 'source'
+                                        ELSE language
+                                      END
+                     WHERE term_id = @id";
+
+                using (var txn = conn.BeginTransaction())
+                using (var termCmd = new SqliteCommand(termSql, conn, txn))
+                using (var synCmd = new SqliteCommand(synSql, conn, txn))
+                {
+                    var termParam = termCmd.Parameters.Add("@id", SqliteType.Integer);
+                    var synParam = synCmd.Parameters.Add("@id", SqliteType.Integer);
+
+                    foreach (var id in idList)
+                    {
+                        termParam.Value = id;
+                        var affected = termCmd.ExecuteNonQuery();
+                        if (affected > 0)
+                        {
+                            synParam.Value = id;
+                            synCmd.ExecuteNonQuery();
+                            reversed++;
+                        }
+                    }
+
+                    txn.Commit();
+                }
+            }
+
+            return reversed;
         }
 
         /// <summary>

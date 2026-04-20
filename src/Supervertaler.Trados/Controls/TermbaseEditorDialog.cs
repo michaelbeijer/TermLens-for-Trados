@@ -30,6 +30,7 @@ namespace Supervertaler.Trados.Controls
         private CheckBox _chkNtOnly;
         private Button _btnClose;
         private ContextMenuStrip _rowContextMenu;
+        private ToolStripMenuItem _reverseItem;
 
         // Synonym counts keyed by term ID, loaded once
         private Dictionary<long, int> _synonymCounts;
@@ -219,9 +220,22 @@ namespace Supervertaler.Trados.Controls
             editItem.Click += OnContextEditClick;
             _rowContextMenu.Items.Add(editItem);
 
+            _reverseItem = new ToolStripMenuItem("Reverse source/target");
+            _reverseItem.Click += OnContextReverseClick;
+            _rowContextMenu.Items.Add(_reverseItem);
+
             var deleteItem = new ToolStripMenuItem("Delete term");
             deleteItem.Click += OnContextDeleteClick;
             _rowContextMenu.Items.Add(deleteItem);
+
+            // Update labels dynamically based on selection size when the menu opens.
+            _rowContextMenu.Opening += (s, ev) =>
+            {
+                var count = CountSelectedDataRows();
+                _reverseItem.Text = count > 1
+                    ? $"Reverse source/target ({count} entries)"
+                    : "Reverse source/target";
+            };
 
             _dgvTerms.CellMouseClick += OnCellMouseClick;
             _dgvTerms.ClipboardCopyMode = DataGridViewClipboardCopyMode.Disable;
@@ -705,9 +719,14 @@ namespace Supervertaler.Trados.Controls
             _contextRowIndex = e.RowIndex;
             _contextColIndex = e.ColumnIndex;
 
-            // Select the right-clicked row
-            _dgvTerms.ClearSelection();
-            _dgvTerms.Rows[e.RowIndex].Selected = true;
+            // Preserve multi-selection when the clicked row is already part of it —
+            // matches standard Windows list/grid behaviour (File Explorer, etc.).
+            // Only clear and single-select if the clicked row wasn't already selected.
+            if (!_dgvTerms.Rows[e.RowIndex].Selected)
+            {
+                _dgvTerms.ClearSelection();
+                _dgvTerms.Rows[e.RowIndex].Selected = true;
+            }
 
             // Show context menu at cursor position
             var rect = _dgvTerms.GetCellDisplayRectangle(e.ColumnIndex, e.RowIndex, true);
@@ -805,6 +824,120 @@ namespace Supervertaler.Trados.Controls
                         _isLoading = false;
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Counts selected rows that map to a real term entry (i.e. not the
+        /// DataGridView "new row" placeholder).
+        /// </summary>
+        private int CountSelectedDataRows()
+        {
+            int count = 0;
+            foreach (DataGridViewRow dgvRow in _dgvTerms.SelectedRows)
+            {
+                if (dgvRow.IsNewRow) continue;
+                if (!(dgvRow.DataBoundItem is DataRowView rv)) continue;
+                if ((rv.Row["Id"] as long? ?? 0) > 0) count++;
+            }
+            return count;
+        }
+
+        private void OnContextReverseClick(object sender, EventArgs e)
+        {
+            // Collect term IDs + their row views so we can refresh in-memory
+            // display after the DB swap without reloading the whole grid.
+            var toReverse = new List<(long id, DataRow row)>();
+            foreach (DataGridViewRow dgvRow in _dgvTerms.SelectedRows)
+            {
+                if (dgvRow.IsNewRow) continue;
+                if (!(dgvRow.DataBoundItem is DataRowView rv)) continue;
+                var id = rv.Row["Id"] as long? ?? 0;
+                if (id > 0) toReverse.Add((id, rv.Row));
+            }
+
+            if (toReverse.Count == 0)
+            {
+                MessageBox.Show("Select one or more rows to reverse.",
+                    "TermLens", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            string message;
+            if (toReverse.Count == 1)
+            {
+                var source = toReverse[0].row["SourceTerm"] as string ?? "";
+                var target = toReverse[0].row["TargetTerm"] as string ?? "";
+                message = $"Reverse this term?\n\n\u201c{source}\u201d \u2194 \u201c{target}\u201d\n\n" +
+                          "Source and target (including abbreviations, language tags, and synonym " +
+                          "direction) will be swapped. This cannot be undone from inside TermLens.";
+            }
+            else
+            {
+                message = $"Reverse {toReverse.Count} term entries?\n\n" +
+                          "For each entry, source and target (including abbreviations, language " +
+                          "tags, and synonym direction) will be swapped. This cannot be undone from " +
+                          "inside TermLens.";
+            }
+
+            var confirm = MessageBox.Show(
+                message,
+                "TermLens \u2014 Reverse source/target",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2);
+            if (confirm != DialogResult.Yes) return;
+
+            _isLoading = true;
+            try
+            {
+                var ids = new List<long>(toReverse.Count);
+                foreach (var (id, _) in toReverse) ids.Add(id);
+
+                int reversed = TermbaseReader.ReverseTermDirection(_dbPath, ids);
+
+                // Reflect the swap in the in-memory DataTable so the grid updates
+                // without a full reload. Columns we swap must match the UI columns.
+                foreach (var (_, row) in toReverse)
+                {
+                    var src = row["SourceTerm"] as string ?? "";
+                    var tgt = row["TargetTerm"] as string ?? "";
+                    row["SourceTerm"] = tgt;
+                    row["TargetTerm"] = src;
+
+                    // Swap abbreviations if the columns exist in the DataTable schema.
+                    if (_dataTable.Columns.Contains("SourceAbbreviation")
+                        && _dataTable.Columns.Contains("TargetAbbreviation"))
+                    {
+                        var sa = row["SourceAbbreviation"] as string ?? "";
+                        var ta = row["TargetAbbreviation"] as string ?? "";
+                        row["SourceAbbreviation"] = ta;
+                        row["TargetAbbreviation"] = sa;
+                    }
+                }
+
+                // Push the updated index to the running TermLens matcher so the
+                // active segment reflects the change immediately. Full-reload via
+                // NotifyTermAdded is heavier but guaranteed-correct for an N-row
+                // swap without per-entry cache invalidation.
+                TermLensEditorViewPart.NotifyTermAdded();
+
+                if (reversed != toReverse.Count)
+                {
+                    MessageBox.Show(
+                        $"Reversed {reversed} of {toReverse.Count} entries. Some rows may have been " +
+                        "removed or locked — the grid has been updated for the ones that succeeded.",
+                        "TermLens", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to reverse direction:\n{ex.Message}",
+                    "TermLens", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                _isLoading = false;
             }
         }
 

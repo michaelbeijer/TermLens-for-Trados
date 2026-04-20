@@ -1,5 +1,24 @@
 # Changelog
 
+## [4.19.22] — 2026-04-21
+
+### Fixed (termbase direction handling — architectural overhaul)
+
+- **Term matching now uses the termbase's declared direction, not the per-entry `source_lang` / `target_lang` columns.** Legacy write-path bugs (pre-v4.19.13) left many termbases with a mix of entries whose per-entry language tags didn't agree with the termbase declaration — and `TermbaseReader.LoadAllTerms` trusted those per-entry tags when deciding whether to invert for reverse-direction projects. The result was entries silently not matching even though their text was correct. `LoadAllTerms` now pulls `source_lang` / `target_lang` from the canonical `termbases` table for the inversion decision, making matching resilient to corrupted per-entry tags. Root-cause fix for the "my termbase entry exists but TermLens says no match" class of bug.
+- **The term entry editor now always shows fields in termbase-declared direction.** Previously `TermEntryEditorDialog` inverted field layout when the project direction differed from the termbase's, and this happened only sometimes depending on which entry point opened it — the Termbase Editor grid right-click did not invert, but the TermLens chip right-click did. The inconsistency made reverse-direction termbases especially confusing. Fields, labels, and save flow are now always termbase-direction, matching the Termbase Editor grid. The `projectSourceLang` parameter is retained for source compatibility but ignored.
+
+### Added
+
+- **"Reverse source/target" right-click action in the Termbase Editor.** Lets you fix one or many reversed-direction entries at once. Menu label dynamically shows the count when multiple rows are selected (e.g. *"Reverse source/target (12 entries)"*). The operation swaps `source_term` ↔ `target_term`, `source_lang` ↔ `target_lang`, `source_abbreviation` ↔ `target_abbreviation`, and flips every linked synonym's language tag (`'source'` ↔ `'target'`). All in one SQL transaction, so partial failure leaves the DB untouched. Right-click on the grid now also preserves multi-row selection when the clicked row was already selected — matches standard Windows list behaviour.
+- **New `TermbaseReader.ReverseTermDirection(dbPath, termIds)`** helper backing the above. Takes a list of term IDs, opens a single ReadWrite connection, does the swaps atomically.
+
+### Tools
+
+- **New `tools/repair_termbase_directions.py`** — stopword-heuristic repair that scans a Supervertaler DB, classifies each legacy-bad entry as tag-only / text-swap / ambiguous, and applies the safe fixes. Conservative by design; skips short single-word entries where language can't be determined confidently.
+- **New `tools/ai_repair_termbase_directions.py`** — LLM-powered repair using Claude Sonnet 4.6 for the entries the heuristic can't handle. Reads the Claude API key straight from the plugin's `settings.json`, batches 50 pairs per call, caches responses locally so reruns are free. Operates on one termbase at a time. See `tools/README.md` for caveats and usage.
+
+---
+
 ## [4.19.20] — 2026-04-20
 
 ### Fixed
