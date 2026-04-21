@@ -47,14 +47,25 @@ Change this only if you are running Ollama on a different port or a remote machi
 
 ## Custom OpenAI-compatible provider
 
-For providers that expose an OpenAI-compatible API (e.g., Azure OpenAI, together.ai, local inference servers), configure these fields:
+For providers that expose an OpenAI-compatible API (e.g., Azure OpenAI, together.ai, internal LLM gateways, local inference servers), configure these fields:
 
 | Field | Description |
 |-------|-------------|
-| **Display name** | A label for this provider (shown in the provider dropdown) |
-| **Endpoint URL** | The base URL for the API (e.g., `https://your-server.com/v1`) |
-| **API key** | The authentication key for this endpoint |
-| **Model name** | The model identifier to use (e.g., `llama-3-70b`) |
+| **Endpoint** | The base URL for the API (e.g., `https://your-server.com/v1`) |
+| **Model** | The model identifier to use (e.g., `llama-3-70b`) |
+| **API Key** | The authentication key for this endpoint |
+
+### Managing multiple endpoints
+
+You can configure more than one custom endpoint and switch between them without re-entering credentials. Each endpoint is stored as a named **profile** in the **Profile** dropdown.
+
+| Button | Action |
+|--------|--------|
+| **+** | Add a new endpoint (starts as "New Endpoint 1", "New Endpoint 2", etc.) |
+| **−** | Remove the currently selected endpoint |
+| **✎** | Rename the currently selected endpoint |
+
+Names are free-form labels – use whatever makes sense for your workflow (e.g. `Azure Production`, `Internal gateway – Mistral Large`, `Local Ollama`). Names must be unique within the list. Renaming is a UI-only change: the endpoint URL, model, and API key all stay attached to the same profile.
 
 ## OpenRouter
 

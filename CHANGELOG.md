@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.19.23] — 2026-04-21
+
+### Added
+
+- **Rename custom OpenAI-compatible endpoints in AI Settings.** Previously, custom endpoints were auto-named "New Endpoint 1", "New Endpoint 2", etc., with no in-app way to give them meaningful labels (the `Name` field existed on the profile object but had no UI). A new pencil button sits next to the existing **+** / **−** buttons on the Custom OpenAI provider panel and opens a small modal dialog: pre-fills the current name, validates live (OK button disabled when empty, unchanged, or colliding with another profile's name — case-insensitive), and updates the combo in place without firing `SelectedIndexChanged` (so unsaved endpoint / model / API-key edits aren't wiped during rename). The rename persists through the existing save path — `SaveCurrentCustomProfile` rebuilds `CustomOpenAiProfiles` from combo items and `SelectedCustomProfileName` is reconciled to the current selection, so a rename survives Settings-dialog OK and Trados restart. Feature request from a user.
+
+---
+
 ## [4.19.22] — 2026-04-21
 
 ### Fixed (termbase direction handling — architectural overhaul)

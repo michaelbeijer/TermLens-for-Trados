@@ -36,6 +36,7 @@ namespace Supervertaler.Trados.Controls
         private ComboBox _cmbCustomProfile;
         private Button _btnAddProfile;
         private Button _btnRemoveProfile;
+        private Button _btnRenameProfile;
         private TextBox _txtCustomEndpoint;
         private TextBox _txtCustomModel;
         private TextBox _txtCustomApiKey;
@@ -351,6 +352,21 @@ namespace Supervertaler.Trados.Controls
             _btnRemoveProfile.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 220, 220);
             _btnRemoveProfile.Click += OnRemoveProfileClick;
 
+            _btnRenameProfile = new Button
+            {
+                Text = "\u270E",
+                Width = 26, Height = 26,
+                Location = new Point(362, 33),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10f),
+                ForeColor = Color.FromArgb(80, 80, 80),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            _btnRenameProfile.FlatAppearance.BorderSize = 0;
+            _btnRenameProfile.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 220, 220);
+            _btnRenameProfile.Click += OnRenameProfileClick;
+            new ToolTip().SetToolTip(_btnRenameProfile, "Rename this endpoint");
+
             var lblCustomEndpoint = new Label
             {
                 Text = "Endpoint:",
@@ -411,7 +427,7 @@ namespace Supervertaler.Trados.Controls
             _pnlCustom.Controls.AddRange(new Control[]
             {
                 sepCustom, lblCustomHeader,
-                lblProfile, _cmbCustomProfile, _btnAddProfile, _btnRemoveProfile,
+                lblProfile, _cmbCustomProfile, _btnAddProfile, _btnRemoveProfile, _btnRenameProfile,
                 lblCustomEndpoint, _txtCustomEndpoint,
                 lblCustomModel, _txtCustomModel,
                 lblCustomApiKey, _txtCustomApiKey, _btnShowCustomKey
@@ -1149,6 +1165,135 @@ namespace Supervertaler.Trados.Controls
                 _txtCustomModel.Text = "";
                 _txtCustomApiKey.Text = "";
             }
+        }
+
+        private void OnRenameProfileClick(object sender, EventArgs e)
+        {
+            if (!(_cmbCustomProfile.SelectedItem is CustomProfileItem current))
+                return;
+
+            var idx = _cmbCustomProfile.SelectedIndex;
+            var newName = PromptForProfileRename(FindForm(), current.Name);
+            if (newName == null || newName == current.Name)
+                return;
+
+            current.Name = newName;
+
+            // ComboBox caches the display string per item; re-inserting forces a redraw
+            // without firing SelectedIndexChanged (which would save-then-reload fields).
+            _cmbCustomProfile.SelectedIndexChanged -= OnCustomProfileChanged;
+            try
+            {
+                _cmbCustomProfile.Items[idx] = current;
+                _cmbCustomProfile.SelectedIndex = idx;
+                _lastCustomProfileIndex = idx;
+            }
+            finally
+            {
+                _cmbCustomProfile.SelectedIndexChanged += OnCustomProfileChanged;
+            }
+        }
+
+        private string PromptForProfileRename(IWin32Window parent, string currentName)
+        {
+            using (var dlg = new Form())
+            {
+                dlg.Text = "Rename endpoint";
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dlg.MinimizeBox = false;
+                dlg.MaximizeBox = false;
+                dlg.StartPosition = FormStartPosition.CenterParent;
+                dlg.ClientSize = new Size(380, 130);
+                dlg.ShowInTaskbar = false;
+
+                var lbl = new Label
+                {
+                    Text = "New name for this endpoint:",
+                    Location = new Point(12, 12),
+                    Size = new Size(356, 18),
+                    AutoSize = false
+                };
+
+                var txt = new TextBox
+                {
+                    Location = new Point(12, 38),
+                    Size = new Size(356, 22),
+                    Text = currentName ?? ""
+                };
+                txt.SelectAll();
+
+                var lblError = new Label
+                {
+                    Location = new Point(12, 66),
+                    Size = new Size(356, 18),
+                    ForeColor = Color.FromArgb(180, 60, 60),
+                    Text = ""
+                };
+
+                var btnOk = new Button
+                {
+                    Text = "Rename",
+                    DialogResult = DialogResult.OK,
+                    Location = new Point(192, 90),
+                    Size = new Size(85, 28)
+                };
+
+                var btnCancel = new Button
+                {
+                    Text = "Cancel",
+                    DialogResult = DialogResult.Cancel,
+                    Location = new Point(283, 90),
+                    Size = new Size(85, 28)
+                };
+
+                void Revalidate()
+                {
+                    var candidate = txt.Text.Trim();
+                    if (string.IsNullOrEmpty(candidate))
+                    {
+                        btnOk.Enabled = false;
+                        lblError.Text = "";
+                    }
+                    else if (candidate == (currentName ?? ""))
+                    {
+                        btnOk.Enabled = false;
+                        lblError.Text = "";
+                    }
+                    else if (NameTakenByOther(candidate, currentName))
+                    {
+                        btnOk.Enabled = false;
+                        lblError.Text = "Another endpoint already uses that name.";
+                    }
+                    else
+                    {
+                        btnOk.Enabled = true;
+                        lblError.Text = "";
+                    }
+                }
+
+                txt.TextChanged += (s, e) => Revalidate();
+                Revalidate();
+
+                dlg.AcceptButton = btnOk;
+                dlg.CancelButton = btnCancel;
+                dlg.Controls.AddRange(new Control[] { lbl, txt, lblError, btnOk, btnCancel });
+
+                if (dlg.ShowDialog(parent) != DialogResult.OK)
+                    return null;
+
+                return txt.Text.Trim();
+            }
+        }
+
+        private bool NameTakenByOther(string candidate, string currentName)
+        {
+            foreach (CustomProfileItem item in _cmbCustomProfile.Items)
+            {
+                if (item.Name == currentName) continue;
+                if (string.Equals(item.Name, candidate, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
         }
 
         private int _lastCustomProfileIndex = -1;
