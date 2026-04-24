@@ -120,7 +120,7 @@ Multi-row selection is preserved: if you select several rows first and then righ
 
 ### Reversing source/target
 
-If you have term entries that were added in the wrong direction – for example, English text in the Dutch column because they were entered during a reverse-direction project – you can correct them with **Reverse source/target**:
+If you have term entries that ended up in the wrong direction – for example, English text in the Dutch column when the termbase is declared English → Dutch – you can correct them with **Reverse source/target**:
 
 1. Select one or more rows in the grid (Shift-click or Ctrl-click for multi-select).
 2. Right-click → **Reverse source/target (N entries)**.
@@ -128,8 +128,10 @@ If you have term entries that were added in the wrong direction – for example,
 
 The operation swaps the source and target text, language tags, abbreviations, and flips the direction of every linked synonym. It runs in a single database transaction, so a partial failure leaves the termbase untouched.
 
+This action is mostly for repairing legacy entries created or edited under v4.19.24 or earlier, when the term entry editor could write values into the wrong DB columns in projects whose direction was the inverse of the termbase's. From v4.19.25 onwards the editor guards against that, so new entries should not need this repair.
+
 {% hint style="info" %}
-**Edit dialog field order is always in termbase direction.** Regardless of your current Trados project's language direction, the **Edit term…** dialog shows the termbase's declared source language on the left and target language on the right (e.g. an EN→NL termbase always opens with English on the left). This matches the column order in the Termbase Editor grid and keeps field positions predictable across projects.
+**Add and Edit dialog fields are always in termbase direction.** The dialog labels and values both reflect the termbase's declared direction – English on the left when the termbase is declared EN→NL, regardless of the current Trados project's direction. From v4.19.25 the values are guaranteed to align with the labels: the Edit dialog re-reads the entry from the database, and the Add dialog swaps the pre-fills internally when the project direction is the inverse of the termbase. Earlier versions could silently write reversed entries in inverse-direction projects – use **Reverse source/target** above to repair any pre-v4.19.25 damage.
 {% endhint %}
 
 ## Sharing termbases
