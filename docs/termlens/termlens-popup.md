@@ -40,6 +40,14 @@ Cycling wraps: from the last match, Right takes you back to the first.
 
 Both paths share the same insertion logic — there is no difference between picking by keyboard and picking by mouse.
 
+## Editing a match
+
+Press **E** while a match is highlighted to open the term-entry editor for that entry. The popup closes first so the editor opens with clean focus. The editor is the same dialogue the docked panel's right-click "Edit Term…" menu uses, including the multi-termbase editing case for entries that exist in more than one termbase.
+
+{% hint style="info" %}
+**MultiTerm matches are read-only** in TermLens. Pressing E on a green MultiTerm chip flashes a hint instead — edit those entries in **Trados → Termbase Viewer**.
+{% endhint %}
+
 ## Visuals
 
 The popup uses the same chip rendering, colour scheme, and metadata indicators as the docked TermLens panel — pink for project termbase terms, blue for regular Supervertaler terms, yellow for non-translatable, green for MultiTerm. See the [TermLens overview](../termlens.md) for the full colour key.
@@ -48,7 +56,7 @@ The popup uses the same chip rendering, colour scheme, and metadata indicators a
 
 Both show the same matches for the active segment. Pick whichever fits your style:
 
-| | TermLens popup (Ctrl tap) | [Term Picker dialogue](term-picker.md) (Ctrl+Shift+T) |
+| | TermLens popup (Ctrl tap) | [Term Picker dialogue](term-picker.md) (Ctrl+Shift+P) |
 |---|---|---|
 | Layout | Source segment with chips underneath each matched word | Sortable, scrollable table |
 | Best for | Skimming matches in segment context | Many matches that benefit from sorting / typing-to-jump |

@@ -8,7 +8,7 @@ The Term Picker is a compact overlay that shows all matched terms for the curren
 
 ## Opening the Term Picker
 
-Press **Ctrl+Shift+T** to open the Term Picker. It appears as a floating window above the editor.
+Press **Ctrl+Shift+P** to open the Term Picker. It appears as a floating window above the editor.
 
 {% hint style="info" %}
 Looking for the memoQ-style Ctrl-tap behaviour? That now opens the [TermLens popup](termlens-popup.md) — a more compact in-context view of the same matches. The Term Picker dialogue described on this page is the list-based alternative for users who prefer a tabular UI.
