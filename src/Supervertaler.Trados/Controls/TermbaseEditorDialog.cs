@@ -300,6 +300,7 @@ namespace Supervertaler.Trados.Controls
                 _dataTable.Columns.Add("Domain", typeof(string));
                 _dataTable.Columns.Add("Notes", typeof(string));
                 _dataTable.Columns.Add("NT", typeof(bool));
+                _dataTable.Columns.Add("Forbidden", typeof(bool));
                 _dataTable.Columns.Add("SrcAbbr", typeof(string));
                 _dataTable.Columns.Add("TgtAbbr", typeof(string));
                 _dataTable.Columns.Add("Url", typeof(string));
@@ -317,6 +318,7 @@ namespace Supervertaler.Trados.Controls
                         term.Domain ?? "",
                         term.Notes ?? "",
                         term.IsNonTranslatable,
+                        term.Forbidden,
                         term.SourceAbbreviation ?? "",
                         term.TargetAbbreviation ?? "",
                         term.Url ?? "");
@@ -376,6 +378,15 @@ namespace Supervertaler.Trados.Controls
                     _dgvTerms.Columns["NT"].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
                     _dgvTerms.Columns["NT"].Width = 36;
                     _dgvTerms.Columns["NT"].FillWeight = 1;
+                }
+                if (_dgvTerms.Columns.Contains("Forbidden"))
+                {
+                    _dgvTerms.Columns["Forbidden"].HeaderText = "🚫";
+                    _dgvTerms.Columns["Forbidden"].ToolTipText = "Forbidden — do not use (edit via term editor)";
+                    _dgvTerms.Columns["Forbidden"].ReadOnly = true;
+                    _dgvTerms.Columns["Forbidden"].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                    _dgvTerms.Columns["Forbidden"].Width = 36;
+                    _dgvTerms.Columns["Forbidden"].FillWeight = 1;
                 }
                 if (_dgvTerms.Columns.Contains("SrcAbbr"))
                 {
@@ -795,6 +806,7 @@ namespace Supervertaler.Trados.Controls
                         row["Notes"] = dlg.Notes;
                         row["Url"] = dlg.Url;
                         row["NT"] = dlg.IsNonTranslatable;
+                        row["Forbidden"] = dlg.IsForbidden;
 
                         // Update synonym count
                         int synCount = dlg.SourceSynonymsList.Count + dlg.TargetSynonymsList.Count;

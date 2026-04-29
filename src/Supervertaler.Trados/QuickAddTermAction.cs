@@ -125,7 +125,8 @@ namespace Supervertaler.Trados
                     return;
                 }
 
-                // Get write termbase metadata for all configured write targets
+                // Get write termbase metadata for all configured write targets,
+                // excluding the project termbase — Alt+Up handles that exclusively.
                 var writeTermbases = new List<Models.TermbaseInfo>();
                 using (var reader = new TermbaseReader(settings.TermbasePath))
                 {
@@ -133,6 +134,7 @@ namespace Supervertaler.Trados
                     {
                         foreach (var id in settings.WriteTermbaseIds)
                         {
+                            if (id == settings.ProjectTermbaseId) continue;
                             var tb = reader.GetTermbaseById(id);
                             if (tb != null) writeTermbases.Add(tb);
                         }
@@ -142,7 +144,7 @@ namespace Supervertaler.Trados
                 if (writeTermbases.Count == 0)
                 {
                     MessageBox.Show(
-                        "The configured write termbases were not found in the database.\n" +
+                        "No write termbases found (the project termbase is excluded \u2013 use Alt+\u2191 to add there).\n" +
                         "Please check the TermLens settings.",
                         "TermLens \u2014 Quick-Add Term",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);

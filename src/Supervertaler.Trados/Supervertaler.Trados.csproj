@@ -5,8 +5,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>Supervertaler.Trados</RootNamespace>
     <AssemblyName>Supervertaler.Trados</AssemblyName>
-    <Version>4.19.38</Version>
-    <InformationalVersion>4.19.38</InformationalVersion>
+    <Version>4.19.41</Version>
+    <InformationalVersion>4.19.41</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Authors>Michael Beijer</Authors>
     <Company>Supervertaler</Company>

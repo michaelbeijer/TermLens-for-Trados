@@ -148,7 +148,6 @@ namespace Supervertaler.Trados.Core
                 WHERE (LOWER(t.source_term) = LOWER(@term)
                     OR LOWER(RTRIM(t.source_term, '.!?,;:')) = LOWER(@term)
                     OR LOWER(@term) = LOWER(RTRIM(t.source_term, '.!?,;:')))
-                  AND COALESCE(t.forbidden, 0) = 0
                 ORDER BY ranking ASC, t.source_term ASC";
 
             using (var cmd = new SqliteCommand(sql, _connection))
@@ -238,7 +237,7 @@ namespace Supervertaler.Trados.Core
                        {urlCol}
                 FROM termbase_terms t
                 LEFT JOIN termbases tb ON CAST(t.termbase_id AS INTEGER) = tb.id
-                WHERE COALESCE(t.forbidden, 0) = 0";
+                WHERE 1=1";
 
             if (disabledTermbaseIds != null && disabledTermbaseIds.Count > 0)
             {
@@ -769,7 +768,7 @@ namespace Supervertaler.Trados.Core
             string definition = "", string domain = "", string notes = "",
             bool isNonTranslatable = false,
             string sourceAbbreviation = null, string targetAbbreviation = null,
-            string url = null, string client = null)
+            string url = null, string client = null, bool forbidden = false)
         {
             var connStr = new SqliteConnectionStringBuilder
             {
@@ -817,7 +816,7 @@ namespace Supervertaler.Trados.Core
                          term_uuid, source_abbreviation, target_abbreviation, url, client)
                     VALUES
                         (@source, @target, @tbId, @srcLang, @tgtLang,
-                         @def, @domain, @notes, 0, 0, @nt,
+                         @def, @domain, @notes, @forbidden, 0, @nt,
                          @uuid, @srcAbbr, @tgtAbbr, @url, @client);
                     SELECT last_insert_rowid();";
 
@@ -832,6 +831,7 @@ namespace Supervertaler.Trados.Core
                     cmd.Parameters.AddWithValue("@domain", domain ?? "");
                     cmd.Parameters.AddWithValue("@notes", notes ?? "");
                     cmd.Parameters.AddWithValue("@nt", isNonTranslatable ? 1 : 0);
+                    cmd.Parameters.AddWithValue("@forbidden", forbidden ? 1 : 0);
                     cmd.Parameters.AddWithValue("@uuid", System.Guid.NewGuid().ToString());
                     cmd.Parameters.AddWithValue("@srcAbbr", sourceAbbreviation ?? "");
                     cmd.Parameters.AddWithValue("@tgtAbbr", targetAbbreviation ?? "");
@@ -1055,7 +1055,7 @@ namespace Supervertaler.Trados.Core
             string definition = "", string domain = "", string notes = "",
             bool isNonTranslatable = false,
             string sourceAbbreviation = null, string targetAbbreviation = null,
-            string url = null, string client = null)
+            string url = null, string client = null, bool forbidden = false)
         {
             var connStr = new SqliteConnectionStringBuilder
             {
@@ -1097,6 +1097,7 @@ namespace Supervertaler.Trados.Core
                         domain      = @domain,
                         notes       = @notes,
                         is_nontranslatable = @nt,
+                        forbidden   = @forbidden,
                         source_abbreviation = @srcAbbr,
                         target_abbreviation = @tgtAbbr,
                         url         = @url,
@@ -1111,6 +1112,7 @@ namespace Supervertaler.Trados.Core
                     cmd.Parameters.AddWithValue("@domain", domain ?? "");
                     cmd.Parameters.AddWithValue("@notes", notes ?? "");
                     cmd.Parameters.AddWithValue("@nt", isNonTranslatable ? 1 : 0);
+                    cmd.Parameters.AddWithValue("@forbidden", forbidden ? 1 : 0);
                     cmd.Parameters.AddWithValue("@srcAbbr", sourceAbbreviation ?? "");
                     cmd.Parameters.AddWithValue("@tgtAbbr", targetAbbreviation ?? "");
                     cmd.Parameters.AddWithValue("@url", url ?? "");
@@ -2213,12 +2215,14 @@ namespace Supervertaler.Trados.Core
                 bool hasNotes = HasColumn(conn, "termbase_terms", "notes");
                 bool hasNt = HasColumn(conn, "termbase_terms", "is_nontranslatable");
                 bool hasClient = HasColumn(conn, "termbase_terms", "client");
+                bool hasForbidden = HasColumn(conn, "termbase_terms", "forbidden");
 
                 var cols = "id, source_term, target_term, source_lang, target_lang, termbase_id, definition";
                 if (hasDomain) cols += ", domain";
                 if (hasNotes) cols += ", notes";
                 if (hasNt) cols += ", is_nontranslatable";
                 if (hasClient) cols += ", client";
+                if (hasForbidden) cols += ", forbidden";
 
                 var sql = $"SELECT {cols} FROM termbase_terms WHERE id = @id";
                 using (var cmd = new SqliteCommand(sql, conn))
@@ -2259,6 +2263,11 @@ namespace Supervertaler.Trados.Core
                         if (hasClient)
                         {
                             entry.Client = reader.IsDBNull(col) ? "" : reader.GetString(col);
+                            col++;
+                        }
+                        if (hasForbidden)
+                        {
+                            entry.Forbidden = !reader.IsDBNull(col) && GetBool(reader, col);
                             col++;
                         }
 

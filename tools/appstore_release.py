@@ -97,11 +97,13 @@ def collect_sections(entries):
                 continue
             if stripped.startswith("### "):
                 header = stripped[4:].strip().lower()
-                if header in ("added", "new features"):
+                # Allow parenthetical suffixes, e.g. "Fixed (TermLens popup – ...)"
+                head_word = header.split("(", 1)[0].strip()
+                if head_word in ("added", "new features"):
                     current_section = "added"
-                elif header == "changed":
+                elif head_word == "changed":
                     current_section = "changed"
-                elif header == "fixed":
+                elif head_word == "fixed":
                     current_section = "fixed"
                 else:
                     current_section = None

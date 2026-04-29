@@ -1,5 +1,35 @@
 # Changelog
 
+## [4.19.41] – 2026-04-29
+
+### Fixed (TermLens popup – stayed visible behind editor dialog when E pressed)
+
+- **Pressing E on a TermLens popup match now closes the popup before the term-entry editor opens.** Previously the popup's pixels stayed painted on screen behind the modal editor dialog until the dialog closed. Root cause: `EditCurrentMatch` registered the editor-open inside a `FormClosed` event handler, but the editor's `ShowDialog` blocks the message pump before the area underneath the popup gets repainted, so the popup remained fully visible. Fixed by hiding the popup synchronously, then deferring `Close()` plus `HandleEditCurrentTerm` to the owner form's message loop via `BeginInvoke`. The owner pump processes pending WM_PAINTs for the freshly-uncovered area first, so the editor opens onto a clean screen.
+
+---
+
+## [4.19.40] – 2026-04-29
+
+### Fixed (Alt+Down no longer writes to the project termbase)
+
+- **Alt+Down (Quick-add to write termbases) no longer adds to the project termbase, even when it is also ticked in the Write column.** Previously `QuickAddTermAction` iterated all IDs in `WriteTermbaseIds` without filtering, so any termbase marked as both Write and Project would receive the term from both shortcuts – making Alt+Up and Alt+Down behave identically. The project termbase ID is now skipped in the write-set loop; Alt+Up (project-only) and Alt+Down (write-set-only) are now fully exclusive. The "no write termbases found" warning also notes that the project termbase is excluded so users understand why a write-only configuration might appear empty.
+
+---
+
+## [4.19.39] – 2026-04-29
+
+### Added (Forbidden Term System – active warnings in TermLens)
+
+- **TermLens now actively warns when the source segment contains a target translation that has been marked forbidden in the termbase.** Previously the plugin simply filtered forbidden terms out of all SQL lookups (`WHERE COALESCE(t.forbidden, 0) = 0`), so the user had no idea a term existed at all — equivalent to silent suppression. Now forbidden matches show up in the TermLens chip flow with a strong red background (`#E53935`, hover `#C62828`), white target text, and a strikethrough on the target term (the source is rendered normally — it isn't the source that's forbidden, it's the translation). Hovering the chip shows a `🚫 Forbidden — do not use` tag at the top of the popup. Background colour was deliberately picked to be unmistakably distinct from the soft pink used for project-termbase entries (`#FFE5F0`); a first attempt at salmon (`#FFDAD6`) was too close to pink and got changed in the same release.
+- **Term Entry Editor dialog has a "Forbidden term (warn when used in translation)" checkbox** below the Non-translatable checkbox, drawn in dark red so it reads as a warning option. Toggling it persists to `termbase_terms.forbidden` via new `forbidden` parameters on `TermbaseReader.InsertTerm` and `UpdateTerm`. The checkbox correctly reflects DB state when reopening an existing term — required adding `forbidden` to the column list in `GetTermById`, which had been quietly omitting it.
+- **Termbase Editor grid now has a 🚫 column** showing the forbidden state for every term at a glance, sized to match the existing NT column. Read-only by design (clicking the cell would otherwise change the visual state without persisting, which was confusing during testing); editing is done through the term-editor dialog. The grid row is patched with the new value when the dialog returns OK so the column updates immediately.
+
+### Fixed (Termbase settings — column sort scrambled checkbox assignments)
+
+- **Sorting the termbase list in Settings → Termbases by Termbase / Terms / Languages no longer corrupts Read / Write / Project / CS checkbox assignments.** Root cause: the save path read checkboxes by row index (`_dgvTermbases.Rows[i]`) and looked up the corresponding termbase via the parallel `_termbases[i]` list, which assumed visual row order matched the underlying list. After a column header click the DataGridView reorders rows in place but the parallel list stays put, so checkbox state for one termbase was being saved against another's ID. Fixed by storing the `TermbaseInfo` (or `MultiTermTermbaseInfo`) reference in each row's `Tag` when the grid is populated, and rewriting the save loop plus all selected-row operations (Open, Distill, Remove, Import, Export) to look up the termbase via `row.Tag` instead of by index. Sort is fully re-enabled.
+
+---
+
 ## [4.19.38] – 2026-04-26
 
 ### Changed (TermLens popup – feedback when E is pressed on a MultiTerm match)

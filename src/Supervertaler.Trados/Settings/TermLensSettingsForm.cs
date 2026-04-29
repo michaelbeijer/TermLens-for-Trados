@@ -952,10 +952,8 @@ namespace Supervertaler.Trados.Settings
                 return;
             }
 
-            if (rowIndex < 0 || rowIndex >= _termbases.Count)
-                return;
-
-            var selected = _termbases[rowIndex];
+            var selected = _dgvTermbases.Rows[rowIndex].Tag as TermbaseInfo;
+            if (selected == null) return;
 
             using (var editor = new TermbaseEditorDialog(dbPath, selected, _settings))
             {
@@ -970,8 +968,8 @@ namespace Supervertaler.Trados.Settings
         private void OnDistillTermbaseClick()
         {
             if (_dgvTermbases.SelectedRows.Count == 0) return;
-            var rowIndex = _dgvTermbases.SelectedRows[0].Index;
-            if (rowIndex < 0 || rowIndex >= _termbases.Count) return;
+            var termbase = _dgvTermbases.SelectedRows[0].Tag as TermbaseInfo;
+            if (termbase == null) return;
 
             var dbPath = _txtTermbasePath.Text.Trim();
             if (string.IsNullOrEmpty(dbPath) || !File.Exists(dbPath))
@@ -980,8 +978,6 @@ namespace Supervertaler.Trados.Settings
                     "TermLens", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-
-            var termbase = _termbases[rowIndex];
             List<TermEntry> terms;
             try
             {
@@ -1137,7 +1133,7 @@ namespace Supervertaler.Trados.Settings
                                 bool isWrite = writeIds.Contains(tb.Id);
                                 bool isProject = tb.Id == _settings.ProjectTermbaseId;
                                 bool isCaseSensitive = tb.CaseSensitive == 1;
-                                _dgvTermbases.Rows.Add(
+                                int rowIdx = _dgvTermbases.Rows.Add(
                                     isRead,
                                     isWrite,
                                     isProject,
@@ -1145,6 +1141,7 @@ namespace Supervertaler.Trados.Settings
                                     tb.Name,
                                     tb.TermCount.ToString("N0"),
                                     $"{LanguageUtils.ShortenLanguageName(tb.SourceLang)} \u2192 {LanguageUtils.ShortenLanguageName(tb.TargetLang)}");
+                                _dgvTermbases.Rows[rowIdx].Tag = tb;
                             }
                         }
                     }
@@ -1183,6 +1180,7 @@ namespace Supervertaler.Trados.Settings
 
                     // Style MultiTerm rows with a light green tint
                     var row = _dgvTermbases.Rows[rowIdx];
+                    row.Tag = info;
                     row.Cells["colWrite"].ReadOnly = true;
                     row.Cells["colProject"].ReadOnly = true;
                     row.Cells["colCS"].ReadOnly = true;
@@ -1326,11 +1324,9 @@ namespace Supervertaler.Trados.Settings
                 return;
             }
 
-            int idx = _dgvTermbases.SelectedRows[0].Index;
-            if (idx < 0 || idx >= _termbases.Count)
-                return;
+            var selected = _dgvTermbases.SelectedRows[0].Tag as TermbaseInfo;
+            if (selected == null) return;
 
-            var selected = _termbases[idx];
             var result = MessageBox.Show(
                 $"Delete termbase \"{selected.Name}\" and all its {selected.TermCount:N0} terms?\n\nThis cannot be undone.",
                 "TermLens \u2014 Delete Termbase",
@@ -1376,11 +1372,8 @@ namespace Supervertaler.Trados.Settings
                 return;
             }
 
-            int idx = _dgvTermbases.SelectedRows[0].Index;
-            if (idx < 0 || idx >= _termbases.Count)
-                return;
-
-            var selected = _termbases[idx];
+            var selected = _dgvTermbases.SelectedRows[0].Tag as TermbaseInfo;
+            if (selected == null) return;
 
             using (var dlg = new OpenFileDialog())
             {
@@ -1506,11 +1499,8 @@ namespace Supervertaler.Trados.Settings
                 return;
             }
 
-            int idx = _dgvTermbases.SelectedRows[0].Index;
-            if (idx < 0 || idx >= _termbases.Count)
-                return;
-
-            var selected = _termbases[idx];
+            var selected = _dgvTermbases.SelectedRows[0].Tag as TermbaseInfo;
+            if (selected == null) return;
 
             using (var dlg = new SaveFileDialog())
             {
@@ -1571,40 +1561,32 @@ namespace Supervertaler.Trados.Settings
 
             var dbPath = _txtTermbasePath.Text;
 
-            for (int i = 0; i < _termbases.Count; i++)
-            {
-                var readChecked = _dgvTermbases.Rows[i].Cells["colRead"].Value as bool? ?? false;
-                var writeChecked = _dgvTermbases.Rows[i].Cells["colWrite"].Value as bool? ?? false;
-                var projectChecked = _dgvTermbases.Rows[i].Cells["colProject"].Value as bool? ?? false;
-
-                // Save per-termbase case sensitivity to DB
-                bool csChecked = _dgvTermbases.Rows[i].Cells["colCS"].Value as bool? ?? false;
-                int caseSetting = csChecked ? 1 : 0;
-                if (caseSetting != _termbases[i].CaseSensitive && !string.IsNullOrEmpty(dbPath) && File.Exists(dbPath))
-                {
-                    try { TermbaseReader.SetTermbaseCaseSensitive(dbPath, _termbases[i].Id, caseSetting); }
-                    catch { /* ignore write failures */ }
-                    _termbases[i].CaseSensitive = caseSetting;
-                }
-
-                if (!readChecked)
-                    _settings.DisabledTermbaseIds.Add(_termbases[i].Id);
-                if (writeChecked)
-                    _settings.WriteTermbaseIds.Add(_termbases[i].Id);
-                if (projectChecked)
-                    _settings.ProjectTermbaseId = _termbases[i].Id;
-            }
-
-            // Save MultiTerm disabled IDs
+            // Iterate by Tag so the mapping survives column sorts
             _settings.DisabledMultiTermIds = new List<long>();
-            for (int i = 0; i < _multiTermInfos.Count; i++)
+            foreach (DataGridViewRow row in _dgvTermbases.Rows)
             {
-                int rowIdx = _termbases.Count + i;
-                if (rowIdx < _dgvTermbases.Rows.Count)
+                if (row.Tag is TermbaseInfo tb)
                 {
-                    var readChecked = _dgvTermbases.Rows[rowIdx].Cells["colRead"].Value as bool? ?? false;
+                    var readChecked = row.Cells["colRead"].Value as bool? ?? false;
+                    var writeChecked = row.Cells["colWrite"].Value as bool? ?? false;
+                    var projectChecked = row.Cells["colProject"].Value as bool? ?? false;
+                    bool csChecked = row.Cells["colCS"].Value as bool? ?? false;
+                    int caseSetting = csChecked ? 1 : 0;
+                    if (caseSetting != tb.CaseSensitive && !string.IsNullOrEmpty(dbPath) && File.Exists(dbPath))
+                    {
+                        try { TermbaseReader.SetTermbaseCaseSensitive(dbPath, tb.Id, caseSetting); }
+                        catch { /* ignore write failures */ }
+                        tb.CaseSensitive = caseSetting;
+                    }
+                    if (!readChecked) _settings.DisabledTermbaseIds.Add(tb.Id);
+                    if (writeChecked) _settings.WriteTermbaseIds.Add(tb.Id);
+                    if (projectChecked) _settings.ProjectTermbaseId = tb.Id;
+                }
+                else if (row.Tag is MultiTermTermbaseInfo mtInfo)
+                {
+                    var readChecked = row.Cells["colRead"].Value as bool? ?? false;
                     if (!readChecked)
-                        _settings.DisabledMultiTermIds.Add(_multiTermInfos[i].SyntheticId);
+                        _settings.DisabledMultiTermIds.Add(mtInfo.SyntheticId);
                 }
             }
 

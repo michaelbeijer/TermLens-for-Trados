@@ -35,6 +35,7 @@ namespace Supervertaler.Trados.Controls
         private bool _definitionExpanded;
         private bool _notesExpanded;
         private CheckBox _chkNonTranslatable;
+        private CheckBox _chkForbidden;
 
         // Synonym lists
         private ListBox _lstSourceSynonyms;
@@ -62,6 +63,7 @@ namespace Supervertaler.Trados.Controls
             public string Source, Target, Definition, Domain, Notes, Url, Client;
             public string SourceAbbr, TargetAbbr;
             public bool IsNonTranslatable;
+            public bool IsForbidden;
             public bool IsInverted;
             public List<SynonymEntry> SourceSyns = new List<SynonymEntry>();
             public List<SynonymEntry> TargetSyns = new List<SynonymEntry>();
@@ -79,6 +81,7 @@ namespace Supervertaler.Trados.Controls
         public string Url => _txtUrl.Text.Trim();
         public string Client => _txtClient.Text.Trim();
         public bool IsNonTranslatable => _chkNonTranslatable.Checked;
+        public bool IsForbidden => _chkForbidden.Checked;
         public long TermId => _termId;
         public bool IsEditMode => _termId > 0;
         public List<SynonymEntry> SourceSynonymsList => _sourceSyns;
@@ -170,6 +173,7 @@ namespace Supervertaler.Trados.Controls
                     Url = entry.Url ?? "",
                     Client = entry.Client ?? "",
                     IsNonTranslatable = entry.IsNonTranslatable,
+                    IsForbidden = entry.Forbidden,
                     IsInverted = false
                 });
             }
@@ -673,6 +677,17 @@ namespace Supervertaler.Trados.Controls
                 }
             };
             _contentPanel.Controls.Add(_chkNonTranslatable);
+            y += 24;
+
+            // Forbidden checkbox
+            _chkForbidden = new CheckBox
+            {
+                Text = "Forbidden term (warn when used in translation)",
+                Location = new Point(leftX, y),
+                AutoSize = true,
+                ForeColor = Color.FromArgb(180, 0, 0)
+            };
+            _contentPanel.Controls.Add(_chkForbidden);
 
             _txtSource.TextChanged += (s, e) =>
             {
@@ -748,6 +763,7 @@ namespace Supervertaler.Trados.Controls
             _txtUrl.Text = entry.Url ?? "";
             _txtClient.Text = entry.Client ?? "";
             _chkNonTranslatable.Checked = entry.IsNonTranslatable;
+            _chkForbidden.Checked = entry.Forbidden;
         }
 
         private void LoadSynonymsFromDb()
@@ -804,6 +820,7 @@ namespace Supervertaler.Trados.Controls
             ed.Url = _txtUrl.Text.Trim();
             ed.Client = _txtClient.Text.Trim();
             ed.IsNonTranslatable = _chkNonTranslatable.Checked;
+            ed.IsForbidden = _chkForbidden.Checked;
             // Synonym lists are stored by reference — already up to date
             ed.SourceSyns = new List<SynonymEntry>(_sourceSyns);
             ed.TargetSyns = new List<SynonymEntry>(_targetSyns);
@@ -833,6 +850,7 @@ namespace Supervertaler.Trados.Controls
             _txtUrl.Text = ed.Url ?? "";
             _txtClient.Text = ed.Client ?? "";
             _chkNonTranslatable.Checked = ed.IsNonTranslatable;
+            _chkForbidden.Checked = ed.IsForbidden;
 
             // Load synonyms
             _sourceSyns.Clear();
@@ -1119,7 +1137,7 @@ namespace Supervertaler.Trados.Controls
                         isNonTranslatable: IsNonTranslatable,
                         sourceAbbreviation: SourceAbbreviation,
                         targetAbbreviation: TargetAbbreviation,
-                        url: Url, client: Client);
+                        url: Url, client: Client, forbidden: IsForbidden);
                 }
                 else if (_termbase != null)
                 {
@@ -1132,7 +1150,7 @@ namespace Supervertaler.Trados.Controls
                         isNonTranslatable: IsNonTranslatable,
                         sourceAbbreviation: SourceAbbreviation,
                         targetAbbreviation: TargetAbbreviation,
-                        url: Url, client: Client);
+                        url: Url, client: Client, forbidden: IsForbidden);
 
                     // Can't save synonyms without a term ID
                     if (newId <= 0)

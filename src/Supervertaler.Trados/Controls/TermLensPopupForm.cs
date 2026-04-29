@@ -299,6 +299,15 @@ namespace Supervertaler.Trados.Controls
         /// is expected to replace MultiTerm with a SQLite-backed
         /// terminology system, so we're not investing in MultiTerm
         /// write support here).
+        ///
+        /// Why Hide() + owner.BeginInvoke instead of "FormClosed += …; Close()":
+        /// The editor dialog opens via ShowDialog, which is modal and blocks
+        /// the message pump. When invoked from inside FormClosed, the pump is
+        /// blocked before the area beneath the popup has been repainted — the
+        /// popup's pixels stay visible behind the modal until it closes.
+        /// Hiding synchronously and deferring Close() + editor-open to the
+        /// owner's message loop lets WM_PAINT for the freshly-uncovered area
+        /// run first, so the editor opens onto a clean screen.
         /// </summary>
         private void EditCurrentMatch()
         {
@@ -318,9 +327,28 @@ namespace Supervertaler.Trados.Controls
             // view that's invalid after the popup disposes.
             var allEntries = new List<TermEntry>(block.Entries);
 
-            FormClosed += (s, e) =>
-                TermLensEditorViewPart.HandleEditCurrentTerm(entry, allEntries);
-            Close();
+            // 1. Hide immediately so the popup is visually gone right away.
+            Hide();
+
+            // 2. Defer Close() + editor open to the owner's message loop so
+            //    the area underneath the popup gets repainted before the
+            //    modal editor dialog blocks the pump.
+            var owner = Owner;
+            if (owner != null && owner.IsHandleCreated && !owner.IsDisposed)
+            {
+                owner.BeginInvoke(new Action(() =>
+                {
+                    Close();
+                    TermLensEditorViewPart.HandleEditCurrentTerm(entry, allEntries);
+                }));
+            }
+            else
+            {
+                // No live owner — fall back to the original FormClosed pattern.
+                FormClosed += (s, e) =>
+                    TermLensEditorViewPart.HandleEditCurrentTerm(entry, allEntries);
+                Close();
+            }
         }
 
         /// <summary>

@@ -34,6 +34,8 @@ namespace Supervertaler.Trados.Controls
         private static readonly Color AbbreviationBg = ColorTranslator.FromHtml("#E8DAFF");
         private static readonly Color AbbreviationHover = ColorTranslator.FromHtml("#D8C8FF");
         private static readonly Color SeparatorColor = Color.FromArgb(180, 180, 180);
+        private static readonly Color ForbiddenBg = ColorTranslator.FromHtml("#E53935");
+        private static readonly Color ForbiddenHover = ColorTranslator.FromHtml("#C62828");
 
         private bool _isHovered;
         private bool _isCurrent;
@@ -43,6 +45,7 @@ namespace Supervertaler.Trados.Controls
         private readonly bool _isProjectTermbase;
         private readonly bool _isNonTranslatable;
         private readonly bool _isMultiTerm;
+        private readonly bool _isForbidden;
         private readonly HashSet<long> _abbreviationMatchIds;
 
         public event EventHandler<TermInsertEventArgs> TermInsertRequested;
@@ -70,7 +73,7 @@ namespace Supervertaler.Trados.Controls
 
         public TermBlock(string sourceText, List<TermEntry> entries, int shortcutIndex = -1,
             bool isProjectTermbase = false, bool isNonTranslatable = false, bool isMultiTerm = false,
-            HashSet<long> abbreviationMatchIds = null)
+            HashSet<long> abbreviationMatchIds = null, bool isForbidden = false)
         {
             _sourceText = sourceText;
             _entries = entries ?? new List<TermEntry>();
@@ -78,6 +81,7 @@ namespace Supervertaler.Trados.Controls
             _isProjectTermbase = isProjectTermbase;
             _isNonTranslatable = isNonTranslatable;
             _isMultiTerm = isMultiTerm;
+            _isForbidden = isForbidden;
             _abbreviationMatchIds = abbreviationMatchIds ?? new HashSet<long>();
 
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint |
@@ -132,6 +136,7 @@ namespace Supervertaler.Trados.Controls
         public bool IsProjectTermbase => _isProjectTermbase;
         public bool IsNonTranslatable => _isNonTranslatable;
         public bool IsMultiTerm => _isMultiTerm;
+        public bool IsForbidden => _isForbidden;
         public TermEntry PrimaryEntry => _entries.Count > 0 ? _entries[0] : null;
         public IReadOnlyList<TermEntry> Entries => _entries;
         public int ShortcutIndex => _shortcutIndex;
@@ -342,7 +347,9 @@ namespace Supervertaler.Trados.Controls
             float targetRowWidth = targetSize.Width + extraWidth + badgeWidth + 4;
 
             Color bgColor;
-            if (_isNonTranslatable)
+            if (_isForbidden)
+                bgColor = _isHovered ? ForbiddenHover : ForbiddenBg;
+            else if (_isNonTranslatable)
                 bgColor = _isHovered ? NonTranslatableHover : NonTranslatableBg;
             else if (IsAbbreviationMatch)
                 bgColor = _isHovered ? AbbreviationHover : AbbreviationBg;
@@ -360,17 +367,21 @@ namespace Supervertaler.Trados.Controls
                 g.FillPath(brush, path);
             }
 
-            // Target text (ellipsis if clamped)
+            // Target text (ellipsis if clamped) — white + strikethrough when forbidden
             float targetX = 4;
             float maxTargetTextWidth = Width - 8 - extraWidth - badgeWidth;
-            using (var brush = new SolidBrush(Color.FromArgb(20, 20, 20)))
+            var tgtFont = _isForbidden
+                ? new Font(Font.FontFamily, Font.Size, FontStyle.Strikeout)
+                : TargetFont;
+            using (var brush = new SolidBrush(_isForbidden ? Color.White : Color.FromArgb(20, 20, 20)))
             using (var sf = new StringFormat { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap })
             {
                 float drawWidth = Math.Min(targetSize.Width, maxTargetTextWidth);
                 var textRect = new RectangleF(targetX, y, drawWidth, targetSize.Height);
-                g.DrawString(targetText, TargetFont, brush, textRect, sf);
+                g.DrawString(targetText, tgtFont, brush, textRect, sf);
                 targetX += drawWidth;
             }
+            if (_isForbidden) tgtFont.Dispose();
 
             // "+N" indicator for multiple translations
             if (extraCount > 0)
@@ -392,7 +403,9 @@ namespace Supervertaler.Trados.Controls
                 float badgeY = y + (targetSize.Height - BadgeHeight) / 2 + 1;
 
                 Color badgeColor;
-                if (_isNonTranslatable)
+                if (_isForbidden)
+                    badgeColor = Color.FromArgb(180, 30, 30);
+                else if (_isNonTranslatable)
                     badgeColor = Color.FromArgb(180, 150, 50);
                 else if (IsAbbreviationMatch)
                     badgeColor = Color.FromArgb(130, 90, 200);
@@ -503,6 +516,8 @@ namespace Supervertaler.Trados.Controls
             if (_entries.Count > 0)
             {
                 var lines = new List<PopupLine>();
+                if (_isForbidden)
+                    lines.Add(new PopupLine("\ud83d\udeab Forbidden \u2014 do not use", PopupLineType.Tag));
                 if (_isMultiTerm)
                     lines.Add(new PopupLine("[MultiTerm \u2014 read-only]", PopupLineType.Tag));
                 if (_isNonTranslatable)

@@ -385,7 +385,9 @@ namespace Supervertaler.Trados.Controls
                         });
                     }
 
-                    var block = new TermBlock(token.Text, sortedEntries, shortcutIndex, isProject, isNonTranslatable, isMultiTerm, token.AbbreviationMatchIds)
+                    bool isForbidden = sortedEntries.Count > 0 && sortedEntries[0].Forbidden;
+
+                    var block = new TermBlock(token.Text, sortedEntries, shortcutIndex, isProject, isNonTranslatable, isMultiTerm, token.AbbreviationMatchIds, isForbidden)
                     {
                         Font = Font,
                         MaxWidth = maxBlockWidth,
