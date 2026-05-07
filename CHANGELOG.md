@@ -1,5 +1,19 @@
 # Changelog
 
+## [4.19.84] – 2026-05-07
+
+### Fixed (Chat panel: Send / Stop / Clear button labels clipped at high DPI)
+
+- **At 150% Windows display scaling, the bottom-row chat buttons clipped to "Cle" / "Sto" / partial "Send".** The buttons had explicit `Size = new Size(UiScale.Pixels(60 / 48 / 48), 26)` – tight even at 100%, and once the rendered text width at the higher DPI exceeded the pre-scaled width, the labels chopped off.
+- Fix at [`AiAssistantControl.cs`](src/Supervertaler.Trados/Controls/AiAssistantControl.cs): switch all three to `AutoSize = true` with `AutoSizeMode.GrowAndShrink` and the previous widths kept as `MinimumSize`. Internal padding (8 px each side) so the labels never touch the button border.
+
+### Fixed (SuperMemory toolbar: "Distill" clipped at high DPI on narrow side panel)
+
+- **In the chat header, "Distill" clipped to "Disti..." at 150% scaling because the toolbar (`Memory Bank` label + dropdown + `?` + Process Inbox + Health Check + Distill) is a single non-wrapping row that ran out of horizontal space when the Trados side panel was at typical width and everything was scaled up.**
+- Fix at [`SuperMemoryToolbar.cs`](src/Supervertaler.Trados/Controls/SuperMemoryToolbar.cs): trim the Memory Bank dropdown width from 180 → 130 logical px. Typical bank names ("default", "test-mb", "client-x") still display fully; the saved horizontal room is enough for "Distill" to fit at 150% scaling. Longer names still scroll inside the dropdown when opened.
+
+---
+
 ## [4.19.83] – 2026-05-07
 
 ### Fixed (TermLens panel: big bold "A" font-size button clipped at the bottom)

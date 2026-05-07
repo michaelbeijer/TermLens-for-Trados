@@ -430,10 +430,19 @@ namespace Supervertaler.Trados.Controls
 
             _inputPanel.Controls.Add(_resizeHandle);
 
+            // Send / Stop / Clear: AutoSize with MinimumSize floor so the
+            // labels don't clip ("Sto" / "Clea") at high Windows display
+            // scaling. The previous fixed widths (60 / 48 / 48 logical) were
+            // tight even at 100%; once UiScale.Pixels factored system DPI in
+            // and the ambient font rendered the text wider than the
+            // pre-scaled width predicted, the button clipped.
             _btnSend = new Button
             {
                 Text = "Send",
-                Size = new Size(UiScale.Pixels(60), UiScale.Pixels(26)),
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                MinimumSize = new Size(UiScale.Pixels(60), UiScale.Pixels(26)),
+                Padding = new Padding(UiScale.Pixels(8), 0, UiScale.Pixels(8), 0),
                 Font = new Font("Segoe UI", UiScale.FontSize(8f)),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = ColorTranslator.FromHtml("#D6EBFF"),
@@ -448,7 +457,10 @@ namespace Supervertaler.Trados.Controls
             _btnStop = new Button
             {
                 Text = "Stop",
-                Size = new Size(UiScale.Pixels(48), UiScale.Pixels(26)),
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                MinimumSize = new Size(UiScale.Pixels(60), UiScale.Pixels(26)),
+                Padding = new Padding(UiScale.Pixels(8), 0, UiScale.Pixels(8), 0),
                 Font = new Font("Segoe UI", UiScale.FontSize(8f)),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(255, 230, 230),
@@ -464,7 +476,10 @@ namespace Supervertaler.Trados.Controls
             _btnClear = new Button
             {
                 Text = "Clear",
-                Size = new Size(UiScale.Pixels(48), UiScale.Pixels(26)),
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                MinimumSize = new Size(UiScale.Pixels(60), UiScale.Pixels(26)),
+                Padding = new Padding(UiScale.Pixels(8), 0, UiScale.Pixels(8), 0),
                 Font = new Font("Segoe UI", UiScale.FontSize(8f)),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.Transparent,

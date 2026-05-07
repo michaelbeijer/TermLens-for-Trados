@@ -98,7 +98,15 @@ namespace Supervertaler.Trados.Controls
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Font = new Font("Segoe UI", UiScale.FontSize(8f)),
                 FlatStyle = FlatStyle.Flat,
-                Width = UiScale.Pixels(180),
+                // 130 logical px (was 180). The toolbar is a single row that
+                // doesn't wrap or scroll; at 150% Windows display scaling
+                // the previous 180 + Memory Bank label + ? + Process Inbox
+                // + Health Check + Distill exceeded the side-panel width
+                // and clipped Distill. 130 fits typical bank names
+                // ("default", "test-mb", "client-x") without dropping
+                // the trailing buttons. Long names still scroll inside
+                // the dropdown.
+                Width = UiScale.Pixels(130),
                 Height = UiScale.Pixels(22),
                 TabStop = false
             };
