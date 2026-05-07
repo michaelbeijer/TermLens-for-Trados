@@ -390,80 +390,50 @@ namespace Supervertaler.Trados.Settings
                 ForeColor = Color.FromArgb(80, 80, 80)
             };
 
-            // Termbase management buttons (right-aligned on the Termbases row)
-            _btnAddTermbase = new Button
+            // Termbase management buttons (right-aligned on the Termbases row).
+            // All five use AutoSize + MinimumSize so labels never clip at high
+            // DPI \u2013 at 150% Windows scaling the previous fixed widths cropped
+            // "Open" -> "Ope" and dropped the "Remove" / "Add" text entirely,
+            // leaving just the +/\u2212 symbol. The chain positions each button to
+            // the LEFT of the previous one using its measured Width, so the
+            // row still right-aligns correctly regardless of label length.
+            Button MakeFlatButton(string text, int minWidth)
             {
-                Text = "+ Add",
-                Width = 50,
-                Height = 26,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8f),
-                ForeColor = Color.FromArgb(80, 80, 80),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            _btnAddTermbase.FlatAppearance.BorderSize = 0;
-            _btnAddTermbase.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 220, 220);
-            _btnAddTermbase.Location = new Point(w - 10 - 50, 110);
+                var b = new Button
+                {
+                    Text = text,
+                    AutoSize = true,
+                    AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                    MinimumSize = new Size(minWidth, 26),
+                    Padding = new Padding(8, 0, 8, 0),
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 8f),
+                    ForeColor = Color.FromArgb(80, 80, 80),
+                    Anchor = AnchorStyles.Top | AnchorStyles.Right
+                };
+                b.FlatAppearance.BorderSize = 0;
+                b.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 220, 220);
+                return b;
+            }
+
+            _btnAddTermbase = MakeFlatButton("+ Add", 50);
+            _btnAddTermbase.Location = new Point(w - 10 - _btnAddTermbase.PreferredSize.Width, 110);
             _btnAddTermbase.Click += OnAddTermbaseClick;
 
-            _btnRemoveTermbase = new Button
-            {
-                Text = "\u2212 Remove",
-                Width = 68,
-                Height = 26,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8f),
-                ForeColor = Color.FromArgb(80, 80, 80),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            _btnRemoveTermbase.FlatAppearance.BorderSize = 0;
-            _btnRemoveTermbase.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 220, 220);
-            _btnRemoveTermbase.Location = new Point(_btnAddTermbase.Left - _btnRemoveTermbase.Width - 2, 110);
+            _btnRemoveTermbase = MakeFlatButton("\u2212 Remove", 68);
+            _btnRemoveTermbase.Location = new Point(_btnAddTermbase.Left - _btnRemoveTermbase.PreferredSize.Width - 2, 110);
             _btnRemoveTermbase.Click += OnRemoveTermbaseClick;
 
-            _btnImport = new Button
-            {
-                Text = "Import",
-                Width = 65,
-                Height = 26,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8f),
-                ForeColor = Color.FromArgb(80, 80, 80),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            _btnImport.FlatAppearance.BorderSize = 0;
-            _btnImport.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 220, 220);
-            _btnImport.Location = new Point(_btnRemoveTermbase.Left - _btnImport.Width - 2, 110);
+            _btnImport = MakeFlatButton("Import", 65);
+            _btnImport.Location = new Point(_btnRemoveTermbase.Left - _btnImport.PreferredSize.Width - 2, 110);
             _btnImport.Click += OnImportClick;
 
-            _btnExport = new Button
-            {
-                Text = "Export",
-                Width = 65,
-                Height = 26,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8f),
-                ForeColor = Color.FromArgb(80, 80, 80),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            _btnExport.FlatAppearance.BorderSize = 0;
-            _btnExport.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 220, 220);
-            _btnExport.Location = new Point(_btnImport.Left - _btnExport.Width - 2, 110);
+            _btnExport = MakeFlatButton("Export", 65);
+            _btnExport.Location = new Point(_btnImport.Left - _btnExport.PreferredSize.Width - 2, 110);
             _btnExport.Click += OnExportClick;
 
-            _btnOpenTermbase = new Button
-            {
-                Text = "Open",
-                Width = 55,
-                Height = 26,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8f),
-                ForeColor = Color.FromArgb(80, 80, 80),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            _btnOpenTermbase.FlatAppearance.BorderSize = 0;
-            _btnOpenTermbase.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 220, 220);
-            _btnOpenTermbase.Location = new Point(_btnExport.Left - _btnOpenTermbase.Width - 2, 110);
+            _btnOpenTermbase = MakeFlatButton("Open", 55);
+            _btnOpenTermbase.Location = new Point(_btnExport.Left - _btnOpenTermbase.PreferredSize.Width - 2, 110);
             _btnOpenTermbase.Click += OnOpenTermbaseClick;
 
             _dgvTermbases = new DataGridView
@@ -499,11 +469,17 @@ namespace Supervertaler.Trados.Settings
                 SelectionForeColor = Color.FromArgb(40, 40, 40)
             };
             // Columns
+            // DataGridView column widths are fixed pixels and do NOT participate
+            // in AutoScaleMode.Dpi scaling (the grid scales row heights and
+            // fonts but not explicit column widths). At 150% Windows display
+            // scaling the bold "Write" / "Read" / "Terms" headers in their
+            // 54/60-px columns clipped to "Wr..." / "Ter..." – widths bumped
+            // here to give comfortable headroom at any DPI.
             var colRead = new DataGridViewCheckBoxColumn
             {
                 Name = "colRead",
                 HeaderText = "Read",
-                Width = 54,
+                Width = 80,
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
                 FillWeight = 1,
                 ToolTipText = "Click header to select/deselect all"
@@ -512,7 +488,7 @@ namespace Supervertaler.Trados.Settings
             {
                 Name = "colWrite",
                 HeaderText = "Write",
-                Width = 54,
+                Width = 80,
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
                 FillWeight = 1,
                 ToolTipText = "Click header to select/deselect all"
@@ -521,7 +497,7 @@ namespace Supervertaler.Trados.Settings
             {
                 Name = "colProject",
                 HeaderText = "Project",
-                Width = 72,
+                Width = 90,
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
                 FillWeight = 1,
                 ToolTipText = "Mark as project termbase (shown in pink). Click header to clear."
@@ -530,7 +506,7 @@ namespace Supervertaler.Trados.Settings
             {
                 Name = "colCS",
                 HeaderText = "CS",
-                Width = 40,
+                Width = 56,
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
                 FillWeight = 1,
                 ToolTipText = "Case-sensitive matching for this termbase."
@@ -547,7 +523,7 @@ namespace Supervertaler.Trados.Settings
                 Name = "colTermCount",
                 HeaderText = "Terms",
                 ReadOnly = true,
-                Width = 60,
+                Width = 80,
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
                 FillWeight = 1,
                 DefaultCellStyle = new DataGridViewCellStyle
@@ -633,6 +609,12 @@ namespace Supervertaler.Trados.Settings
                 ForeColor = Color.FromArgb(60, 60, 60)
             };
 
+            // Bottom rows: a label, an input, and a trailing unit label. The
+            // input column was previously hard-coded to x=130, but at 150%
+            // Windows display scaling the AutoSize labels grow past 120px
+            // and overlap the input. Compute a shared input-column x from the
+            // widest of the three labels' actual widths, then chain the
+            // trailing units off each input's right edge.
             var lblFontSize = new Label
             {
                 Text = "Panel font size:",
@@ -640,11 +622,32 @@ namespace Supervertaler.Trados.Settings
                 AutoSize = true,
                 ForeColor = Color.FromArgb(60, 60, 60)
             };
+            var lblShortcutStyle = new Label
+            {
+                Text = "Term shortcuts:",
+                Location = new Point(10, 86),
+                AutoSize = true,
+                ForeColor = Color.FromArgb(60, 60, 60)
+            };
+            var lblChordDelay = new Label
+            {
+                Text = "Shortcut delay:",
+                Location = new Point(10, 114),
+                AutoSize = true,
+                ForeColor = Color.FromArgb(60, 60, 60)
+            };
+            int inputX = Math.Max(130,
+                Math.Max(lblFontSize.PreferredSize.Width,
+                    Math.Max(lblShortcutStyle.PreferredSize.Width,
+                             lblChordDelay.PreferredSize.Width)) + 16);
 
+            // Bumped widths so the digit area still feels comfortable after
+            // AutoScaleMode.Dpi scales the control body at >100% scaling – at
+            // 60/70px the system spinner buttons swallowed most of the width.
             _nudFontSize = new NumericUpDown
             {
-                Location = new Point(130, 56),
-                Width = 60,
+                Location = new Point(inputX, 56),
+                Width = 80,
                 Minimum = 7,
                 Maximum = 16,
                 DecimalPlaces = 1,
@@ -655,22 +658,14 @@ namespace Supervertaler.Trados.Settings
             var lblFontPt = new Label
             {
                 Text = "pt",
-                Location = new Point(194, 58),
+                Location = new Point(_nudFontSize.Right + 4, 58),
                 AutoSize = true,
                 ForeColor = Color.FromArgb(100, 100, 100)
             };
 
-            var lblShortcutStyle = new Label
-            {
-                Text = "Term shortcuts:",
-                Location = new Point(10, 86),
-                AutoSize = true,
-                ForeColor = Color.FromArgb(60, 60, 60)
-            };
-
             _cboShortcutStyle = new ComboBox
             {
-                Location = new Point(130, 84),
+                Location = new Point(inputX, 84),
                 Width = 280,
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
@@ -678,18 +673,10 @@ namespace Supervertaler.Trados.Settings
             _cboShortcutStyle.Items.Add("Repeated digit (Alt+55, Alt+66, etc.)");
             _cboShortcutStyle.SelectedIndex = _settings.TermShortcutStyle == "repeated" ? 1 : 0;
 
-            var lblChordDelay = new Label
-            {
-                Text = "Shortcut delay:",
-                Location = new Point(10, 114),
-                AutoSize = true,
-                ForeColor = Color.FromArgb(60, 60, 60)
-            };
-
             _nudChordDelay = new NumericUpDown
             {
-                Location = new Point(130, 112),
-                Width = 70,
+                Location = new Point(inputX, 112),
+                Width = 90,
                 Minimum = 300,
                 Maximum = 3000,
                 Increment = 100,
@@ -699,7 +686,7 @@ namespace Supervertaler.Trados.Settings
             var lblChordMs = new Label
             {
                 Text = "ms",
-                Location = new Point(204, 114),
+                Location = new Point(_nudChordDelay.Right + 4, 114),
                 AutoSize = true,
                 ForeColor = Color.FromArgb(100, 100, 100)
             };
