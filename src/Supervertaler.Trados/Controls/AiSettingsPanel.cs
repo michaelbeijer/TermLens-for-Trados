@@ -185,7 +185,11 @@ namespace Supervertaler.Trados.Controls
             _btnShowKey = new Button
             {
                 Text = "Show",
-                Width = 50,
+                // 80px design-time width (was 50). After AutoScaleMode.Dpi
+                // scales the control at >100% Windows display scaling, 50
+                // wasn't wide enough for the "Show" text – it was clipping
+                // to "Sho". 80 leaves comfortable padding at any DPI.
+                Width = 80,
                 Height = 23,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 8f),
@@ -211,7 +215,11 @@ namespace Supervertaler.Trados.Controls
             _btnTestConnection = new Button
             {
                 Text = "Test Connection",
-                Width = 120,
+                // 160px design-time width (was 120). After AutoScaleMode.Dpi
+                // scales the control at >100% Windows display scaling, 120
+                // wasn't wide enough for "Test Connection" – the text wrapped
+                // to two lines. 160 keeps it on one line at any DPI.
+                Width = 160,
                 Height = 26,
                 Location = new Point(120, y),
                 FlatStyle = FlatStyle.System
