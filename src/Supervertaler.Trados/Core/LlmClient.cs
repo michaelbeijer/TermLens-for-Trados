@@ -332,6 +332,11 @@ namespace Supervertaler.Trados.Core
                     EstimatedInputTokens = inputTokens,
                     EstimatedOutputTokens = outputTokens,
                     EstimatedCost = TokenEstimator.EstimateCost(_model, inputTokens, outputTokens),
+                    // Distinguishes "free" (Ollama, zero rates in table) from
+                    // "unknown" (model not in our pricing table at all). When
+                    // false, the UI shows "unknown" to avoid misleading users
+                    // into thinking a non-curated OpenRouter model is free.
+                    IsCostKnown = TokenEstimator.HasPricing(_model),
                     Duration = duration,
                     IsError = errorMessage != null,
                     ErrorMessage = errorMessage

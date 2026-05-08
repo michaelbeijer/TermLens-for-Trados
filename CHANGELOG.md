@@ -1,5 +1,14 @@
 # Changelog
 
+## [4.19.87] – 2026-05-08
+
+### Fixed (Reports tab: cost shown as "free" for unknown models, masking real cost)
+
+- The cost estimator's pricing table only covers the curated provider lists. When users typed a non-curated OpenRouter model ID (e.g. `deepseek/deepseek-v4-pro`) into the model picker, the lookup missed and `EstimateCost` returned `0`, which the Reports tab then rendered as "free" — same label used for genuinely free Ollama models. Misleading: a $0.02 DeepSeek call appeared identical in the log to a free local Ollama call.
+- Now `PromptLogEntry` carries an `IsCostKnown` flag set from `TokenEstimator.HasPricing(model)`. When the model isn't in the pricing table the SummaryLine and "Copy all" output show **unknown** instead of "free", with a "(model not in pricing table)" hint in the long-form output. Genuinely free models (Ollama and any explicit zero-rate entry) continue to show "free" exactly as before.
+
+---
+
 ## [4.19.86] – 2026-05-08
 
 ### Added (Anthropic prompt caching: ~80% input-cost reduction on batch operations)

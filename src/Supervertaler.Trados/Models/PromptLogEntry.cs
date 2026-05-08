@@ -52,6 +52,17 @@ namespace Supervertaler.Trados.Models
         /// <summary>True when actual API-reported usage is available for this entry.</summary>
         public bool HasActualUsage => ActualRegularInputTokens.HasValue;
 
+        /// <summary>
+        /// True when the model has an entry in the pricing table (so a 0 cost
+        /// reflects a genuinely free provider, e.g. Ollama, rather than a
+        /// missing pricing entry). Set by callers that build the entry. When
+        /// false, the SummaryLine renders "unknown" instead of "free" so users
+        /// don't mistake a non-curated OpenRouter model for a free one.
+        /// Default true preserves the legacy "free" display for any entry that
+        /// pre-dates this flag.
+        /// </summary>
+        public bool IsCostKnown { get; set; } = true;
+
         public TimeSpan Duration { get; set; }
         public bool IsError { get; set; }
         public string ErrorMessage { get; set; }
@@ -95,11 +106,11 @@ namespace Supervertaler.Trados.Models
                     var output = ActualOutputTokens ?? 0;
                     var cost = ActualCost ?? 0m;
 
-                    var costStr = cost >= 0.01m
-                        ? $"${cost:F2}"
-                        : cost > 0
-                            ? $"${cost:F4}"
-                            : "free";
+                    string costStr;
+                    if (cost >= 0.01m) costStr = $"${cost:F2}";
+                    else if (cost > 0) costStr = $"${cost:F4}";
+                    else if (IsCostKnown) costStr = "free";
+                    else costStr = "unknown";
 
                     // Show cache hit count when caching contributed, so users can
                     // see at a glance how much of their input was discounted.
@@ -108,11 +119,11 @@ namespace Supervertaler.Trados.Models
                     return $"{DisplayModel ?? Model} \u2022 {totalIn:N0} in{cacheNote} / {output:N0} out \u2022 {costStr} \u2022 {Duration.TotalSeconds:F1}s";
                 }
 
-                var estCostStr = EstimatedCost >= 0.01m
-                    ? $"~${EstimatedCost:F2}"
-                    : EstimatedCost > 0
-                        ? $"~${EstimatedCost:F4}"
-                        : "free";
+                string estCostStr;
+                if (EstimatedCost >= 0.01m) estCostStr = $"~${EstimatedCost:F2}";
+                else if (EstimatedCost > 0) estCostStr = $"~${EstimatedCost:F4}";
+                else if (IsCostKnown) estCostStr = "free";
+                else estCostStr = "unknown";
 
                 return $"{DisplayModel ?? Model} \u2022 {EstimatedInputTokens:N0} in / {EstimatedOutputTokens:N0} out \u2022 {estCostStr} \u2022 {Duration.TotalSeconds:F1}s";
             }
@@ -140,12 +151,20 @@ namespace Supervertaler.Trados.Models
                 var output = ActualOutputTokens ?? 0;
                 sb.AppendLine($"Tokens (actual): {totalIn:N0} in ({regularIn:N0} regular, {cacheRead:N0} cache hit, {cacheWrite:N0} cache write) / {output:N0} out");
                 var cost = ActualCost ?? 0m;
-                sb.AppendLine($"Cost (actual): {(cost > 0 ? $"${cost:F4}" : "free")}");
+                string costLabel;
+                if (cost > 0) costLabel = $"${cost:F4}";
+                else if (IsCostKnown) costLabel = "free";
+                else costLabel = "unknown (model not in pricing table)";
+                sb.AppendLine($"Cost (actual): {costLabel}");
             }
             else
             {
                 sb.AppendLine($"Estimated tokens: {EstimatedInputTokens:N0} in / {EstimatedOutputTokens:N0} out");
-                sb.AppendLine($"Estimated cost: {(EstimatedCost > 0 ? $"${EstimatedCost:F4}" : "free")}");
+                string estLabel;
+                if (EstimatedCost > 0) estLabel = $"${EstimatedCost:F4}";
+                else if (IsCostKnown) estLabel = "free";
+                else estLabel = "unknown (model not in pricing table)";
+                sb.AppendLine($"Estimated cost: {estLabel}");
             }
             sb.AppendLine();
 

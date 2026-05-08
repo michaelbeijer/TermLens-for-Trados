@@ -365,6 +365,7 @@ namespace Supervertaler.Trados.Core
                     EstimatedInputTokens = aggInputTokens,
                     EstimatedOutputTokens = aggOutputTokens,
                     EstimatedCost = TokenEstimator.EstimateCost(model, aggInputTokens, aggOutputTokens),
+                    IsCostKnown = TokenEstimator.HasPricing(model),
                     Duration = sw.Elapsed,
                     IsError = aggHasError
                 };
