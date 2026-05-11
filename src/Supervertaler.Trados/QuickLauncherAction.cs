@@ -324,6 +324,16 @@ namespace Supervertaler.Trados
         /// <summary>
         /// Creates a single ToolStripMenuItem for a QuickLauncher prompt,
         /// including shortcut display and click handler.
+        ///
+        /// When the prompt is configured with two or more
+        /// <see cref="PromptTemplate.QuickLauncherModes"/> (e.g. both
+        /// "assistant" and "clipboard"), the item gets a cascading submenu
+        /// that lets the user pick the destination at runtime. The default
+        /// mode is rendered first so the natural keyboard flow
+        /// (Right Arrow then Enter, or hover-then-Enter) fires it.
+        ///
+        /// Single-mode prompts (the common case — "assistant" only) keep the
+        /// previous flat behaviour: click fires the single mode directly.
         /// </summary>
         private ToolStripMenuItem CreatePromptMenuItem(
             PromptTemplate prompt, int slotNum,
@@ -362,77 +372,227 @@ namespace Supervertaler.Trados
             var capturedProjectName = projectName;
             var capturedDocumentName = documentName;
             var capturedSurroundingCount = surroundingCount;
+            var capturedSettings = settings;
 
-            item.Click += (s, e) =>
+            if (capturedPrompt.HasMultipleQuickLauncherModes)
             {
-                // Text transforms: apply find/replace directly to target – no AI call
-                if (capturedPrompt.IsTransform)
+                // Build a cascading submenu with one entry per configured mode.
+                // Order: default mode first, then the others in declared order.
+                // ContextMenuStrip auto-renders the right-arrow indicator on
+                // items with DropDownItems; right-arrow expansion + mnemonic
+                // letters work out of the box.
+                var orderedModes = new List<string>();
+                if (!string.IsNullOrEmpty(capturedPrompt.DefaultMode) &&
+                    capturedPrompt.QuickLauncherModes.Contains(capturedPrompt.DefaultMode))
                 {
-                    var result = AiAssistantViewPart.RunTextTransform(capturedPrompt);
-                    AiAssistantViewPart.ShowTransformResult(capturedPrompt.Name, result);
-                    return;
+                    orderedModes.Add(capturedPrompt.DefaultMode);
+                }
+                foreach (var m in capturedPrompt.QuickLauncherModes)
+                {
+                    if (!orderedModes.Contains(m))
+                        orderedModes.Add(m);
                 }
 
-                var content = capturedPrompt.Content;
-
-                // Lazily gather expensive context only if the prompt actually uses it
-                var surroundingSegments = content.Contains("{{SURROUNDING_SEGMENTS}}")
-                    ? DocumentContextHelper.FormatSurroundingSegments(capturedDoc, capturedSurroundingCount)
-                    : null;
-
-                var projectText = content.Contains("{{PROJECT}}")
-                    ? DocumentContextHelper.FormatProjectText(capturedDoc)
-                    : null;
-
-                var tmMatchesText = content.Contains("{{TM_MATCHES}}")
-                    ? PromptLibrary.FormatTmMatches(
-                        DocumentContextHelper.GetTmMatches(capturedDoc), 70)
-                    : null;
-
-                var expanded = PromptLibrary.ApplyVariables(
-                    content,
-                    capturedSourceLang, capturedTargetLang,
-                    capturedSourceText, capturedTargetText, capturedSelection,
-                    capturedProjectName, capturedDocumentName,
-                    surroundingSegments, projectText, tmMatchesText);
-
-                string displayExpanded = null;
-                if (projectText != null)
+                foreach (var mode in orderedModes)
                 {
-                    var segCount = 0;
-                    foreach (var line in projectText.Split('\n'))
-                        if (line.TrimStart().StartsWith("[")) segCount++;
-
-                    var placeholder = $"[source document \u2014 {segCount} segment{(segCount == 1 ? "" : "s")}]";
-                    displayExpanded = PromptLibrary.ApplyVariables(
-                        content,
+                    var subItem = new ToolStripMenuItem(GetModeMenuLabel(mode, capturedSettings));
+                    var tooltip = GetModeTooltip(mode);
+                    if (!string.IsNullOrEmpty(tooltip))
+                        subItem.ToolTipText = tooltip;
+                    var capturedMode = mode;
+                    subItem.Click += (s, e) =>
+                    {
+                        RunPromptInMode(capturedPrompt, capturedMode, capturedSettings,
+                            capturedDoc, capturedSourceText, capturedTargetText, capturedSelection,
+                            capturedSourceLang, capturedTargetLang,
+                            capturedProjectName, capturedDocumentName, capturedSurroundingCount);
+                    };
+                    item.DropDownItems.Add(subItem);
+                }
+            }
+            else
+            {
+                // Single-mode (the default for almost all existing prompts):
+                // flat item that fires the single configured mode on click.
+                item.Click += (s, e) =>
+                {
+                    var mode = (capturedPrompt.QuickLauncherModes != null && capturedPrompt.QuickLauncherModes.Count == 1)
+                        ? capturedPrompt.QuickLauncherModes[0]
+                        : "assistant";
+                    RunPromptInMode(capturedPrompt, mode, capturedSettings,
+                        capturedDoc, capturedSourceText, capturedTargetText, capturedSelection,
                         capturedSourceLang, capturedTargetLang,
-                        capturedSourceText, capturedTargetText, capturedSelection,
-                        capturedProjectName, capturedDocumentName,
-                        surroundingSegments, placeholder, tmMatchesText);
-                }
-
-                // Route to the user's configured target. The Workbench
-                // Sidekick path posts the expanded prompt over a localhost
-                // bridge to Supervertaler Workbench, which echoes the
-                // display version into Sidekick's chat and runs the full
-                // expansion through its LLM client. On any failure
-                // (Sidekick not running, bridge unreachable, stale PID)
-                // we silently fall back to the in-Trados Assistant so a
-                // missing Sidekick never blocks the user from running
-                // their prompt.
-                var target = settings?.AiSettings?.QuickLauncherTarget ?? "TradosAssistant";
-                if (string.Equals(target, "WorkbenchSidekick", StringComparison.OrdinalIgnoreCase))
-                {
-                    var (ok, _) = Core.WorkbenchSidekickClient.RunPrompt(
-                        expanded, displayExpanded ?? expanded, capturedPrompt.Name);
-                    if (ok) return;
-                    // Fell through – fall back to the in-Trados Assistant.
-                }
-                AiAssistantViewPart.RunQuickLauncherPrompt(expanded, displayExpanded, capturedPrompt.Name);
-            };
+                        capturedProjectName, capturedDocumentName, capturedSurroundingCount);
+                };
+            }
 
             return item;
+        }
+
+        /// <summary>
+        /// User-facing label for a single QuickLauncher mode. Uses an
+        /// ampersand mnemonic so the user can pick the mode with a single
+        /// keystroke once the submenu is open (S = Send, C = Copy).
+        /// </summary>
+        private static string GetModeMenuLabel(string mode, TermLensSettings settings)
+        {
+            switch ((mode ?? "").ToLowerInvariant())
+            {
+                case "clipboard":
+                    return "&Copy prompt to clipboard";
+                case "assistant":
+                default:
+                    var target = settings?.AiSettings?.QuickLauncherTarget ?? "TradosAssistant";
+                    return string.Equals(target, "WorkbenchSidekick", StringComparison.OrdinalIgnoreCase)
+                        ? "&Send to Supervertaler Sidekick"
+                        : "&Send to Supervertaler Assistant";
+            }
+        }
+
+        private static string GetModeTooltip(string mode)
+        {
+            switch ((mode ?? "").ToLowerInvariant())
+            {
+                case "clipboard":
+                    return "Copy the expanded prompt to the system clipboard so you can paste it into an external chat (e.g. claude.ai).";
+                case "assistant":
+                    return "Send the prompt to the AI Assistant chat (in Trados or in the Workbench Sidekick, per your global setting).";
+                default:
+                    return null;
+            }
+        }
+
+        /// <summary>
+        /// Expand the prompt's variables against the captured segment context,
+        /// then dispatch the result to the requested destination.
+        ///
+        /// Modes:
+        ///   "assistant"  — current behaviour: route to in-Trados AI Assistant
+        ///                  or Workbench Sidekick per the global setting.
+        ///   "clipboard"  — copy the expanded prompt to the system clipboard
+        ///                  and show a transient status message via the
+        ///                  AI Assistant log (no chat round-trip).
+        /// </summary>
+        private static void RunPromptInMode(
+            PromptTemplate prompt, string mode, TermLensSettings settings,
+            Sdl.TranslationStudioAutomation.IntegrationApi.IStudioDocument doc,
+            string sourceText, string targetText, string selection,
+            string sourceLang, string targetLang,
+            string projectName, string documentName, int surroundingCount)
+        {
+            // Text transforms bypass mode entirely — they apply find/replace
+            // to the target segment directly without going anywhere else.
+            if (prompt.IsTransform)
+            {
+                var result = AiAssistantViewPart.RunTextTransform(prompt);
+                AiAssistantViewPart.ShowTransformResult(prompt.Name, result);
+                return;
+            }
+
+            var content = prompt.Content;
+
+            // Lazily gather expensive context only if the prompt actually uses it
+            var surroundingSegments = content.Contains("{{SURROUNDING_SEGMENTS}}")
+                ? DocumentContextHelper.FormatSurroundingSegments(doc, surroundingCount)
+                : null;
+
+            var projectText = content.Contains("{{PROJECT}}")
+                ? DocumentContextHelper.FormatProjectText(doc)
+                : null;
+
+            var tmMatchesText = content.Contains("{{TM_MATCHES}}")
+                ? PromptLibrary.FormatTmMatches(
+                    DocumentContextHelper.GetTmMatches(doc), 70)
+                : null;
+
+            var expanded = PromptLibrary.ApplyVariables(
+                content,
+                sourceLang, targetLang,
+                sourceText, targetText, selection,
+                projectName, documentName,
+                surroundingSegments, projectText, tmMatchesText);
+
+            string displayExpanded = null;
+            if (projectText != null)
+            {
+                var segCount = 0;
+                foreach (var line in projectText.Split('\n'))
+                    if (line.TrimStart().StartsWith("[")) segCount++;
+
+                var placeholder = "[source document — " + segCount + " segment" + (segCount == 1 ? "" : "s") + "]";
+                displayExpanded = PromptLibrary.ApplyVariables(
+                    content,
+                    sourceLang, targetLang,
+                    sourceText, targetText, selection,
+                    projectName, documentName,
+                    surroundingSegments, placeholder, tmMatchesText);
+            }
+
+            switch ((mode ?? "assistant").ToLowerInvariant())
+            {
+                case "clipboard":
+                    DispatchToClipboard(expanded, prompt.Name);
+                    return;
+
+                case "assistant":
+                default:
+                    DispatchToAssistant(prompt.Name, expanded, displayExpanded, settings);
+                    return;
+            }
+        }
+
+        /// <summary>
+        /// Copy the expanded prompt to the system clipboard. Uses a brief
+        /// retry because Clipboard.SetText can occasionally throw
+        /// ExternalException when another process holds the clipboard
+        /// (the classic Office / TeamViewer race). Silent on success —
+        /// the menu closing is itself the user's confirmation that the
+        /// action fired, and they're typically alt-tabbing to paste it
+        /// somewhere within a second. Only surfaces a dialog if all
+        /// retries fail and the clipboard genuinely couldn't be written.
+        /// </summary>
+        private static void DispatchToClipboard(string expanded, string promptName)
+        {
+            const int maxAttempts = 3;
+            Exception lastErr = null;
+            for (int i = 0; i < maxAttempts; i++)
+            {
+                try
+                {
+                    Clipboard.SetText(expanded ?? "", TextDataFormat.UnicodeText);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    lastErr = ex;
+                    System.Threading.Thread.Sleep(50);
+                }
+            }
+
+            MessageBox.Show(
+                "Could not copy the prompt to the clipboard.\n\n" +
+                (lastErr?.Message ?? "Unknown error"),
+                "Supervertaler — QuickLauncher",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+        /// <summary>
+        /// Route the expanded prompt to the user's configured AI Assistant
+        /// destination (in-Trados or Workbench Sidekick), with the original
+        /// silent-fallback behaviour on Sidekick failures.
+        /// </summary>
+        private static void DispatchToAssistant(
+            string promptName, string expanded, string displayExpanded, TermLensSettings settings)
+        {
+            var target = settings?.AiSettings?.QuickLauncherTarget ?? "TradosAssistant";
+            if (string.Equals(target, "WorkbenchSidekick", StringComparison.OrdinalIgnoreCase))
+            {
+                var (ok, _) = Core.WorkbenchSidekickClient.RunPrompt(
+                    expanded, displayExpanded ?? expanded, promptName);
+                if (ok) return;
+                // Fell through – fall back to the in-Trados Assistant.
+            }
+            AiAssistantViewPart.RunQuickLauncherPrompt(expanded, displayExpanded, promptName);
         }
     }
 }

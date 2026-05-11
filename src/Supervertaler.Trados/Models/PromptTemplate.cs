@@ -77,6 +77,40 @@ namespace Supervertaler.Trados.Models
         /// </summary>
         public bool HiddenFromMenu { get; set; }
 
+        /// <summary>
+        /// Destinations the prompt can be dispatched to from the QuickLauncher menu.
+        /// Currently supported values: "assistant" (send to the in-Trados AI Assistant
+        /// or Workbench Sidekick chat, per the user's global QuickLauncherTarget
+        /// setting) and "clipboard" (copy the expanded prompt to the system clipboard
+        /// for the user to paste into an external chat such as claude.ai).
+        ///
+        /// When the list contains a single value (the default — just "assistant"),
+        /// the menu shows a flat item: clicking fires that single mode. When two or
+        /// more modes are configured, the menu shows a cascading submenu so the
+        /// user can pick the destination at runtime.
+        ///
+        /// Parsed from YAML 'quicklauncher_modes:' field, which accepts either an
+        /// inline list (`[assistant, clipboard]`) or a comma-separated string
+        /// (`assistant, clipboard`).
+        /// </summary>
+        public List<string> QuickLauncherModes { get; set; } = new List<string> { "assistant" };
+
+        /// <summary>
+        /// Which entry in <see cref="QuickLauncherModes"/> should be presented as
+        /// the default when the menu shows a submenu (rendered first, gets the
+        /// natural first-item Enter activation). Falls back to the first item in
+        /// the list when unset or unrecognised. From YAML 'default_mode:' field.
+        /// </summary>
+        public string DefaultMode { get; set; } = "assistant";
+
+        /// <summary>
+        /// True when the prompt has two or more <see cref="QuickLauncherModes"/>
+        /// configured, in which case the menu builder renders a cascading submenu
+        /// instead of a flat item.
+        /// </summary>
+        public bool HasMultipleQuickLauncherModes =>
+            QuickLauncherModes != null && QuickLauncherModes.Count >= 2;
+
         /// <summary>The label to display in the QuickLauncher menu (QuickLauncherLabel if set, else Name).</summary>
         public string MenuLabel => string.IsNullOrWhiteSpace(QuickLauncherLabel) ? Name : QuickLauncherLabel;
 

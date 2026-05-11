@@ -19,6 +19,11 @@ namespace Supervertaler.Trados.Controls
         private CheckBox _chkShowInMenu;
         private TextBox _txtContent;
         private Label _lblDefault;
+        private Label _lblMode;
+        private CheckBox _chkModeAssistant;
+        private CheckBox _chkModeClipboard;
+        private Label _lblDefaultMode;
+        private ComboBox _cboDefaultMode;
         private Button _btnOK;
         private Button _btnCancel;
         private ContextMenuStrip _varMenu;
@@ -158,6 +163,84 @@ namespace Supervertaler.Trados.Controls
             Controls.Add(_lblDefault);
             y += 26;
 
+            // ─── QuickLauncher mode selector ─────────────
+            // When two or more modes are checked, the QuickLauncher menu
+            // renders a cascading submenu so the user can pick at runtime.
+            // Default mode = which submenu item gets the natural first-Enter
+            // activation. Whole row is shown only for QuickLauncher prompts
+            // (same condition as the "Show in menu" checkbox above).
+            _lblMode = new Label
+            {
+                Text = "Mode:",
+                Location = new Point(12, y + 3),
+                AutoSize = true,
+                ForeColor = labelColor,
+                Visible = false
+            };
+            Controls.Add(_lblMode);
+
+            _chkModeAssistant = new CheckBox
+            {
+                Text = "Send to Assistant",
+                Location = new Point(100, y),
+                AutoSize = true,
+                Checked = true,
+                ForeColor = labelColor,
+                Visible = false
+            };
+            Controls.Add(_chkModeAssistant);
+
+            _chkModeClipboard = new CheckBox
+            {
+                Text = "Copy to clipboard",
+                Location = new Point(245, y),
+                AutoSize = true,
+                Checked = false,
+                ForeColor = labelColor,
+                Visible = false
+            };
+            Controls.Add(_chkModeClipboard);
+
+            _lblDefaultMode = new Label
+            {
+                Text = "Default:",
+                Location = new Point(385, y + 3),
+                AutoSize = true,
+                ForeColor = labelColor,
+                Visible = false
+            };
+            Controls.Add(_lblDefaultMode);
+
+            _cboDefaultMode = new ComboBox
+            {
+                Location = new Point(440, y),
+                Width = 130,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Visible = false,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
+            };
+            _cboDefaultMode.Items.AddRange(new object[] { "Assistant", "Clipboard" });
+            _cboDefaultMode.SelectedIndex = 0;
+            Controls.Add(_cboDefaultMode);
+
+            // Enable / disable the default-mode combo based on how many
+            // mode checkboxes are checked. When only one is checked, there
+            // is nothing to default to (single-mode prompts skip the
+            // submenu entirely) so the combo is greyed out.
+            EventHandler updateDefaultModeEnabled = (s, e) =>
+            {
+                var modesChecked =
+                    (_chkModeAssistant.Checked ? 1 : 0) +
+                    (_chkModeClipboard.Checked ? 1 : 0);
+                _cboDefaultMode.Enabled = modesChecked >= 2;
+                _lblDefaultMode.ForeColor = _cboDefaultMode.Enabled
+                    ? labelColor : Color.FromArgb(170, 170, 170);
+            };
+            _chkModeAssistant.CheckedChanged += updateDefaultModeEnabled;
+            _chkModeClipboard.CheckedChanged += updateDefaultModeEnabled;
+
+            y += 26;
+
             // ─── Content label + variable hint ────────────
             var lblContent = new Label
             {
@@ -278,6 +361,19 @@ namespace Supervertaler.Trados.Controls
             _chkShowInMenu.Checked = !_prompt.HiddenFromMenu;
             _txtDomain.TextChanged += (s, ev) => UpdateShowInMenuVisibility();
 
+            // Pre-tick mode checkboxes from the prompt's QuickLauncherModes
+            // list. Single-mode prompts ("assistant" only) show Assistant
+            // ticked and Clipboard unticked — the default. Multi-mode
+            // prompts tick both and enable the default-mode selector.
+            var modes = _prompt.QuickLauncherModes ?? new System.Collections.Generic.List<string>();
+            _chkModeAssistant.Checked = modes.Count == 0 || modes.Contains("assistant");
+            _chkModeClipboard.Checked = modes.Contains("clipboard");
+            _cboDefaultMode.SelectedIndex =
+                string.Equals(_prompt.DefaultMode, "clipboard", StringComparison.OrdinalIgnoreCase)
+                    ? 1 : 0;
+            // Trigger initial enabled/disabled state on the default combo
+            _cboDefaultMode.Enabled = _chkModeAssistant.Checked && _chkModeClipboard.Checked;
+
             if (_prompt.IsReadOnly)
             {
                 _txtName.ReadOnly = true;
@@ -285,42 +381,59 @@ namespace Supervertaler.Trados.Controls
                 _txtDomain.ReadOnly = true;
                 _cboApp.Enabled = false;
                 _chkShowInMenu.Enabled = false;
+                _chkModeAssistant.Enabled = false;
+                _chkModeClipboard.Enabled = false;
+                _cboDefaultMode.Enabled = false;
                 _txtContent.ReadOnly = true;
                 _btnOK.Enabled = false;
                 Text += " (read-only)";
             }
             else if (_prompt.IsDefault)
             {
-                // Default prompts: content is immutable, but visibility can be changed.
-                // To modify content, use Clone.
+                // Default prompts: content is immutable, but visibility +
+                // mode toggles can be changed. To modify content, use Clone.
                 _txtName.ReadOnly = true;
                 _txtDescription.ReadOnly = true;
                 _txtDomain.ReadOnly = true;
                 _cboApp.Enabled = false;
                 _txtContent.ReadOnly = true;
-                // _chkShowInMenu stays enabled – users can hide default prompts
+                // _chkShowInMenu, mode checkboxes, default combo stay enabled —
+                // users can hide a default prompt and toggle clipboard mode on
+                // it without needing to clone first. Those are routing prefs,
+                // not content edits.
                 _lblDefault.Visible = true;
-                Text += " (default \u2014 use Clone to modify)";
+                Text += " (default — use Clone to modify)";
             }
         }
 
         private void UpdateShowInMenuVisibility()
         {
             var domain = (_txtDomain.Text ?? "").Trim();
-            _chkShowInMenu.Visible =
+            var isQuickLauncher =
                 domain.Equals("QuickLauncher", StringComparison.OrdinalIgnoreCase) ||
                 domain.StartsWith("QuickLauncher/", StringComparison.OrdinalIgnoreCase) ||
                 domain.StartsWith("QuickLauncher\\", StringComparison.OrdinalIgnoreCase);
+
+            _chkShowInMenu.Visible = isQuickLauncher;
+            // The mode-selector row is only meaningful for prompts that
+            // appear in the QuickLauncher menu in the first place, so it
+            // tracks the same visibility flag.
+            _lblMode.Visible = isQuickLauncher;
+            _chkModeAssistant.Visible = isQuickLauncher;
+            _chkModeClipboard.Visible = isQuickLauncher;
+            _lblDefaultMode.Visible = isQuickLauncher;
+            _cboDefaultMode.Visible = isQuickLauncher;
         }
 
         private void OnOKClick(object sender, EventArgs e)
         {
-            // Built-in prompts: only the hidden checkbox is editable,
-            // so only update that field and leave everything else untouched.
+            // Built-in prompts: content / name / category are immutable, but
+            // routing prefs (visibility + clipboard mode) can be edited.
             if (_prompt.IsDefault)
             {
                 if (_chkShowInMenu.Visible)
                     _prompt.HiddenFromMenu = !_chkShowInMenu.Checked;
+                ApplyModesFromUi();
                 return;
             }
 
@@ -349,6 +462,35 @@ namespace Supervertaler.Trados.Controls
             // Save QuickLauncher menu visibility
             if (_chkShowInMenu.Visible)
                 _prompt.HiddenFromMenu = !_chkShowInMenu.Checked;
+
+            ApplyModesFromUi();
+        }
+
+        /// <summary>
+        /// Build <see cref="PromptTemplate.QuickLauncherModes"/> + <see cref="PromptTemplate.DefaultMode"/>
+        /// from the mode-selector checkboxes / combo. Force Assistant on if
+        /// the user managed to uncheck everything — silently making a prompt
+        /// unreachable from QuickLauncher would be worse than ignoring the
+        /// edit.
+        /// </summary>
+        private void ApplyModesFromUi()
+        {
+            if (!_lblMode.Visible)
+                return; // non-QuickLauncher prompts: leave modes untouched
+
+            var modes = new System.Collections.Generic.List<string>();
+            if (_chkModeAssistant.Checked) modes.Add("assistant");
+            if (_chkModeClipboard.Checked) modes.Add("clipboard");
+            if (modes.Count == 0)
+                modes.Add("assistant");
+
+            _prompt.QuickLauncherModes = modes;
+            _prompt.DefaultMode = _cboDefaultMode.SelectedIndex == 1 ? "clipboard" : "assistant";
+            // If the user picked a default that's no longer in the list
+            // (e.g. picked Clipboard then unticked Clipboard), fall back to
+            // whatever IS in the list.
+            if (!modes.Contains(_prompt.DefaultMode))
+                _prompt.DefaultMode = modes[0];
         }
 
         private void ShowVarMenu()

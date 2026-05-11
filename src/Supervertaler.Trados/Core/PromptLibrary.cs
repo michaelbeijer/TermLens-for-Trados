@@ -374,6 +374,19 @@ namespace Supervertaler.Trados.Core
                 sb.AppendLine("sort_order: " + prompt.SortOrder);
             if (prompt.HiddenFromMenu)
                 sb.AppendLine("hidden: true");
+            // Only emit quicklauncher_modes / default_mode when they differ
+            // from the implicit default (single "assistant" mode). Keeps
+            // the YAML of pre-existing single-mode prompts unchanged on
+            // round-trip.
+            if (prompt.QuickLauncherModes != null && prompt.QuickLauncherModes.Count >= 2)
+            {
+                sb.AppendLine("quicklauncher_modes: [" + string.Join(", ", prompt.QuickLauncherModes) + "]");
+                if (!string.IsNullOrEmpty(prompt.DefaultMode) &&
+                    !prompt.DefaultMode.Equals("assistant", StringComparison.OrdinalIgnoreCase))
+                {
+                    sb.AppendLine("default_mode: " + prompt.DefaultMode);
+                }
+            }
             sb.AppendLine("---");
             sb.AppendLine();
             sb.Append(prompt.Content ?? "");
@@ -1032,6 +1045,32 @@ namespace Supervertaler.Trados.Core
                         break;
                     case "hidden":
                         prompt.HiddenFromMenu = value.Equals("true", StringComparison.OrdinalIgnoreCase);
+                        break;
+                    case "quicklauncher_modes":
+                        // Accept inline list `[assistant, clipboard]` or
+                        // comma-separated `assistant, clipboard`. Multi-line
+                        // YAML lists (- assistant\n  - clipboard) are not
+                        // supported by this line-based parser.
+                        var modesRaw = value;
+                        if (modesRaw.StartsWith("[") && modesRaw.EndsWith("]"))
+                            modesRaw = modesRaw.Substring(1, modesRaw.Length - 2);
+                        var modeList = new List<string>();
+                        foreach (var part in modesRaw.Split(','))
+                        {
+                            var p = part.Trim().Trim('"', '\'').ToLowerInvariant();
+                            if (string.IsNullOrEmpty(p)) continue;
+                            // Whitelist known modes; silently drop anything else
+                            // so a typo can't make a prompt unreachable.
+                            if (p == "assistant" || p == "clipboard")
+                                modeList.Add(p);
+                        }
+                        if (modeList.Count > 0)
+                            prompt.QuickLauncherModes = modeList;
+                        break;
+                    case "default_mode":
+                        var dm = value.Trim('"', '\'').ToLowerInvariant();
+                        if (dm == "assistant" || dm == "clipboard")
+                            prompt.DefaultMode = dm;
                         break;
                 }
             }

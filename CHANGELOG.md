@@ -1,5 +1,30 @@
 # Changelog
 
+## [4.19.91] – 2026-05-11
+
+### Added (QuickLauncher prompts can now copy to clipboard instead of sending to the AI Assistant)
+
+- A QuickLauncher prompt can now be configured with **two destinations**: the in-Trados AI Assistant (or Workbench Sidekick, per the user's existing global setting) **and** the system clipboard. When both are enabled, the prompt's entry in the **Ctrl+Q QuickLauncher menu** shows a cascading submenu (▶) with two options — *"Send to Supervertaler Assistant"* (`S` accelerator) and *"Copy prompt to clipboard"* (`C` accelerator) — letting the user pick the destination at runtime without leaving the keyboard.
+- Use case the feature was built for: a translator who has a claude.ai project set up for the current job and wants to send a per-segment question (using the same variable-substituted prompt that already works inside Trados) into that browser-based project chat instead of the in-Trados chat. The clipboard option does the variable expansion against the active segment exactly as before, copies the result to the system clipboard, and stays out of the way — paste into the external chat (claude.ai, ChatGPT, Gemini, anywhere) and send manually.
+- **Default mode** controls which submenu item gets first-Enter activation. The default mode is rendered first in the submenu so the natural keyboard flow (Ctrl+Q → type-to-search → Enter → Enter) fires it without explicit selection.
+- Single-mode prompts (the implicit default for every existing prompt — just *"Send to Assistant"*) keep their previous flat menu behaviour: one click, no submenu, no behavioural change. **All current prompts in users' libraries continue to work exactly as before** — the new fields are opt-in via the prompt editor.
+
+### Added (Prompt Editor: Mode row)
+
+- The **Prompt Editor** dialog (Settings → Prompts → Edit / New) now shows a new **Mode** row for prompts whose category starts with `QuickLauncher`. Two checkboxes — `Send to Assistant` (ticked by default) and `Copy to clipboard` — plus a `Default:` dropdown that greys out unless both modes are ticked.
+- Built-in (default) prompts can have their mode toggled even though their content stays read-only, because mode selection is a routing preference rather than a content edit — same logic that already let users hide a default prompt from the menu without cloning it first.
+
+### Implementation notes
+
+- New `PromptTemplate.QuickLauncherModes` (`List<string>`, defaults to `["assistant"]`) and `PromptTemplate.DefaultMode` (`string`, defaults to `"assistant"`).
+- YAML frontmatter accepts both inline-list syntax (`quicklauncher_modes: [assistant, clipboard]`) and a comma-separated string (`quicklauncher_modes: assistant, clipboard`). Multi-line YAML lists with `- assistant` indented bullets are NOT supported by the existing line-based parser, deliberately — keeps the parser implementation untouched.
+- The writer only emits `quicklauncher_modes:` / `default_mode:` when they differ from the implicit defaults, so existing single-mode prompts round-trip without any YAML churn.
+- Whitelist of accepted mode values (`assistant`, `clipboard`) — unknown values are silently dropped on parse to keep typos from making prompts unreachable.
+- `QuickLauncherAction.Run()` refactored: the per-prompt click handler is split into a dispatcher (`RunPromptInMode`) and two backends (`DispatchToAssistant`, `DispatchToClipboard`). The existing Sidekick / in-Trados-Assistant routing with silent-fallback-on-Sidekick-failure is preserved unchanged within `DispatchToAssistant`.
+- Clipboard write uses `TextDataFormat.UnicodeText` and retries up to 3× with 50 ms delays — covers the classic Office / TeamViewer clipboard contention. Silent on success (menu close is itself confirmation); only surfaces a MessageBox if every retry failed.
+
+---
+
 ## [4.19.88] – 2026-05-08
 
 ### Added (Project field on term entries)
