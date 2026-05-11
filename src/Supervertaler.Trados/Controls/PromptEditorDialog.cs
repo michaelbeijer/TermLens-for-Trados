@@ -74,10 +74,15 @@ namespace Supervertaler.Trados.Controls
                 AutoSize = true,
                 ForeColor = labelColor
             };
+            // Right margin = 12 (form edge) + 17 (Windows scrollbar width) so
+            // the right edge lines up with where the Prompt-content text area
+            // ends, not where the scrollbar-inclusive textbox border ends.
+            // Without this all the top textboxes' borders sat ~17 px right of
+            // the prompt content's visible text area, looking misaligned.
             _txtName = new TextBox
             {
                 Location = new Point(100, y),
-                Width = ClientSize.Width - 112,
+                Width = ClientSize.Width - 129,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
             Controls.Add(lblName);
@@ -95,7 +100,7 @@ namespace Supervertaler.Trados.Controls
             _txtDescription = new TextBox
             {
                 Location = new Point(100, y),
-                Width = ClientSize.Width - 112,
+                Width = ClientSize.Width - 129,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
             Controls.Add(lblDesc);
@@ -213,7 +218,7 @@ namespace Supervertaler.Trados.Controls
             _lblDefaultMode = new Label
             {
                 Text = "Default:",
-                Location = new Point(ClientSize.Width - 180, y + 3),
+                Location = new Point(ClientSize.Width - 197, y + 3),
                 AutoSize = true,
                 ForeColor = labelColor,
                 Visible = false,
@@ -223,7 +228,7 @@ namespace Supervertaler.Trados.Controls
 
             _cboDefaultMode = new ComboBox
             {
-                Location = new Point(ClientSize.Width - 105, y),
+                Location = new Point(ClientSize.Width - 122, y),
                 Width = 93,
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Visible = false,

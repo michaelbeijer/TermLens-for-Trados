@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.19.96] – 2026-05-11
+
+### Fixed (Prompt Editor: top fields don't align with Prompt content's text area)
+
+- Name / Description / Default-mode combo all anchored their right edges 12 px from the dialog edge, but the Prompt content textbox below has a vertical scrollbar inside it, so its actual **text area** ends ~17 px earlier than its border. The top row looked misaligned with the content area below. Added a 17-px scrollbar-gutter offset to the right margin of Name, Description and the Default combo (Width / x adjusted by the same amount), so now all four right edges align with the Prompt content's text area, not its scrollbar-inclusive border.
+
+
 ## [4.19.95] – 2026-05-11
 
 ### Fixed (Prompt Editor: "Default:" combo not aligned with Description / Prompt content right edges)
