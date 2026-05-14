@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.19.101] – 2026-05-14
+
+### Added (SuperSearch: Match whole word)
+
+- New **Word** checkbox in the SuperSearch search bar, alongside **Aa** (case sensitive) and **.\*** (regex). When ticked, the query only matches complete words – searching for "cat" no longer matches "category" or "scatter". Applies to both search and Replace / Replace All, so a whole-word search followed by Replace All won't quietly replace partial matches. Ignored when **.\*** (regex) is on – use `\b` in the pattern instead.
+
+### Improved (SuperSearch: tooltips on every control)
+
+- Every control in the SuperSearch search and replace bars now has a tooltip. Previously only **Aa**, **.\*** and **Files** had them; the search box, the Search / Stop buttons, the scope dropdown, the Replace toggle, the **?** button, and the whole replace bar (replacement box, Replace, Replace All) were undocumented.
+
+
 ## [4.19.100] – 2026-05-14
 
 ### Added (SuperSearch can be docked as a tab in the Supervertaler Assistant panel)

@@ -185,7 +185,7 @@ namespace Supervertaler.Trados.Core
                 var results = await Task.Run(() =>
                     XliffSearcher.Search(
                         files, e.Query, e.Scope,
-                        e.CaseSensitive, e.UseRegex,
+                        e.CaseSensitive, e.UseRegex, e.WholeWord,
                         (done, total) => SafeInvoke(() =>
                             _control.SetStatus($"Searching... ({done}/{total} files)")),
                         ct),
@@ -317,7 +317,7 @@ namespace Supervertaler.Trados.Core
 
                 var outcome = ReplaceInActiveSegmentPair(
                     activePair, e.SearchText, e.ReplaceText,
-                    e.CaseSensitive, e.UseRegex, out var newTarget);
+                    e.CaseSensitive, e.UseRegex, e.WholeWord, out var newTarget);
 
                 switch (outcome)
                 {
@@ -352,7 +352,7 @@ namespace Supervertaler.Trados.Core
 
             // Count target matches
             var targetMatches = _lastResults.Where(r =>
-                IsTargetMatch(r.TargetText, e.SearchText, e.CaseSensitive, e.UseRegex)).ToList();
+                IsTargetMatch(r.TargetText, e.SearchText, e.CaseSensitive, e.UseRegex, e.WholeWord)).ToList();
 
             if (targetMatches.Count == 0)
             {
@@ -421,7 +421,7 @@ namespace Supervertaler.Trados.Core
 
                             var outcome = ReplaceInActiveSegmentPair(
                                 pair, e.SearchText, e.ReplaceText,
-                                e.CaseSensitive, e.UseRegex, out var newTarget);
+                                e.CaseSensitive, e.UseRegex, e.WholeWord, out var newTarget);
 
                             if (outcome == ActiveReplaceOutcome.Replaced)
                             {
@@ -446,7 +446,7 @@ namespace Supervertaler.Trados.Core
                     try
                     {
                         int count = ReplaceInXliffFile(filePath, group.ToList(),
-                            e.SearchText, e.ReplaceText, e.CaseSensitive, e.UseRegex,
+                            e.SearchText, e.ReplaceText, e.CaseSensitive, e.UseRegex, e.WholeWord,
                             out var tagSpanInFile);
                         replacedCount += count;
                         skippedTagSpan += tagSpanInFile;
@@ -472,7 +472,7 @@ namespace Supervertaler.Trados.Core
         /// Used for files not currently open in the editor.
         /// </summary>
         private int ReplaceInXliffFile(string filePath, List<SearchResult> results,
-            string searchText, string replaceText, bool caseSensitive, bool useRegex,
+            string searchText, string replaceText, bool caseSensitive, bool useRegex, bool wholeWord,
             out int tagSpanSkipped)
         {
             tagSpanSkipped = 0;
@@ -508,7 +508,7 @@ namespace Supervertaler.Trados.Core
 
                 var node = segNode ?? targetNode;
                 var currentText = node.InnerText;
-                var newText = PerformReplace(currentText, searchText, replaceText, caseSensitive, useRegex);
+                var newText = PerformReplace(currentText, searchText, replaceText, caseSensitive, useRegex, wholeWord);
 
                 if (newText != currentText)
                 {
@@ -529,7 +529,7 @@ namespace Supervertaler.Trados.Core
                         // and saving – pre-v4.19.56 we'd always count++ and
                         // save the file even if no text-node value changed,
                         // making Replace All silently lie about its work.
-                        ReplaceTextInNodes(node, searchText, replaceText, caseSensitive, useRegex);
+                        ReplaceTextInNodes(node, searchText, replaceText, caseSensitive, useRegex, wholeWord);
                         if (node.InnerText == newText)
                         {
                             result.TargetText = newText;
@@ -550,19 +550,19 @@ namespace Supervertaler.Trados.Core
         }
 
         private void ReplaceTextInNodes(XmlNode parent, string searchText, string replaceText,
-            bool caseSensitive, bool useRegex)
+            bool caseSensitive, bool useRegex, bool wholeWord)
         {
             foreach (XmlNode child in parent.ChildNodes)
             {
                 if (child is XmlText textNode)
                 {
-                    var newVal = PerformReplace(textNode.Value, searchText, replaceText, caseSensitive, useRegex);
+                    var newVal = PerformReplace(textNode.Value, searchText, replaceText, caseSensitive, useRegex, wholeWord);
                     if (newVal != textNode.Value)
                         textNode.Value = newVal;
                 }
                 else if (child.HasChildNodes)
                 {
-                    ReplaceTextInNodes(child, searchText, replaceText, caseSensitive, useRegex);
+                    ReplaceTextInNodes(child, searchText, replaceText, caseSensitive, useRegex, wholeWord);
                 }
             }
         }
@@ -596,13 +596,13 @@ namespace Supervertaler.Trados.Core
         /// </summary>
         private ActiveReplaceOutcome ReplaceInActiveSegmentPair(
             ISegmentPair pair, string searchText, string replaceText,
-            bool caseSensitive, bool useRegex, out string newFlatTarget)
+            bool caseSensitive, bool useRegex, bool wholeWord, out string newFlatTarget)
         {
             newFlatTarget = null;
             if (pair == null || _activeDocument == null) return ActiveReplaceOutcome.Error;
 
             var currentTarget = pair.Target?.ToString() ?? "";
-            var expected = PerformReplace(currentTarget, searchText, replaceText, caseSensitive, useRegex);
+            var expected = PerformReplace(currentTarget, searchText, replaceText, caseSensitive, useRegex, wholeWord);
             if (expected == currentTarget) return ActiveReplaceOutcome.NoMatch;
 
             // Pre-flight: simulate per-IText replacement and see if the
@@ -616,7 +616,7 @@ namespace Supervertaler.Trados.Core
             if (iTexts.Count == 0) return ActiveReplaceOutcome.SpansInlineTags;
 
             var simulated = string.Concat(iTexts.Select(t =>
-                PerformReplace(t.Properties.Text ?? "", searchText, replaceText, caseSensitive, useRegex)));
+                PerformReplace(t.Properties.Text ?? "", searchText, replaceText, caseSensitive, useRegex, wholeWord)));
 
             if (simulated != expected) return ActiveReplaceOutcome.SpansInlineTags;
 
@@ -630,7 +630,7 @@ namespace Supervertaler.Trados.Core
                     foreach (var t in liveTexts)
                     {
                         var oldVal = t.Properties.Text ?? "";
-                        var newVal = PerformReplace(oldVal, searchText, replaceText, caseSensitive, useRegex);
+                        var newVal = PerformReplace(oldVal, searchText, replaceText, caseSensitive, useRegex, wholeWord);
                         if (!string.Equals(oldVal, newVal, StringComparison.Ordinal))
                             t.Properties.Text = newVal;
                     }
@@ -672,12 +672,24 @@ namespace Supervertaler.Trados.Core
         }
 
         private static string PerformReplace(string text, string search, string replace,
-            bool caseSensitive, bool useRegex)
+            bool caseSensitive, bool useRegex, bool wholeWord)
         {
             if (useRegex)
             {
                 var options = caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
                 try { return Regex.Replace(text, search, replace, options); }
+                catch { return text; }
+            }
+            if (wholeWord)
+            {
+                // Whole-word literal replace: \b boundaries. Escape $ in the
+                // replacement so it stays literal (Regex.Replace treats $ specially).
+                var options = caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
+                try
+                {
+                    return Regex.Replace(text, @"\b" + Regex.Escape(search) + @"\b",
+                        (replace ?? "").Replace("$", "$$"), options);
+                }
                 catch { return text; }
             }
             return ReplaceString(text, search, replace, caseSensitive);
@@ -708,7 +720,8 @@ namespace Supervertaler.Trados.Core
             return result.ToString();
         }
 
-        private static bool IsTargetMatch(string targetText, string search, bool caseSensitive, bool useRegex)
+        private static bool IsTargetMatch(string targetText, string search,
+            bool caseSensitive, bool useRegex, bool wholeWord)
         {
             if (string.IsNullOrEmpty(targetText)) return false;
 
@@ -716,6 +729,13 @@ namespace Supervertaler.Trados.Core
             {
                 var options = caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
                 try { return Regex.IsMatch(targetText, search, options); }
+                catch { return false; }
+            }
+
+            if (wholeWord)
+            {
+                var options = caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
+                try { return Regex.IsMatch(targetText, @"\b" + Regex.Escape(search) + @"\b", options); }
                 catch { return false; }
             }
 

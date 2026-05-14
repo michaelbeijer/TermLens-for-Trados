@@ -130,6 +130,7 @@ namespace Supervertaler.Trados.Core
         /// <param name="scope">Which fields to search (source, target, or both).</param>
         /// <param name="caseSensitive">Whether the search is case-sensitive.</param>
         /// <param name="useRegex">Whether to treat the query as a regex pattern.</param>
+        /// <param name="wholeWord">Whether to match whole words only (ignored when <paramref name="useRegex"/> is true).</param>
         /// <param name="progress">Optional callback: (filesSearched, totalFiles).</param>
         /// <param name="ct">Cancellation token.</param>
         /// <returns>List of matching segments.</returns>
@@ -139,6 +140,7 @@ namespace Supervertaler.Trados.Core
             SearchScope scope,
             bool caseSensitive,
             bool useRegex,
+            bool wholeWord,
             Action<int, int> progress,
             CancellationToken ct)
         {
@@ -153,6 +155,14 @@ namespace Supervertaler.Trados.Core
                 var options = RegexOptions.Compiled;
                 if (!caseSensitive) options |= RegexOptions.IgnoreCase;
                 try { regex = new Regex(query, options); }
+                catch { return new List<SearchResult>(); }
+            }
+            else if (wholeWord)
+            {
+                // Whole-word literal search: reuse the regex path with \b boundaries.
+                var options = RegexOptions.Compiled;
+                if (!caseSensitive) options |= RegexOptions.IgnoreCase;
+                try { regex = new Regex(@"\b" + Regex.Escape(query) + @"\b", options); }
                 catch { return new List<SearchResult>(); }
             }
             else if (!caseSensitive)

@@ -24,6 +24,7 @@ namespace Supervertaler.Trados.Controls
         private ComboBox _cboScope;
         private CheckBox _chkCaseSensitive;
         private CheckBox _chkRegex;
+        private CheckBox _chkWholeWord;
         private CheckBox _chkShowReplace;
         private Button _btnFiles;
         private Button _btnHelp;
@@ -169,6 +170,18 @@ namespace Supervertaler.Trados.Controls
             ttRegex.SetToolTip(_chkRegex, "Use regular expressions");
             _searchPanel.Controls.Add(_chkRegex);
 
+            _chkWholeWord = new CheckBox
+            {
+                Text = "Word",
+                Font = smallFont,
+                AutoSize = true,
+                ForeColor = SubtleColor
+            };
+            var ttWholeWord = new ToolTip();
+            ttWholeWord.SetToolTip(_chkWholeWord,
+                "Match whole word only (e.g. \"cat\" won't match \"category\")");
+            _searchPanel.Controls.Add(_chkWholeWord);
+
             _chkShowReplace = new CheckBox
             {
                 Text = "Replace",
@@ -252,6 +265,19 @@ namespace Supervertaler.Trados.Controls
 
             _replacePanel.Resize += (s, e) => LayoutReplaceBar();
             Controls.Add(_replacePanel);
+
+            // ─── Tooltips for the search & replace bars ──────────────
+            // (the Aa / .* / Word / Files controls set their own tooltips above)
+            var tt = new ToolTip { AutoPopDelay = 10000 };
+            tt.SetToolTip(_txtSearch, "Text to search for across the project's SDLXLIFF files. Press Enter to search.");
+            tt.SetToolTip(_btnSearch, "Search the selected files for the query");
+            tt.SetToolTip(_btnStop, "Stop the current search");
+            tt.SetToolTip(_cboScope, "Search source text, target text, or both");
+            tt.SetToolTip(_chkShowReplace, "Show the find & replace bar");
+            tt.SetToolTip(_btnHelp, "Open SuperSearch help");
+            tt.SetToolTip(_txtReplace, "Replacement text — applied to target text only");
+            tt.SetToolTip(_btnReplace, "Replace the match in the selected result (active file only)");
+            tt.SetToolTip(_btnReplaceAll, "Replace all target matches across all files");
 
             // ═══════════════════════════════════════════════════════
             // Status bar (bottom)
@@ -509,9 +535,10 @@ namespace Supervertaler.Trados.Controls
             // Fixed controls from left after the search box
             int fixedLeft = _btnFiles.Left;
 
-            // Position from right: chkShowReplace, chkRegex, chkCaseSensitive, cboScope, btnStop, btnSearch
+            // Position from right: chkShowReplace, chkWholeWord, chkRegex, chkCaseSensitive, cboScope, btnStop, btnSearch
             _chkShowReplace.Location = new Point(fixedLeft - _chkShowReplace.Width - 4, chkY);
-            _chkRegex.Location = new Point(_chkShowReplace.Left - _chkRegex.Width - 2, chkY);
+            _chkWholeWord.Location = new Point(_chkShowReplace.Left - _chkWholeWord.Width - 2, chkY);
+            _chkRegex.Location = new Point(_chkWholeWord.Left - _chkRegex.Width - 2, chkY);
             _chkCaseSensitive.Location = new Point(_chkRegex.Left - _chkCaseSensitive.Width - 2, chkY);
             _cboScope.Location = new Point(_chkCaseSensitive.Left - _cboScope.Width - 6, cboY);
             _btnStop.Location = new Point(_cboScope.Left - _btnStop.Width - 4, btnY);
@@ -990,7 +1017,8 @@ namespace Supervertaler.Trados.Controls
                 Query = _txtSearch.Text,
                 Scope = scope,
                 CaseSensitive = _chkCaseSensitive.Checked,
-                UseRegex = _chkRegex.Checked
+                UseRegex = _chkRegex.Checked,
+                WholeWord = _chkWholeWord.Checked
             });
         }
 
@@ -1005,6 +1033,7 @@ namespace Supervertaler.Trados.Controls
                 ReplaceText = _txtReplace.Text,
                 CaseSensitive = _chkCaseSensitive.Checked,
                 UseRegex = _chkRegex.Checked,
+                WholeWord = _chkWholeWord.Checked,
                 SelectedResult = result
             });
         }
@@ -1016,7 +1045,8 @@ namespace Supervertaler.Trados.Controls
                 SearchText = _txtSearch.Text,
                 ReplaceText = _txtReplace.Text,
                 CaseSensitive = _chkCaseSensitive.Checked,
-                UseRegex = _chkRegex.Checked
+                UseRegex = _chkRegex.Checked,
+                WholeWord = _chkWholeWord.Checked
             });
         }
 
@@ -1075,6 +1105,7 @@ namespace Supervertaler.Trados.Controls
         public SearchScope Scope { get; set; }
         public bool CaseSensitive { get; set; }
         public bool UseRegex { get; set; }
+        public bool WholeWord { get; set; }
     }
 
     public class ReplaceRequestEventArgs : EventArgs
@@ -1083,6 +1114,7 @@ namespace Supervertaler.Trados.Controls
         public string ReplaceText { get; set; }
         public bool CaseSensitive { get; set; }
         public bool UseRegex { get; set; }
+        public bool WholeWord { get; set; }
         public SearchResult SelectedResult { get; set; }
     }
 }
