@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.19.112] – 2026-05-17
+
+### Changed (All in-app help links repointed at the new help.supervertaler.com site)
+
+- The Supervertaler help system has migrated off GitBook to a self-hosted Astro/Starlight site at `https://help.supervertaler.com`, deployed via Cloudflare Pages from the public `Supervertaler/Supervertaler-Help` repo. The new site has per-product sidebar filtering (a Trados page shows only the Trados tree; a Workbench page shows only the Workbench tree), a custom search component that groups results by product, and proper folder-based URLs (`/trados/...` instead of GitBook's flat-with-collision-suffix slugs). The migration was driven by GitBook free-plan limitations (no support for two distinct product spaces) and by the recurring pain of search results mixing Workbench and Trados topics.
+- Every help-URL constant in `Core/HelpSystem.cs` has been rewritten from the old GitBook slug shape to the new Astro folder-based URLs. The mapping is 1-to-1 against `src/generated/sidebar.js` in the `Supervertaler-Help` repo (which is the authoritative URL map). All 37 constants now point at `https://help.supervertaler.com/trados/...`, with trailing slashes (Astro's canonical form, so the browser hits the page directly instead of via a 301 redirect). The `bidirectional` parameter wasn't needed here; the routing just goes to a different host.
+- Two further hardcoded help URLs were also repointed: the `HelpUrl` constant in `Controls/UsageStatisticsDialog.cs` (Help button on the first-run stats dialog) and a comment-only reference in `Controls/TermLensPopupForm.cs`. Verified end-to-end: every help action from inside Trados Studio – Help menu, F1 in panels, "Help" buttons in dialogs – now lands on a 200-OK page on the new domain.
+- The old `supervertaler.gitbook.io/help/...` URLs continue to work during a two-week handover window so that any users on older installed versions still get a working help system. After that window, GitBook will be replaced with a single "we've moved" notice and unpublished. The redirect window matters specifically because Trados plugin installs propagate slowly via the RWS App Store update mechanism.
+- Implementation note: this commit just bumps the version and ships the URL constants that landed in `717f9a5` (Re-point all help URLs at help.supervertaler.com). No behavioural changes beyond the URL repointing; no UI changes; no new features.
+
+
 ## [4.19.111] – 2026-05-16
 
 ### Changed (AutoPrompt-generated prompts now embed the Translator's Comment methodology by default)
