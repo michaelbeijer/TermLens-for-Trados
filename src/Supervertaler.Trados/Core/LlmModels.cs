@@ -92,6 +92,12 @@ namespace Supervertaler.Trados.Core
             },
             new LlmModelInfo
             {
+                Id = "gemini-3.5-flash", DisplayName = "Gemini 3.5 Flash",
+                Description = "Premium Flash – higher quality, ~6x cost of Flash-Lite, 1M context",
+                Provider = LlmProvider.Gemini
+            },
+            new LlmModelInfo
+            {
                 Id = "gemini-2.5-pro", DisplayName = "Gemini 2.5 Pro",
                 Description = "Higher quality – advanced reasoning, 1M context",
                 Provider = LlmProvider.Gemini

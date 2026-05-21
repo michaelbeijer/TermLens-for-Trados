@@ -672,7 +672,18 @@ namespace Supervertaler.Trados.Core
             }
 
             sb.Append(",\"generationConfig\":{\"maxOutputTokens\":").Append(tokens);
-            sb.Append(",\"temperature\":0.3}");
+            if (_model.StartsWith("gemini-3.5", StringComparison.OrdinalIgnoreCase))
+            {
+                // gemini-3.5+ forces "thinking" (default medium), billing
+                // hundreds of reasoning tokens at the output rate even for
+                // short segments. Pin it to "minimal" to keep cost sane.
+                // 3.5 also dropped temperature/top_p/top_k, so omit them.
+                sb.Append(",\"thinkingConfig\":{\"thinkingLevel\":\"minimal\"}}");
+            }
+            else
+            {
+                sb.Append(",\"temperature\":0.3}");
+            }
             sb.Append("}");
 
             using (var request = new HttpRequestMessage(HttpMethod.Post, url))
@@ -965,7 +976,18 @@ namespace Supervertaler.Trados.Core
                 sb.Append(",\"systemInstruction\":{\"parts\":[{\"text\":").Append(JsonString(systemPrompt)).Append("}]}");
 
             sb.Append(",\"generationConfig\":{\"maxOutputTokens\":").Append(tokens);
-            sb.Append(",\"temperature\":0.3}");
+            if (_model.StartsWith("gemini-3.5", StringComparison.OrdinalIgnoreCase))
+            {
+                // gemini-3.5+ forces "thinking" (default medium), billing
+                // hundreds of reasoning tokens at the output rate even for
+                // short segments. Pin it to "minimal" to keep cost sane.
+                // 3.5 also dropped temperature/top_p/top_k, so omit them.
+                sb.Append(",\"thinkingConfig\":{\"thinkingLevel\":\"minimal\"}}");
+            }
+            else
+            {
+                sb.Append(",\"temperature\":0.3}");
+            }
             sb.Append("}");
 
             using (var request = new HttpRequestMessage(HttpMethod.Post, url))

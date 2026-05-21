@@ -30,6 +30,7 @@ namespace Supervertaler.Trados.Core
 
             // Google Gemini
             { "gemini-3.1-flash-lite",     (0.25m,   1.50m)  },
+            { "gemini-3.5-flash",          (1.50m,   9.00m)  },
             { "gemini-2.5-pro",            (1.25m,   10.00m) },
             { "gemini-3.1-pro-preview",    (2.00m,   12.00m) },
 

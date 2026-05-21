@@ -818,6 +818,18 @@ namespace Supervertaler.Trados.Core
         /// and minimise lock duration.
         /// </summary>
         /// <returns>The ID of the newly inserted term, or -1 on failure.</returns>
+        // Trailing sentence punctuation stripped from translatable terms on save
+        // (Scope 1). Deliberately excludes quotes and brackets/parens so wrapping
+        // characters like "term" or (25) are preserved. Matches the trailing-
+        // punctuation set used at match time (TrimEnd / RTRIM), keeping storage
+        // and matching consistent.
+        private static readonly char[] TermTrailingPunct = { '.', ',', ';', ':', '!', '?' };
+
+        /// <summary>Strip surrounding whitespace and trailing sentence punctuation
+        /// from a term before storage (e.g. "circumference." -> "circumference").</summary>
+        private static string NormalizeTermForSave(string text)
+            => string.IsNullOrEmpty(text) ? text : text.Trim().TrimEnd(TermTrailingPunct).Trim();
+
         public static long InsertTerm(string dbPath, long termbaseId,
             string sourceTerm, string targetTerm,
             string sourceLang, string targetLang,
@@ -827,6 +839,15 @@ namespace Supervertaler.Trados.Core
             string url = null, string client = null, bool forbidden = false,
             string project = null)
         {
+            // Strip trailing sentence punctuation from translatable terms so
+            // "circumference." is stored as "circumference". Non-translatables are
+            // left as-is (a trailing "." may be meaningful, e.g. "Inc.").
+            if (!isNonTranslatable)
+            {
+                sourceTerm = NormalizeTermForSave(sourceTerm);
+                targetTerm = NormalizeTermForSave(targetTerm);
+            }
+
             var connStr = new SqliteConnectionStringBuilder
             {
                 DataSource = dbPath,
@@ -913,6 +934,14 @@ namespace Supervertaler.Trados.Core
             bool isNonTranslatable = false,
             string projectSourceLang = null)
         {
+            // Strip trailing sentence punctuation from translatable terms on save
+            // (e.g. "circumference." -> "circumference"); non-translatables kept as-is.
+            if (!isNonTranslatable)
+            {
+                sourceTerm = NormalizeTermForSave(sourceTerm);
+                targetTerm = NormalizeTermForSave(targetTerm);
+            }
+
             // projectSourceLang: language of `sourceTerm` as supplied by the caller.
             //   When provided, this method makes a PER-TERMBASE decision about
             //   whether the text needs to be swapped to match that termbase's
@@ -1114,6 +1143,14 @@ namespace Supervertaler.Trados.Core
             string url = null, string client = null, bool forbidden = false,
             string project = null)
         {
+            // Strip trailing sentence punctuation from translatable terms on save
+            // (e.g. "circumference." -> "circumference"); non-translatables kept as-is.
+            if (!isNonTranslatable)
+            {
+                sourceTerm = NormalizeTermForSave(sourceTerm);
+                targetTerm = NormalizeTermForSave(targetTerm);
+            }
+
             var connStr = new SqliteConnectionStringBuilder
             {
                 DataSource = dbPath,
@@ -2322,7 +2359,7 @@ namespace Supervertaler.Trados.Core
                     VALUES (@termId, @text, @lang, @order, @forbidden)", conn, tx))
                 {
                     cmd.Parameters.AddWithValue("@termId", termId);
-                    cmd.Parameters.AddWithValue("@text", synonyms[i].text);
+                    cmd.Parameters.AddWithValue("@text", NormalizeTermForSave(synonyms[i].text));
                     cmd.Parameters.AddWithValue("@lang", language);
                     cmd.Parameters.AddWithValue("@order", i);
                     cmd.Parameters.AddWithValue("@forbidden", synonyms[i].forbidden ? 1 : 0);
@@ -2512,7 +2549,7 @@ namespace Supervertaler.Trados.Core
                 {
                     checkCmd.Parameters.AddWithValue("@termId", termId);
                     checkCmd.Parameters.AddWithValue("@lang", language);
-                    checkCmd.Parameters.AddWithValue("@text", text.Trim());
+                    checkCmd.Parameters.AddWithValue("@text", NormalizeTermForSave(text));
                     var count = Convert.ToInt64(checkCmd.ExecuteScalar());
                     if (count > 0) return; // Already exists – skip silently
                 }
@@ -2523,7 +2560,7 @@ namespace Supervertaler.Trados.Core
                     VALUES (@termId, @text, @lang, @order, 0)", conn))
                 {
                     cmd.Parameters.AddWithValue("@termId", termId);
-                    cmd.Parameters.AddWithValue("@text", text.Trim());
+                    cmd.Parameters.AddWithValue("@text", NormalizeTermForSave(text));
                     cmd.Parameters.AddWithValue("@lang", language);
                     cmd.Parameters.AddWithValue("@order", nextOrder);
                     cmd.ExecuteNonQuery();
@@ -2572,7 +2609,7 @@ namespace Supervertaler.Trados.Core
                                 VALUES (@termId, @text, @lang, @order, @forbidden)", conn, tx))
                             {
                                 cmd.Parameters.AddWithValue("@termId", termId);
-                                cmd.Parameters.AddWithValue("@text", syn.Text.Trim());
+                                cmd.Parameters.AddWithValue("@text", NormalizeTermForSave(syn.Text));
                                 cmd.Parameters.AddWithValue("@lang", syn.Language ?? "target");
                                 cmd.Parameters.AddWithValue("@order", i);
                                 cmd.Parameters.AddWithValue("@forbidden", syn.Forbidden ? 1 : 0);

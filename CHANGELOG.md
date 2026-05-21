@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.20.2] – 2026-05-21
+
+### Fixed
+
+- **Trailing sentence punctuation is stripped when adding terms to a termbase.** A term pair such as "circumference." is now stored as "circumference". Wrapping quotes and parentheses are preserved, and non-translatables keep a meaningful trailing full stop (e.g. "Inc."). Applies to source terms, target terms and synonyms across the add, quick-add and edit routes. This matches the trailing-punctuation set already used when matching terms during translation, so stored and matched forms stay consistent.
+
+## [4.20.1] – 2026-05-21
+
+### Added
+
+- **Gemini 3.5 Flash is now selectable as a Gemini model.** Google's newest Flash model is offered as a premium, higher-quality option in AI Settings alongside the existing Gemini models. Gemini 3.1 Flash-Lite stays the recommended default; 3.5 Flash costs roughly six times as much per segment, so it is best reserved for difficult content.
+  - Gemini 3.5 Flash always performs a "thinking" step, which at its default level would bill several hundred hidden reasoning tokens (charged at the output rate) on even a single short segment. The plugin sends `thinkingConfig.thinkingLevel: minimal` for 3.5 models (and omits the now-unsupported `temperature` parameter for them), keeping the cost of short translation jobs in line with its headline price without affecting quality on normal text.
+
 ## [4.20.0] – 2026-05-19
 
 ### Added (Trados Studio 2026 support — a second, x64 build of the plugin that runs natively in Studio 2026 and reads its new SQLite-based .ttb termbases)
