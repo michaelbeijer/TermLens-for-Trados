@@ -9,9 +9,9 @@ using System.Text;
 namespace Supervertaler.Trados.Core
 {
     /// <summary>
-    /// Client for the Workbench-side Sidekick Bridge server (the Python
-    /// half lives in <c>modules/sidekick_bridge_server.py</c> in the
-    /// Supervertaler-Workbench repo). Inverse of <see cref="SidekickBridge"/>:
+    /// Client for the Workbench-side Supervertaler Bridge server (the Python
+    /// half lives in <c>modules/supervertaler_bridge_server.py</c> in the
+    /// Supervertaler-Workbench repo). Inverse of <see cref="SupervertalerBridge"/>:
     /// here we *push* a QuickLauncher prompt into the Workbench's Sidekick
     /// Chat instead of reading Trados context for the Workbench to consume.
     ///
@@ -28,7 +28,7 @@ namespace Supervertaler.Trados.Core
     /// All methods are synchronous with short timeouts so they're safe to
     /// call from the editor thread on a QuickLauncher click.
     /// </summary>
-    internal static class WorkbenchSidekickClient
+    internal static class WorkbenchBridgeClient
     {
         private const int HandshakeVersion = 1;
         private const int TimeoutMs = 5000;

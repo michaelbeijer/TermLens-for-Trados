@@ -74,10 +74,10 @@ namespace Supervertaler.Trados
         private bool _fullyInitialized;
 
         // Localhost HTTP bridge for the Workbench Sidekick Chat. See
-        // Core/SidekickBridge.cs for protocol details. Started at the end of
+        // Core/SupervertalerBridge.cs for protocol details. Started at the end of
         // InitializeFullIfNeeded when the user has Assistant access AND the
         // hidden setting AiSettings.SidekickBridgeEnabled is true.
-        private SidekickBridge _sidekickBridge;
+        private SupervertalerBridge _supervertalerBridge;
 
         // Memory-bank reader (lazy: created once, cached for the session).
         // Cached against _kbReaderBankName so that switching the active memory
@@ -296,7 +296,7 @@ namespace Supervertaler.Trados
             RefreshMemoryBankDropdown();
             RefreshSuperMemoryInboxCount();
             StartInboxWatcher();
-            StartSidekickBridge();
+            StartSupervertalerBridge();
 
             // Check the already-active bank at start-up too. If the user has
             // a bank (e.g. one created before template bundling shipped, or
@@ -885,9 +885,9 @@ namespace Supervertaler.Trados
             }
         }
 
-        // ─── Sidekick Bridge ─────────────────────────────────────────────
+        // ─── Supervertaler Bridge ─────────────────────────────────────────────
         //
-        // The Sidekick Bridge (Core/SidekickBridge.cs) is a localhost-only
+        // The Supervertaler Bridge (Core/SupervertalerBridge.cs) is a localhost-only
         // HTTP listener that lets external Supervertaler clients – primarily
         // the floating Sidekick Chat in Supervertaler Workbench – read the
         // active Trados project context and insert translations back into
@@ -896,13 +896,13 @@ namespace Supervertaler.Trados
         // the helpers (GetSurroundingSegments, GetProjectName, etc.) the
         // bridge needs to build its context snapshot.
 
-        private void StartSidekickBridge()
+        private void StartSupervertalerBridge()
         {
             try
             {
-                BridgeLog.Write("StartSidekickBridge() called");
+                BridgeLog.Write("StartSupervertalerBridge() called");
 
-                if (_sidekickBridge != null)
+                if (_supervertalerBridge != null)
                 {
                     BridgeLog.Write("guard: bridge already non-null – no-op");
                     return;
@@ -919,15 +919,15 @@ namespace Supervertaler.Trados
                 }
                 BridgeLog.Write($"guards passed: tier={LicenseManager.Instance.CurrentTier}, enabled={_settings?.AiSettings?.SidekickBridgeEnabled}");
 
-                _sidekickBridge = new SidekickBridge(
+                _supervertalerBridge = new SupervertalerBridge(
                     getContext: BuildBridgeContextSnapshot,
                     insertText: BridgeInsertTranslation);
-                _sidekickBridge.Start();
+                _supervertalerBridge.Start();
             }
             catch (Exception ex)
             {
-                BridgeLog.Write($"StartSidekickBridge() THREW: {ex.GetType().Name}: {ex.Message}\r\n{ex.StackTrace}");
-                _sidekickBridge = null;
+                BridgeLog.Write($"StartSupervertalerBridge() THREW: {ex.GetType().Name}: {ex.Message}\r\n{ex.StackTrace}");
+                _supervertalerBridge = null;
             }
         }
 
@@ -937,19 +937,19 @@ namespace Supervertaler.Trados
         /// fields the in-Trados Chat already gathers in OnSendRequested so
         /// both consumers see the same shape of context.
         /// </summary>
-        private SidekickContextSnapshot BuildBridgeContextSnapshot()
+        private BridgeContextSnapshot BuildBridgeContextSnapshot()
         {
             var ctrl = _control?.Value;
             if (ctrl == null || ctrl.IsDisposed)
-                return new SidekickContextSnapshot { Available = false };
+                return new BridgeContextSnapshot { Available = false };
 
             if (ctrl.InvokeRequired)
             {
-                return (SidekickContextSnapshot)ctrl.Invoke(
-                    new Func<SidekickContextSnapshot>(BuildBridgeContextSnapshot));
+                return (BridgeContextSnapshot)ctrl.Invoke(
+                    new Func<BridgeContextSnapshot>(BuildBridgeContextSnapshot));
             }
 
-            var snapshot = new SidekickContextSnapshot { Available = false };
+            var snapshot = new BridgeContextSnapshot { Available = false };
             if (_activeDocument == null) return snapshot;
 
             try
@@ -967,14 +967,14 @@ namespace Supervertaler.Trados
                     : null;
 
                 snapshot.Available = true;
-                snapshot.Project = new SidekickProjectInfo
+                snapshot.Project = new BridgeProjectInfo
                 {
                     Name = GetProjectName(),
                     FileName = GetFileName(),
                     SourceLang = GetDocumentSourceLanguage(),
                     TargetLang = GetDocumentTargetLanguage()
                 };
-                snapshot.ActiveSegment = new SidekickSegmentInfo
+                snapshot.ActiveSegment = new BridgeSegmentInfo
                 {
                     Source = sourceText ?? "",
                     Target = targetText
@@ -983,10 +983,10 @@ namespace Supervertaler.Trados
                 // Surrounding segments
                 var surroundingCount = _settings?.AiSettings?.QuickLauncherSurroundingSegments ?? 5;
                 var surrounding = GetSurroundingSegments(surroundingCount);
-                snapshot.SurroundingSegments = new List<SidekickSegmentInfo>();
+                snapshot.SurroundingSegments = new List<BridgeSegmentInfo>();
                 foreach (var s in surrounding)
                 {
-                    snapshot.SurroundingSegments.Add(new SidekickSegmentInfo
+                    snapshot.SurroundingSegments.Add(new BridgeSegmentInfo
                     {
                         Source = s[0] ?? "",
                         Target = s[1]
@@ -999,12 +999,12 @@ namespace Supervertaler.Trados
                     try
                     {
                         var tmMatches = DocumentContextHelper.GetTmMatches(_activeDocument);
-                        snapshot.TmMatches = new List<SidekickTmMatch>();
+                        snapshot.TmMatches = new List<BridgeTmMatch>();
                         if (tmMatches != null)
                         {
                             foreach (var m in tmMatches)
                             {
-                                snapshot.TmMatches.Add(new SidekickTmMatch
+                                snapshot.TmMatches.Add(new BridgeTmMatch
                                 {
                                     Score = m.MatchPercentage,
                                     Source = m.SourceText ?? "",
@@ -1016,7 +1016,7 @@ namespace Supervertaler.Trados
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"[SidekickBridge] TM gather threw: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"[SupervertalerBridge] TM gather threw: {ex.Message}");
                     }
                 }
 
@@ -1029,12 +1029,12 @@ namespace Supervertaler.Trados
                         ? allMatches.Where(m => !disabledIds.Contains(m.PrimaryEntry?.TermbaseId ?? 0)).ToList()
                         : allMatches;
 
-                    snapshot.TermbaseHits = new List<SidekickTermbaseHit>();
+                    snapshot.TermbaseHits = new List<BridgeTermbaseHit>();
                     foreach (var m in matchedTerms)
                     {
                         var entry = m.PrimaryEntry;
                         if (entry == null) continue;
-                        snapshot.TermbaseHits.Add(new SidekickTermbaseHit
+                        snapshot.TermbaseHits.Add(new BridgeTermbaseHit
                         {
                             Source = entry.SourceTerm ?? "",
                             Target = entry.TargetTerm ?? "",
@@ -1047,13 +1047,13 @@ namespace Supervertaler.Trados
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[SidekickBridge] termbase gather threw: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[SupervertalerBridge] termbase gather threw: {ex.Message}");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[SidekickBridge] BuildBridgeContextSnapshot threw: {ex.Message}");
-                return new SidekickContextSnapshot { Available = false };
+                System.Diagnostics.Debug.WriteLine($"[SupervertalerBridge] BuildBridgeContextSnapshot threw: {ex.Message}");
+                return new BridgeContextSnapshot { Available = false };
             }
 
             return snapshot;
@@ -5800,10 +5800,10 @@ Always list the original source filename(s) in the `sources:` frontmatter field.
                 _inboxWatcher = null;
             }
 
-            if (_sidekickBridge != null)
+            if (_supervertalerBridge != null)
             {
-                try { _sidekickBridge.Dispose(); } catch { /* never let bridge cleanup break Dispose */ }
-                _sidekickBridge = null;
+                try { _supervertalerBridge.Dispose(); } catch { /* never let bridge cleanup break Dispose */ }
+                _supervertalerBridge = null;
             }
 
             if (_editorController != null)

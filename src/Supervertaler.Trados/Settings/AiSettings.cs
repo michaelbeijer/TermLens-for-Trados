@@ -63,7 +63,7 @@ namespace Supervertaler.Trados.Settings
 
         /// <summary>
         /// When true (default), the plugin starts a localhost-only HTTP bridge
-        /// (<see cref="Core.SidekickBridge"/>) that lets Supervertaler Workbench's
+        /// (<see cref="Core.SupervertalerBridge"/>) that lets Supervertaler Workbench's
         /// floating Sidekick Chat fetch the active project context and insert
         /// translations back into the active Trados segment. Hidden setting –
         /// no UI checkbox; advanced users can flip it off by editing settings.json
@@ -211,8 +211,8 @@ namespace Supervertaler.Trados.Settings
         /// the in-Trados AI Assistant chat. <c>"WorkbenchSidekick"</c> instead
         /// posts the prompt to Supervertaler Workbench's Chat (AI tab → Chat
         /// sub-tab) via the localhost bridge Workbench exposes (see
-        /// WorkbenchSidekickClient and the Workbench-side
-        /// modules/sidekick_bridge_server.py).
+        /// WorkbenchBridgeClient and the Workbench-side
+        /// modules/supervertaler_bridge_server.py).
         ///
         /// The setting value <c>"WorkbenchSidekick"</c> is a historical
         /// identifier kept stable for back-compat: the Workbench-side

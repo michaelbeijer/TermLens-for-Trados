@@ -587,7 +587,7 @@ namespace Supervertaler.Trados
             var target = settings?.AiSettings?.QuickLauncherTarget ?? "TradosAssistant";
             if (string.Equals(target, "WorkbenchSidekick", StringComparison.OrdinalIgnoreCase))
             {
-                var (ok, _) = Core.WorkbenchSidekickClient.RunPrompt(
+                var (ok, _) = Core.WorkbenchBridgeClient.RunPrompt(
                     expanded, displayExpanded ?? expanded, promptName);
                 if (ok) return;
                 // Fell through – fall back to the in-Trados Assistant.

@@ -85,14 +85,14 @@ namespace Supervertaler.Trados.Settings
         public static string TradosRuntimeDir => Path.Combine(Root, "trados", "runtime");
 
         /// <summary>
-        /// Handshake file written by <c>SidekickBridge</c> while the bridge
+        /// Handshake file written by <c>SupervertalerBridge</c> while the bridge
         /// is listening. Contains <c>port</c>, <c>token</c>, <c>pid</c>, and
         /// <c>startedAt</c> so external clients (notably Supervertaler
         /// Workbench's Sidekick Chat) can discover and authenticate to the
         /// bridge. Deleted on plugin shutdown; readers must validate
         /// <c>pid</c> liveness before trusting it.
         /// </summary>
-        public static string SidekickBridgeFile => Path.Combine(TradosRuntimeDir, "bridge.json");
+        public static string SupervertalerBridgeFile => Path.Combine(TradosRuntimeDir, "bridge.json");
 
         // ── Memory banks (multi-bank layout) ─────────────────────────
         //

@@ -12,7 +12,7 @@ using Supervertaler.Trados.Settings;
 namespace Supervertaler.Trados.Core
 {
     /// <summary>
-    /// Append-only log file for the Sidekick Bridge, written to
+    /// Append-only log file for the Supervertaler Bridge, written to
     /// <c>UserDataPath.TradosRuntimeDir\bridge.log</c>. Visible diagnostics so
     /// users can tell whether the bridge actually started, what port it bound
     /// to, and what went wrong if it didn't. Truncated on every plugin start
@@ -56,7 +56,7 @@ namespace Supervertaler.Trados.Core
                     {
                         header += $"UserDataPath.Root  = {UserDataPath.Root}\r\n";
                         header += $"TradosRuntimeDir   = {UserDataPath.TradosRuntimeDir}\r\n";
-                        header += $"SidekickBridgeFile = {UserDataPath.SidekickBridgeFile}\r\n";
+                        header += $"SupervertalerBridgeFile = {UserDataPath.SupervertalerBridgeFile}\r\n";
                     }
                     catch (Exception ex)
                     {
@@ -99,29 +99,29 @@ namespace Supervertaler.Trados.Core
     // changes here are a wire-format change – bump the URL path version.
 
     [DataContract]
-    public class SidekickContextSnapshot
+    public class BridgeContextSnapshot
     {
         [DataMember(Name = "available", Order = 0)]
         public bool Available { get; set; }
 
         [DataMember(Name = "project", Order = 1, EmitDefaultValue = false)]
-        public SidekickProjectInfo Project { get; set; }
+        public BridgeProjectInfo Project { get; set; }
 
         [DataMember(Name = "activeSegment", Order = 2, EmitDefaultValue = false)]
-        public SidekickSegmentInfo ActiveSegment { get; set; }
+        public BridgeSegmentInfo ActiveSegment { get; set; }
 
         [DataMember(Name = "surroundingSegments", Order = 3, EmitDefaultValue = false)]
-        public List<SidekickSegmentInfo> SurroundingSegments { get; set; }
+        public List<BridgeSegmentInfo> SurroundingSegments { get; set; }
 
         [DataMember(Name = "tmMatches", Order = 4, EmitDefaultValue = false)]
-        public List<SidekickTmMatch> TmMatches { get; set; }
+        public List<BridgeTmMatch> TmMatches { get; set; }
 
         [DataMember(Name = "termbaseHits", Order = 5, EmitDefaultValue = false)]
-        public List<SidekickTermbaseHit> TermbaseHits { get; set; }
+        public List<BridgeTermbaseHit> TermbaseHits { get; set; }
     }
 
     [DataContract]
-    public class SidekickProjectInfo
+    public class BridgeProjectInfo
     {
         [DataMember(Name = "name", Order = 0, EmitDefaultValue = false)] public string Name { get; set; }
         [DataMember(Name = "fileName", Order = 1, EmitDefaultValue = false)] public string FileName { get; set; }
@@ -130,14 +130,14 @@ namespace Supervertaler.Trados.Core
     }
 
     [DataContract]
-    public class SidekickSegmentInfo
+    public class BridgeSegmentInfo
     {
         [DataMember(Name = "source", Order = 0)] public string Source { get; set; }
         [DataMember(Name = "target", Order = 1, EmitDefaultValue = false)] public string Target { get; set; }
     }
 
     [DataContract]
-    public class SidekickTmMatch
+    public class BridgeTmMatch
     {
         [DataMember(Name = "score", Order = 0)] public int Score { get; set; }
         [DataMember(Name = "source", Order = 1)] public string Source { get; set; }
@@ -146,7 +146,7 @@ namespace Supervertaler.Trados.Core
     }
 
     [DataContract]
-    public class SidekickTermbaseHit
+    public class BridgeTermbaseHit
     {
         [DataMember(Name = "source", Order = 0)] public string Source { get; set; }
         [DataMember(Name = "target", Order = 1)] public string Target { get; set; }
@@ -157,7 +157,7 @@ namespace Supervertaler.Trados.Core
     }
 
     [DataContract]
-    internal class SidekickHandshake
+    internal class BridgeHandshake
     {
         [DataMember(Name = "version", Order = 0)] public int Version { get; set; }
         [DataMember(Name = "port", Order = 1)] public int Port { get; set; }
@@ -167,13 +167,13 @@ namespace Supervertaler.Trados.Core
     }
 
     [DataContract]
-    internal class SidekickInsertRequest
+    internal class BridgeInsertRequest
     {
         [DataMember(Name = "text", IsRequired = true)] public string Text { get; set; }
     }
 
     [DataContract]
-    internal class SidekickResultResponse
+    internal class BridgeResultResponse
     {
         [DataMember(Name = "ok", Order = 0)] public bool Ok { get; set; }
         [DataMember(Name = "error", Order = 1, EmitDefaultValue = false)] public string Error { get; set; }
@@ -190,13 +190,13 @@ namespace Supervertaler.Trados.Core
     ///     non-loopback connections.
     ///   * Generates a fresh per-session auth token on Start; clients must
     ///     present it as <c>Authorization: Bearer &lt;token&gt;</c>.
-    ///   * Writes a handshake file at <c>UserDataPath.SidekickBridgeFile</c>
+    ///   * Writes a handshake file at <c>UserDataPath.SupervertalerBridgeFile</c>
     ///     with port + token + PID + timestamp so clients can discover it.
     ///     Deleted on Stop. Stale files from hard kills are detected by the
     ///     client checking PID liveness.
     ///
     /// Endpoints:
-    ///   * <c>GET /v1/active-context</c> – returns a SidekickContextSnapshot
+    ///   * <c>GET /v1/active-context</c> – returns a BridgeContextSnapshot
     ///     describing the current Trados document state (active segment,
     ///     surrounding segments, TM matches, termbase hits, project metadata).
     ///   * <c>POST /v1/insert-translation</c> – inserts text into the active
@@ -210,11 +210,11 @@ namespace Supervertaler.Trados.Core
     ///     supplied delegates – callers MUST be safe to invoke from any
     ///     thread; the bridge itself does not synchronise with WinForms.
     /// </summary>
-    public sealed class SidekickBridge : IDisposable
+    public sealed class SupervertalerBridge : IDisposable
     {
         private const int HandshakeVersion = 1;
 
-        private readonly Func<SidekickContextSnapshot> _getContext;
+        private readonly Func<BridgeContextSnapshot> _getContext;
         private readonly Func<string, string> _insertText; // returns null on success, error message otherwise
 
         private HttpListener _listener;
@@ -224,8 +224,8 @@ namespace Supervertaler.Trados.Core
         private int _port;
         private bool _disposed;
 
-        public SidekickBridge(
-            Func<SidekickContextSnapshot> getContext,
+        public SupervertalerBridge(
+            Func<BridgeContextSnapshot> getContext,
             Func<string, string> insertText)
         {
             _getContext = getContext ?? throw new ArgumentNullException(nameof(getContext));
@@ -289,7 +289,7 @@ namespace Supervertaler.Trados.Core
             _listenerThread = new Thread(ListenLoop)
             {
                 IsBackground = true,
-                Name = "SidekickBridge"
+                Name = "SupervertalerBridge"
             };
             _listenerThread.Start();
             BridgeLog.Write("listener thread started");
@@ -297,7 +297,7 @@ namespace Supervertaler.Trados.Core
             try
             {
                 WriteHandshakeFile();
-                BridgeLog.Write($"handshake file written at {UserDataPath.SidekickBridgeFile}");
+                BridgeLog.Write($"handshake file written at {UserDataPath.SupervertalerBridgeFile}");
             }
             catch (Exception ex)
             {
@@ -317,12 +317,12 @@ namespace Supervertaler.Trados.Core
 
             try
             {
-                if (File.Exists(UserDataPath.SidekickBridgeFile))
-                    File.Delete(UserDataPath.SidekickBridgeFile);
+                if (File.Exists(UserDataPath.SupervertalerBridgeFile))
+                    File.Delete(UserDataPath.SupervertalerBridgeFile);
             }
             catch (Exception ex)
             {
-                BridgeLog.Write($"[SidekickBridge] failed to delete handshake file: {ex.Message}");
+                BridgeLog.Write($"[SupervertalerBridge] failed to delete handshake file: {ex.Message}");
             }
 
             // Don't Join the thread – HttpListener.Stop unblocks GetContext
@@ -360,7 +360,7 @@ namespace Supervertaler.Trados.Core
                 }
                 catch (Exception ex)
                 {
-                    BridgeLog.Write($"[SidekickBridge] GetContext failed: {ex.Message}");
+                    BridgeLog.Write($"[SupervertalerBridge] GetContext failed: {ex.Message}");
                     return;
                 }
 
@@ -370,7 +370,7 @@ namespace Supervertaler.Trados.Core
                 }
                 catch (Exception ex)
                 {
-                    BridgeLog.Write($"[SidekickBridge] HandleRequest threw: {ex.Message}");
+                    BridgeLog.Write($"[SupervertalerBridge] HandleRequest threw: {ex.Message}");
                     TryWriteError(context, 500, "internal error");
                 }
                 finally
@@ -426,15 +426,15 @@ namespace Supervertaler.Trados.Core
 
         private void HandleGetActiveContext(HttpListenerContext context)
         {
-            SidekickContextSnapshot snapshot;
+            BridgeContextSnapshot snapshot;
             try
             {
-                snapshot = _getContext() ?? new SidekickContextSnapshot { Available = false };
+                snapshot = _getContext() ?? new BridgeContextSnapshot { Available = false };
             }
             catch (Exception ex)
             {
-                BridgeLog.Write($"[SidekickBridge] context provider threw: {ex.Message}");
-                snapshot = new SidekickContextSnapshot { Available = false };
+                BridgeLog.Write($"[SupervertalerBridge] context provider threw: {ex.Message}");
+                snapshot = new BridgeContextSnapshot { Available = false };
             }
 
             WriteJson(context, 200, snapshot);
@@ -442,7 +442,7 @@ namespace Supervertaler.Trados.Core
 
         private void HandleInsertTranslation(HttpListenerContext context)
         {
-            SidekickInsertRequest req;
+            BridgeInsertRequest req;
             try
             {
                 using (var reader = new StreamReader(context.Request.InputStream, Encoding.UTF8))
@@ -450,21 +450,21 @@ namespace Supervertaler.Trados.Core
                     var body = reader.ReadToEnd();
                     if (string.IsNullOrWhiteSpace(body))
                     {
-                        WriteJson(context, 400, new SidekickResultResponse { Ok = false, Error = "empty body" });
+                        WriteJson(context, 400, new BridgeResultResponse { Ok = false, Error = "empty body" });
                         return;
                     }
-                    req = DeserializeJson<SidekickInsertRequest>(body);
+                    req = DeserializeJson<BridgeInsertRequest>(body);
                 }
             }
             catch (Exception ex)
             {
-                WriteJson(context, 400, new SidekickResultResponse { Ok = false, Error = "malformed body: " + ex.Message });
+                WriteJson(context, 400, new BridgeResultResponse { Ok = false, Error = "malformed body: " + ex.Message });
                 return;
             }
 
             if (req == null || string.IsNullOrEmpty(req.Text))
             {
-                WriteJson(context, 400, new SidekickResultResponse { Ok = false, Error = "missing 'text'" });
+                WriteJson(context, 400, new BridgeResultResponse { Ok = false, Error = "missing 'text'" });
                 return;
             }
 
@@ -479,9 +479,9 @@ namespace Supervertaler.Trados.Core
             }
 
             if (err == null)
-                WriteJson(context, 200, new SidekickResultResponse { Ok = true });
+                WriteJson(context, 200, new BridgeResultResponse { Ok = true });
             else
-                WriteJson(context, 409, new SidekickResultResponse { Ok = false, Error = err });
+                WriteJson(context, 409, new BridgeResultResponse { Ok = false, Error = err });
         }
 
         // ── Handshake file ───────────────────────────────────────────────
@@ -490,7 +490,7 @@ namespace Supervertaler.Trados.Core
         {
             Directory.CreateDirectory(UserDataPath.TradosRuntimeDir);
 
-            var handshake = new SidekickHandshake
+            var handshake = new BridgeHandshake
             {
                 Version = HandshakeVersion,
                 Port = _port,
@@ -500,7 +500,7 @@ namespace Supervertaler.Trados.Core
             };
 
             var bytes = SerializeJson(handshake);
-            File.WriteAllBytes(UserDataPath.SidekickBridgeFile, bytes);
+            File.WriteAllBytes(UserDataPath.SupervertalerBridgeFile, bytes);
         }
 
         // ── JSON helpers ─────────────────────────────────────────────────
@@ -517,7 +517,7 @@ namespace Supervertaler.Trados.Core
             }
             catch (Exception ex)
             {
-                BridgeLog.Write($"[SidekickBridge] WriteJson failed: {ex.Message}");
+                BridgeLog.Write($"[SupervertalerBridge] WriteJson failed: {ex.Message}");
             }
         }
 
@@ -525,7 +525,7 @@ namespace Supervertaler.Trados.Core
         {
             try
             {
-                WriteJson(context, statusCode, new SidekickResultResponse { Ok = false, Error = message });
+                WriteJson(context, statusCode, new BridgeResultResponse { Ok = false, Error = message });
             }
             catch { /* nothing more we can do */ }
         }
