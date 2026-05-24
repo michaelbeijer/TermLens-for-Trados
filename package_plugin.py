@@ -30,6 +30,9 @@ PLUGIN_FILES = [
     # --- iTextSharp (PDF text extraction) ---
     "itextsharp.dll",
     "BouncyCastle.Cryptography.dll",
+    # --- DocumentFormat.OpenXml (DOCX read/write for the Import / Export
+    #     tab added in v4.20.7) ---
+    "DocumentFormat.OpenXml.dll",
     # --- .NET Standard polyfills (Trados ships older versions) ---
     "System.Memory.dll",
     "System.Buffers.dll",
@@ -51,6 +54,7 @@ INCLUDE_FILES = [
     "SQLitePCLRaw.core.dll",
     "SQLitePCLRaw.batteries_v2.dll",
     "SQLitePCLRaw.provider.dynamic_cdecl.dll",
+    "DocumentFormat.OpenXml.dll",
     "System.Memory.dll",
     "System.Buffers.dll",
     "System.Numerics.Vectors.dll",
