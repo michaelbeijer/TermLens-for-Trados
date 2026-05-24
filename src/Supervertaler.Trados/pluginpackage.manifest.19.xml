@@ -14,6 +14,7 @@
     <File>System.Buffers.dll</File>
     <File>System.Numerics.Vectors.dll</File>
     <File>System.Runtime.CompilerServices.Unsafe.dll</File>
+    <File>DocumentFormat.OpenXml.dll</File>
     <File>runtimes/win-x64/native/e_sqlite3.dll</File>
     <File>runtimes/win-x86/native/e_sqlite3.dll</File>
     <File>runtimes/win-arm64/native/e_sqlite3.dll</File>
