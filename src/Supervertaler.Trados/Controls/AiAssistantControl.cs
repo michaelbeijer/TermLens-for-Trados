@@ -60,6 +60,10 @@ namespace Supervertaler.Trados.Controls
         // Reports tab
         private ReportsControl _reportsControl;
 
+        // Import / Export tab — bilingual review export & round-trip re-import.
+        // Added in v4.20.7.
+        private ImportExportControl _importExportControl;
+
         // SuperSearch tab (optional — added by EnsureSuperSearchTab when the
         // SuperSearchInAssistantTab setting is on)
         private TabPage _superSearchPage;
@@ -168,6 +172,9 @@ namespace Supervertaler.Trados.Controls
         /// <summary>Exposes the ReportsControl for event wiring by the ViewPart.</summary>
         public ReportsControl ReportsControl => _reportsControl;
 
+        /// <summary>Exposes the ImportExportControl for event wiring by the ViewPart.</summary>
+        public ImportExportControl ImportExportControl => _importExportControl;
+
         /// <summary>Exposes the SuperMemory toolbar for event wiring by the ViewPart.</summary>
         public SuperMemoryToolbar SuperMemoryToolbar => _superMemoryToolbar;
 
@@ -208,6 +215,16 @@ namespace Supervertaler.Trados.Controls
             };
             batchPage.Controls.Add(_batchTranslateControl);
             _tabControl.TabPages.Add(batchPage);
+
+            // === Import / Export tab ===
+            // New in v4.20.7. Bilingual review export (DOCX / Markdown / HTML)
+            // and round-trip re-import. Sits between Batch Operations and
+            // Reports because it's part of the same "do something with the
+            // whole document" workflow family.
+            var importExportPage = new TabPage("Import / Export") { BackColor = Color.White };
+            _importExportControl = new ImportExportControl { Dock = DockStyle.Fill };
+            importExportPage.Controls.Add(_importExportControl);
+            _tabControl.TabPages.Add(importExportPage);
 
             // === Reports tab ===
             var reportsPage = new TabPage("Reports") { BackColor = Color.White };
@@ -2001,20 +2018,43 @@ namespace Supervertaler.Trados.Controls
 
         /// <summary>
         /// Updates the Reports tab text with a badge showing the issue count.
+        /// Looks the tab up by label rather than by hard-coded index so the
+        /// Import / Export tab (added at index 2 in v4.20.7) doesn't break
+        /// the badge \u2014 every future tab insertion is safe.
         /// </summary>
         public void UpdateReportsBadge(int issueCount)
         {
-            _tabControl.TabPages[2].Text = issueCount > 0
-                ? $"Reports  \u26A0 {issueCount}"
-                : "Reports";
+            var page = FindTabByLabelStart("Reports");
+            if (page != null)
+            {
+                page.Text = issueCount > 0
+                    ? $"Reports  \u26A0 {issueCount}"
+                    : "Reports";
+            }
         }
 
         /// <summary>
-        /// Switches to the Reports tab.
+        /// Switches to the Reports tab. Resolves the tab by label, not by index.
         /// </summary>
         public void SwitchToReportsTab()
         {
-            _tabControl.SelectedIndex = 2;
+            var page = FindTabByLabelStart("Reports");
+            if (page != null) _tabControl.SelectedTab = page;
+        }
+
+        /// <summary>Walk the tab pages and return the first whose <c>Text</c>
+        /// (with any badge / warning suffix stripped) starts with the given
+        /// prefix. Returns <c>null</c> if no such tab exists.</summary>
+        private TabPage FindTabByLabelStart(string prefix)
+        {
+            if (string.IsNullOrEmpty(prefix)) return null;
+            foreach (TabPage p in _tabControl.TabPages)
+            {
+                var t = p.Text ?? "";
+                if (t.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    return p;
+            }
+            return null;
         }
 
         // ─── SuperSearch tab (optional host) ───────────────────────

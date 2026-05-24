@@ -1,5 +1,37 @@
 # Changelog
 
+## [4.20.7] – 2026-05-24
+
+### Added
+
+- **New "Import / Export" tab in the Supervertaler Assistant panel.** A dedicated home for bilingual review workflows that sits between Batch Operations and Reports. Three export formats and three layouts:
+  - **Formats:** Word document (`.docx`), Markdown (`.md`), HTML report (`.html`, client-facing, read-only).
+  - **Layouts:** *Supervertaler Bilingual Table* (5-column table — `#, Source, Target, Status, Notes` — the canonical round-trippable shape, identical to Supervertaler Workbench's "Bilingual Table" so files can flow between both products), *Stacked source-on-top* (source paragraph above target paragraph, sentence by sentence), and *Stacked target-on-top* (target paragraph above source).
+  - Every export writes both the file itself and a small **sidecar manifest JSON** (`<file>.svexport.json`) that records the project name, source filename, language pair, export timestamp, tool version, and the per-segment `(number → Trados ParagraphUnitId / SegmentId)` mapping with a source-text SHA-256 prefix. The manifest lets re-import locate the exact Trados segments even if the proofreader accidentally reorders rows.
+  - A **Recent exports** list at the bottom of the tab tracks every export this session with **Open file** / **Open folder** / **Re-import this** buttons next to it.
+
+- **Round-trip re-import (DOCX and Markdown).** Send a bilingual file to a proofreader, get it back, click **📥 Re-import…**, pick the file. Supervertaler:
+  - Reads the file's segment rows (DOCX table or Markdown `## Segment N` blocks).
+  - Loads the sidecar manifest if present (fully detected by file path: `<file>.svexport.json`); falls back to a current-document mapping with a warning if the sidecar is missing.
+  - Diffs each row against the live Trados segment state: classifies every row as *unchanged*, *changed*, *segment-missing*, *source-mismatched*, or *locked / rejected*.
+  - Shows a confirmation prompt with counts before any write happens.
+  - Applies changes via the same `ProcessSegmentPair` writeback path the AI batch translator uses, so soft-return handling for Excel / Visio segments behaves the same way and locked/rejected segments are skipped automatically.
+  - HTML is **not** re-importable by design — the HTML renderer is for client-facing review reports, not editing.
+
+- **Embedded segment markers in every exported file** (`SV_seg_N` bookmarks in DOCX, `<!-- sv-seg:N -->` HTML comments in Markdown / HTML). These are invisible in normal rendering but let future versions match segments by ID even when human numbering drifts.
+
+- **DocumentFormat.OpenXml 2.20.0 NuGet dependency** added for DOCX read/write. Pinned at the 2.x line because the 3.x multi-assembly layout doesn't fit the `.sdlplugin` packaging model. Single-DLL deployment alongside the existing iTextSharp / Microsoft.Data.Sqlite stack.
+
+### Fixed
+
+- **AiAssistantControl: Reports tab badge + tab navigation no longer break when a new tab is inserted.** Previously `UpdateReportsBadge` and `SwitchToReportsTab` were hard-coded to tab index 2; adding the Import / Export tab shifted Reports to index 3 and would have silently broken the badge. Both methods now look the Reports tab up by label, so future tab insertions can't re-break navigation — same fix pattern applied to the Workbench in v1.10.161.
+
+## [4.20.6] – 2026-05-24
+
+### Fixed
+
+- **AI Assistant → Batch Operations: "Preview prompt" link no longer overlaps the "Copy to Clipboard" button when Clipboard Mode is on.** The reposition routine was anchored on the (now-hidden) Translate button, so the wider Copy to Clipboard button slid in underneath the link. The routine now picks the rightmost *visible* control on the action row — Translate, Copy to Clipboard, Paste from Clipboard, or the Proofread "Also add issues as Trados comments" checkbox — and places the link clear of all of them. Spotted by a user.
+
 ## [4.20.5] – 2026-05-21
 
 ### Fixed

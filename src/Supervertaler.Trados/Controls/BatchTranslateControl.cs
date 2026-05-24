@@ -881,17 +881,35 @@ namespace Supervertaler.Trados.Controls
 
         /// <summary>
         /// Repositions the "Preview prompt" link so it always sits after the rightmost
-        /// visible control on the action row. In Translate mode that's the action button;
-        /// in Proofread mode the "Also add issues as Trados comments" checkbox extends
-        /// further right and the link must clear it.
+        /// visible control on the action row. The rightmost control depends on mode:
+        ///   - Translate (non-clipboard): _btnTranslate.
+        ///   - Proofread (non-clipboard): _btnTranslate, plus _chkAddComments which
+        ///     extends further right when its "Also add issues as Trados comments"
+        ///     checkbox is showing.
+        ///   - Clipboard Mode: _btnTranslate is hidden and the two clipboard
+        ///     buttons (Copy + Paste) take its place. Without including them
+        ///     in this calculation the link stays at the old _btnTranslate.Right
+        ///     position and ends up overlapping the wider Copy to Clipboard
+        ///     button. Fixed by walking every action-row control and picking
+        ///     the largest .Right of those currently visible.
         /// </summary>
         private void RepositionPreviewPromptLink()
         {
-            if (_lnkPreviewPrompt == null || _btnTranslate == null) return;
+            if (_lnkPreviewPrompt == null) return;
 
-            int rightEdge = _btnTranslate.Right;
+            int rightEdge = 0;
+            if (_btnTranslate != null && _btnTranslate.Visible)
+                rightEdge = Math.Max(rightEdge, _btnTranslate.Right);
+            if (_btnCopyToClipboard != null && _btnCopyToClipboard.Visible)
+                rightEdge = Math.Max(rightEdge, _btnCopyToClipboard.Right);
+            if (_btnPasteFromClipboard != null && _btnPasteFromClipboard.Visible)
+                rightEdge = Math.Max(rightEdge, _btnPasteFromClipboard.Right);
             if (_chkAddComments != null && _chkAddComments.Visible)
                 rightEdge = Math.Max(rightEdge, _chkAddComments.Right);
+
+            // Nothing visible on the action row (shouldn't happen in practice,
+            // but guard rather than write a negative X).
+            if (rightEdge <= 0) return;
 
             _lnkPreviewPrompt.Location = new Point(rightEdge + UiScale.Pixels(12), _lnkPreviewPrompt.Location.Y);
         }

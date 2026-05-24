@@ -1,0 +1,194 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Text;
+using System.Text.RegularExpressions;
+
+namespace Supervertaler.Trados.Core.Export
+{
+    /// <summary>
+    /// Parses a Supervertaler-exported Markdown file back into a list of
+    /// <see cref="ImportedSegment"/>s. Tolerant of:
+    ///
+    /// - Light proofreader edits (added whitespace, slightly different
+    ///   surrounding markup).
+    /// - Both stacked-source-top and stacked-target-top layouts (detected by
+    ///   the relative order of the <c>**Source ...:**</c> and
+    ///   <c>**Target ...:**</c> labels).
+    /// - The Markdown table layout (5 columns: # | Source | Target | Status | Notes).
+    ///
+    /// NOT tolerant of:
+    /// - Renaming the <c>## Segment N</c> headings (the segment-number is the
+    ///   primary alignment key).
+    /// - Removing the <c>&lt;!-- sv-seg:N --&gt;</c> markers entirely AND
+    ///   renaming the heading; one of them must survive.
+    /// </summary>
+    public class MarkdownImporter
+    {
+        private static readonly Regex SegMarkerRe = new Regex(@"<!--\s*sv-seg:(\d+)\s*-->", RegexOptions.IgnoreCase);
+        private static readonly Regex SegHeadingRe = new Regex(@"^##\s*Segment\s+(\d+)\s*$", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+        private static readonly Regex LabelLineRe = new Regex(@"^\*\*(Source|Target)\b[^*]*\*\*\s*$", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+        private static readonly Regex StatusLineRe = new Regex(@"^\*\*Status:\*\*\s*(.+)$", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+        private static readonly Regex TableRowRe = new Regex(@"^\|\s*(\d+)\s*(?:<!--\s*sv-seg:\d+\s*-->)?\s*\|(.*)\|\s*$", RegexOptions.Multiline);
+
+        public List<ImportedSegment> Parse(string filePath)
+        {
+            var text = File.ReadAllText(filePath, Encoding.UTF8);
+            return ParseText(text);
+        }
+
+        public List<ImportedSegment> ParseText(string text)
+        {
+            text = (text ?? "").Replace("\r\n", "\n");
+
+            // Try table layout first — it has a recognisable header row.
+            if (text.Contains("| # |") || Regex.IsMatch(text, @"^\|\s*#\s*\|", RegexOptions.Multiline))
+            {
+                var fromTable = ParseTableLayout(text);
+                if (fromTable.Count > 0) return fromTable;
+            }
+
+            // Stacked layout fallback.
+            return ParseStackedLayout(text);
+        }
+
+        private static List<ImportedSegment> ParseTableLayout(string text)
+        {
+            var rows = new List<ImportedSegment>();
+            foreach (Match m in TableRowRe.Matches(text))
+            {
+                int num;
+                if (!int.TryParse(m.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out num))
+                    continue;
+
+                var rest = m.Groups[2].Value;
+                var cells = rest.Split('|');
+                if (cells.Length < 2) continue;
+
+                var seg = new ImportedSegment
+                {
+                    Number = num,
+                    SourceText = UnescapeCell(cells[0]),
+                    TargetText = UnescapeCell(cells[1]),
+                    Status = cells.Length > 2 ? UnescapeCell(cells[2]) : "",
+                    Notes = cells.Length > 3 ? UnescapeCell(cells[3]) : ""
+                };
+                rows.Add(seg);
+            }
+            return rows;
+        }
+
+        private static string UnescapeCell(string cell)
+        {
+            if (string.IsNullOrEmpty(cell)) return "";
+            return cell.Trim().Replace("\\|", "|");
+        }
+
+        private static List<ImportedSegment> ParseStackedLayout(string text)
+        {
+            // Split into segment blocks by `## Segment N` headings (or
+            // `<!-- sv-seg:N -->` markers as fallback).
+            var segments = new List<ImportedSegment>();
+
+            // Find all anchors (heading or marker) and their positions.
+            var anchors = new List<KeyValuePair<int, int>>(); // position → number
+            foreach (Match m in SegHeadingRe.Matches(text))
+            {
+                int num;
+                if (int.TryParse(m.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out num))
+                    anchors.Add(new KeyValuePair<int, int>(m.Index, num));
+            }
+            // Markers only count if they aren't immediately preceded by their own heading
+            // (which would double-count); we just dedupe by number further down.
+            foreach (Match m in SegMarkerRe.Matches(text))
+            {
+                int num;
+                if (int.TryParse(m.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out num))
+                    anchors.Add(new KeyValuePair<int, int>(m.Index, num));
+            }
+
+            anchors.Sort((a, b) => a.Key.CompareTo(b.Key));
+
+            // Dedupe consecutive anchors with the same number (heading + marker
+            // for the same segment) by keeping the earliest one.
+            var dedup = new List<KeyValuePair<int, int>>();
+            var seen = new HashSet<int>();
+            foreach (var a in anchors)
+            {
+                if (seen.Contains(a.Value)) continue;
+                seen.Add(a.Value);
+                dedup.Add(a);
+            }
+
+            for (int i = 0; i < dedup.Count; i++)
+            {
+                int blockStart = dedup[i].Key;
+                int blockEnd = (i + 1 < dedup.Count) ? dedup[i + 1].Key : text.Length;
+                int number = dedup[i].Value;
+                var blockText = text.Substring(blockStart, blockEnd - blockStart);
+
+                var seg = ParseStackedBlock(number, blockText);
+                if (seg != null) segments.Add(seg);
+            }
+
+            return segments;
+        }
+
+        private static ImportedSegment ParseStackedBlock(int number, string block)
+        {
+            // Find Source / Target label lines and capture the text between them.
+            var labelMatches = LabelLineRe.Matches(block);
+            if (labelMatches.Count == 0) return null;
+
+            // Collect (label, start-of-body, end-of-body) tuples.
+            var sections = new List<Section>();
+            for (int i = 0; i < labelMatches.Count; i++)
+            {
+                var lm = labelMatches[i];
+                var labelKind = lm.Groups[1].Value.Trim().ToLowerInvariant(); // "source" or "target"
+                int bodyStart = lm.Index + lm.Length;
+                int bodyEnd = (i + 1 < labelMatches.Count) ? labelMatches[i + 1].Index : block.Length;
+
+                // Also stop at "---" separators or "## Segment" (block boundary).
+                int sep = IndexOfAny(block, bodyStart, bodyEnd, "\n---", "\n## ");
+                if (sep > 0) bodyEnd = sep;
+
+                // Status line acts as a soft body end too.
+                var statusMatch = StatusLineRe.Match(block, bodyStart, bodyEnd - bodyStart);
+                if (statusMatch.Success) bodyEnd = statusMatch.Index;
+
+                var body = block.Substring(bodyStart, bodyEnd - bodyStart).Trim('\n', '\r', ' ');
+                sections.Add(new Section { Label = labelKind, Body = body });
+            }
+
+            var seg = new ImportedSegment { Number = number };
+            foreach (var s in sections)
+            {
+                if (s.Label == "source" && seg.SourceText == null) seg.SourceText = s.Body;
+                if (s.Label == "target" && seg.TargetText == null) seg.TargetText = s.Body;
+            }
+
+            var status = StatusLineRe.Match(block);
+            if (status.Success) seg.Status = status.Groups[1].Value.Trim();
+
+            // Only return a valid segment if we got at least target text (the
+            // proofreader's actual edit). Source-only segments are skipped.
+            if (seg.TargetText == null) return null;
+            return seg;
+        }
+
+        private static int IndexOfAny(string text, int start, int end, params string[] needles)
+        {
+            int best = -1;
+            foreach (var n in needles)
+            {
+                int idx = text.IndexOf(n, start, Math.Min(text.Length, end) - start, StringComparison.Ordinal);
+                if (idx >= 0 && (best == -1 || idx < best)) best = idx;
+            }
+            return best;
+        }
+
+        private class Section { public string Label; public string Body; }
+    }
+}

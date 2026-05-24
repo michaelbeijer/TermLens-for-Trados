@@ -261,6 +261,16 @@ namespace Supervertaler.Trados
             reportsControl.NavigateToSegmentRequested += OnNavigateToSegment;
             reportsControl.ClearResultsRequested += OnClearReports;
 
+            // Wire Import / Export control events (v4.20.7). Export collects
+            // segments from the active document and writes them via the
+            // Core.Export.* pipeline; import reads the sidecar manifest +
+            // round-tripped file and applies diffs back via ProcessSegmentPair.
+            var importExportControl = _control.Value.ImportExportControl;
+            importExportControl.ExportRequested += OnBilingualExportRequested;
+            importExportControl.ImportRequested += OnBilingualImportRequested;
+            importExportControl.OpenFileRequested += OnImportExportOpenFile;
+            importExportControl.OpenFolderRequested += OnImportExportOpenFolder;
+
             // Optionally host SuperSearch as a 4th tab in this panel. The
             // SuperSearchController owns the control and all its logic; we just
             // re-parent the shared control into a tab here. The standalone
@@ -5821,6 +5831,460 @@ Always list the original source filename(s) in the `sources:` frontmatter field.
             }
 
             base.Dispose();
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        // Import / Export tab (v4.20.7) — bilingual review file export &
+        // round-trip re-import. The tab UI fires the four events handled
+        // below; the heavy lifting lives in
+        // <see cref="Core.Export.BilingualExporter"/> and
+        // <see cref="Core.Export.BilingualImporter"/>.
+        // ════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Walks the active Trados document, builds an <see cref="Core.Export.ExportSegment"/>
+        /// list with source/target/status, picks a file path, and writes the
+        /// bilingual file plus its sidecar manifest. Adds the result to the
+        /// recent-exports list.
+        /// </summary>
+        private void OnBilingualExportRequested(object sender, ExportRequestedEventArgs e)
+        {
+            SafeInvoke(() =>
+            {
+                var ctrl = _control.Value.ImportExportControl;
+                if (_activeDocument == null)
+                {
+                    ctrl.AppendLog("No document open.", true);
+                    return;
+                }
+
+                List<Core.Export.ExportSegment> segments;
+                try
+                {
+                    segments = CollectBilingualExportSegments();
+                }
+                catch (Exception ex)
+                {
+                    ctrl.AppendLog("Could not enumerate segments: " + ex.Message, true);
+                    return;
+                }
+
+                if (segments.Count == 0)
+                {
+                    ctrl.AppendLog("No segments to export.", true);
+                    return;
+                }
+
+                var opts = e.Options;
+                var srcLang = GetDocumentSourceLanguage();
+                var tgtLang = GetDocumentTargetLanguage();
+                opts.SourceLanguageDisplay = !string.IsNullOrEmpty(srcLang)
+                    ? Core.LanguageUtils.ShortenLanguageName(srcLang)
+                    : "Source";
+                opts.TargetLanguageDisplay = !string.IsNullOrEmpty(tgtLang)
+                    ? Core.LanguageUtils.ShortenLanguageName(tgtLang)
+                    : "Target";
+                opts.ProjectName = SafeGetProjectName();
+                opts.SourceFileName = SafeGetActiveFileName();
+                opts.ToolVersion = SafeGetPluginVersion();
+
+                var defaultName = Core.Export.BilingualExporter.DefaultFileName(opts);
+                string targetPath;
+                using (var dlg = new SaveFileDialog())
+                {
+                    dlg.FileName = defaultName;
+                    dlg.Title = "Save bilingual review file";
+                    switch (opts.Format)
+                    {
+                        case Core.Export.ExportFormat.Docx:
+                            dlg.Filter = "Word document (*.docx)|*.docx";
+                            dlg.DefaultExt = "docx";
+                            break;
+                        case Core.Export.ExportFormat.Markdown:
+                            dlg.Filter = "Markdown (*.md)|*.md";
+                            dlg.DefaultExt = "md";
+                            break;
+                        case Core.Export.ExportFormat.Html:
+                            dlg.Filter = "HTML (*.html)|*.html";
+                            dlg.DefaultExt = "html";
+                            break;
+                    }
+                    if (dlg.ShowDialog(_control.Value) != DialogResult.OK) return;
+                    targetPath = dlg.FileName;
+                }
+
+                ctrl.SetBusy(true);
+                try
+                {
+                    var exporter = new Core.Export.BilingualExporter();
+                    var manifest = exporter.Export(segments, opts, targetPath);
+                    ctrl.AddHistoryEntry(DateTime.Now, opts.Format.ToString(), targetPath);
+                    ctrl.AppendLog(
+                        $"Exported {segments.Count} segments to {Path.GetFileName(targetPath)} " +
+                        $"({opts.Format}, {opts.Layout}).");
+                    ctrl.AppendLog("Sidecar manifest: " +
+                        Path.GetFileName(Core.Export.ExportManifest.SidecarPathFor(targetPath)));
+                }
+                catch (Exception ex)
+                {
+                    ctrl.AppendLog("Export failed: " + ex.Message, true);
+                }
+                finally
+                {
+                    ctrl.SetBusy(false);
+                }
+            });
+        }
+
+        /// <summary>
+        /// Reads a round-tripped DOCX or Markdown file, loads its sidecar
+        /// manifest if present, computes the diff against the current Trados
+        /// document state, confirms with the user, and applies accepted
+        /// changes via <c>ProcessSegmentPair</c> (same writeback path the
+        /// batch AI translator uses).
+        /// </summary>
+        private void OnBilingualImportRequested(object sender, ImportRequestedEventArgs e)
+        {
+            SafeInvoke(() =>
+            {
+                var ctrl = _control.Value.ImportExportControl;
+                if (_activeDocument == null)
+                {
+                    ctrl.AppendLog("No document open.", true);
+                    return;
+                }
+
+                if (!File.Exists(e.FilePath))
+                {
+                    ctrl.AppendLog("File does not exist: " + e.FilePath, true);
+                    return;
+                }
+
+                var sidecarPath = Core.Export.ExportManifest.SidecarPathFor(e.FilePath);
+                Core.Export.ExportManifest manifest;
+                try
+                {
+                    manifest = File.Exists(sidecarPath)
+                        ? Core.Export.ExportManifest.Load(sidecarPath)
+                        : null;
+                }
+                catch (Exception ex)
+                {
+                    ctrl.AppendLog("Could not read sidecar manifest: " + ex.Message, true);
+                    manifest = null;
+                }
+
+                if (manifest == null)
+                {
+                    // Build a fallback "manifest" purely from current document
+                    // state. This loses source-tamper protection but lets the
+                    // user re-import files that were generated before
+                    // manifests existed or whose sidecars got deleted.
+                    ctrl.AppendLog(
+                        "No sidecar manifest found — falling back to current-document mapping. " +
+                        "Source-tamper detection will be disabled for this import.", true);
+                    manifest = BuildManifestFromCurrentDocument();
+                }
+
+                // Lookups for the importer to query current state.
+                var currentTargetMap = SnapshotCurrentTargets();
+                var lockedMap = SnapshotLockedSegments();
+
+                var importer = new Core.Export.BilingualImporter();
+                var result = importer.Build(
+                    e.FilePath, manifest,
+                    currentTargetLookup: (pu, sg) =>
+                    {
+                        string val;
+                        return currentTargetMap.TryGetValue(KeyOf(pu, sg), out val) ? val : null;
+                    },
+                    isWriteable: (pu, sg) => !lockedMap.Contains(KeyOf(pu, sg)),
+                    currentSourceLookup: null);
+
+                if (result.TotalImported == 0)
+                {
+                    ctrl.AppendLog("No segments parsed from the file. " +
+                        "Check that it's a Supervertaler-exported DOCX or Markdown.", true);
+                    return;
+                }
+
+                // Confirmation prompt.
+                var msg = $"Read {result.TotalImported} segments from the file.\n\n" +
+                          $"  {result.ChangedCount} change(s) to apply\n" +
+                          $"  {result.UnchangedCount} unchanged\n" +
+                          $"  {result.IssueCount} issue(s) (missing, locked, or source-mismatched)\n\n" +
+                          "Apply the changes to the active Trados document?";
+                var dr = MessageBox.Show(_control.Value, msg, "Re-import bilingual file",
+                    MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+                if (dr != DialogResult.OK) return;
+
+                int applied = 0, failed = 0;
+                ctrl.SetBusy(true);
+                try
+                {
+                    foreach (var d in result.Diffs)
+                    {
+                        if (d.Kind != Core.Export.ImportChangeKind.Changed || !d.Apply) continue;
+                        var pair = FindSegmentPair(d.ParagraphUnitId, d.SegmentId);
+                        if (pair == null)
+                        {
+                            ctrl.AppendLog($"Segment {d.Number}: not found in document, skipped.", true);
+                            failed++;
+                            continue;
+                        }
+                        try
+                        {
+                            _activeDocument.ProcessSegmentPair(pair, "Supervertaler",
+                                (sp, cancel) =>
+                                {
+                                    // Plain-text re-import for the MVP: clone an IText from
+                                    // the source to carry across text properties (Excel /
+                                    // Visio soft-return preservation), and set the new
+                                    // target string. Tag-bearing segments are preserved
+                                    // verbatim by Trados if the proofreader did not edit
+                                    // them; if they DID edit a tag-bearing segment, the
+                                    // tag round-trip would need the same logic the batch
+                                    // translator uses (out of scope for the bilingual
+                                    // re-import MVP).
+                                    var textTpl = Core.SegmentTagHandler.FindFirstText(sp.Source);
+                                    if (textTpl != null && d.NewTarget != null)
+                                    {
+                                        sp.Target.Clear();
+                                        var clone = (IText)textTpl.Clone();
+                                        clone.Properties.Text = d.NewTarget;
+                                        sp.Target.Add(clone);
+                                    }
+                                });
+                            applied++;
+                        }
+                        catch (Exception ex)
+                        {
+                            ctrl.AppendLog($"Segment {d.Number}: write failed — {ex.Message}", true);
+                            failed++;
+                        }
+                    }
+                }
+                finally
+                {
+                    ctrl.SetBusy(false);
+                }
+
+                ctrl.AppendLog($"Re-import complete: {applied} applied, {failed} failed, " +
+                               $"{result.IssueCount} issue(s) skipped.");
+            });
+        }
+
+        private void OnImportExportOpenFile(object sender, string filePath)
+        {
+            try { System.Diagnostics.Process.Start(filePath); }
+            catch (Exception ex)
+            {
+                _control.Value.ImportExportControl.AppendLog(
+                    "Could not open file: " + ex.Message, true);
+            }
+        }
+
+        private void OnImportExportOpenFolder(object sender, string filePath)
+        {
+            try
+            {
+                var dir = Path.GetDirectoryName(filePath);
+                if (!string.IsNullOrEmpty(dir))
+                    System.Diagnostics.Process.Start("explorer.exe", dir);
+            }
+            catch (Exception ex)
+            {
+                _control.Value.ImportExportControl.AppendLog(
+                    "Could not open folder: " + ex.Message, true);
+            }
+        }
+
+        // ─── Trados SDK helpers for the Import / Export tab ─────────────
+
+        /// <summary>Walks the active document and returns one
+        /// <see cref="Core.Export.ExportSegment"/> per non-empty source
+        /// segment, with stable Trados (paragraph-unit-id, segment-id) keys
+        /// in the manifest.</summary>
+        private List<Core.Export.ExportSegment> CollectBilingualExportSegments()
+        {
+            var result = new List<Core.Export.ExportSegment>();
+            if (_activeDocument == null) return result;
+
+            int number = 1;
+            foreach (var pair in _activeDocument.SegmentPairs)
+            {
+                if (pair?.Source == null) continue;
+                var sourceText = pair.Source.ToString() ?? "";
+                if (string.IsNullOrWhiteSpace(sourceText)) continue;
+
+                var targetText = pair.Target != null ? pair.Target.ToString() : "";
+                string puId = "", segId = "";
+                try
+                {
+                    var parentPU = _activeDocument.GetParentParagraphUnit(pair);
+                    puId = parentPU?.Properties?.ParagraphUnitId.Id ?? "";
+                }
+                catch { }
+                try { segId = pair.Properties?.Id.Id ?? ""; } catch { }
+
+                var status = "";
+                try
+                {
+                    status = pair.Properties?.ConfirmationLevel.ToString() ?? "";
+                }
+                catch { }
+
+                result.Add(new Core.Export.ExportSegment
+                {
+                    Number = number++,
+                    ParagraphUnitId = puId,
+                    SegmentId = segId,
+                    SourceText = sourceText,
+                    TargetText = targetText ?? "",
+                    Status = status,
+                    SourceHash = Core.Export.BilingualExporter.HashPrefix(sourceText)
+                });
+            }
+            return result;
+        }
+
+        /// <summary>Build a synthetic manifest from the current document — used
+        /// when the user picks a file without a sidecar JSON. Loses tamper
+        /// detection but lets the round-trip still work in best-effort mode.</summary>
+        private Core.Export.ExportManifest BuildManifestFromCurrentDocument()
+        {
+            var m = new Core.Export.ExportManifest
+            {
+                ProjectName = SafeGetProjectName(),
+                SourceFileName = SafeGetActiveFileName(),
+                SourceLanguage = GetDocumentSourceLanguage() ?? "",
+                TargetLanguage = GetDocumentTargetLanguage() ?? "",
+                ExportTimestampUtc = DateTime.UtcNow,
+                Format = "",
+                Layout = "",
+                ToolVersion = SafeGetPluginVersion()
+            };
+
+            int n = 1;
+            foreach (var pair in _activeDocument.SegmentPairs)
+            {
+                if (pair?.Source == null) continue;
+                var src = pair.Source.ToString() ?? "";
+                if (string.IsNullOrWhiteSpace(src)) continue;
+
+                string puId = "", segId = "";
+                try { puId = _activeDocument.GetParentParagraphUnit(pair)?.Properties?.ParagraphUnitId.Id ?? ""; } catch { }
+                try { segId = pair.Properties?.Id.Id ?? ""; } catch { }
+
+                m.Segments.Add(new Core.Export.ExportManifestSegment
+                {
+                    Number = n++,
+                    ParagraphUnitId = puId,
+                    SegmentId = segId,
+                    SourceHash = Core.Export.BilingualExporter.HashPrefix(src),
+                    Status = ""
+                });
+            }
+            return m;
+        }
+
+        /// <summary>Snapshot the current target text for every segment, keyed
+        /// by <c>"{puId}/{segId}"</c>. Used by the importer's diff pass.</summary>
+        private Dictionary<string, string> SnapshotCurrentTargets()
+        {
+            var map = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (_activeDocument == null) return map;
+            foreach (var pair in _activeDocument.SegmentPairs)
+            {
+                if (pair?.Source == null) continue;
+                string puId = "", segId = "";
+                try { puId = _activeDocument.GetParentParagraphUnit(pair)?.Properties?.ParagraphUnitId.Id ?? ""; } catch { }
+                try { segId = pair.Properties?.Id.Id ?? ""; } catch { }
+                if (string.IsNullOrEmpty(puId) || string.IsNullOrEmpty(segId)) continue;
+
+                var targetText = pair.Target != null ? pair.Target.ToString() : "";
+                map[KeyOf(puId, segId)] = targetText ?? "";
+            }
+            return map;
+        }
+
+        /// <summary>Snapshot of (puId/segId) keys that are locked or rejected
+        /// and should not be overwritten silently.</summary>
+        private HashSet<string> SnapshotLockedSegments()
+        {
+            var set = new HashSet<string>(StringComparer.Ordinal);
+            if (_activeDocument == null) return set;
+            foreach (var pair in _activeDocument.SegmentPairs)
+            {
+                if (pair?.Properties == null) continue;
+                var conf = pair.Properties.ConfirmationLevel;
+                // Treat Rejected as needing explicit override. Locked status
+                // lives on the parent paragraph unit but for the MVP we just
+                // honour the confirmation-level signal.
+                if (conf == Sdl.Core.Globalization.ConfirmationLevel.Rejected)
+                {
+                    string puId = "", segId = "";
+                    try { puId = _activeDocument.GetParentParagraphUnit(pair)?.Properties?.ParagraphUnitId.Id ?? ""; } catch { }
+                    try { segId = pair.Properties?.Id.Id ?? ""; } catch { }
+                    if (!string.IsNullOrEmpty(puId) && !string.IsNullOrEmpty(segId))
+                        set.Add(KeyOf(puId, segId));
+                }
+            }
+            return set;
+        }
+
+        /// <summary>Find the live <c>ISegmentPair</c> for a given
+        /// (paragraph-unit, segment) id pair. Returns <c>null</c> if not
+        /// found.</summary>
+        private ISegmentPair FindSegmentPair(string paragraphUnitId, string segmentId)
+        {
+            if (_activeDocument == null) return null;
+            if (string.IsNullOrEmpty(paragraphUnitId) || string.IsNullOrEmpty(segmentId)) return null;
+            foreach (var pair in _activeDocument.SegmentPairs)
+            {
+                string puId = "", segId = "";
+                try { puId = _activeDocument.GetParentParagraphUnit(pair)?.Properties?.ParagraphUnitId.Id ?? ""; } catch { }
+                try { segId = pair.Properties?.Id.Id ?? ""; } catch { }
+                if (string.Equals(puId, paragraphUnitId, StringComparison.Ordinal) &&
+                    string.Equals(segId, segmentId, StringComparison.Ordinal))
+                {
+                    return pair;
+                }
+            }
+            return null;
+        }
+
+        private static string KeyOf(string puId, string segId) =>
+            (puId ?? "") + "/" + (segId ?? "");
+
+        private string SafeGetProjectName()
+        {
+            try
+            {
+                var pc = SdlTradosStudio.Application.GetController<ProjectsController>();
+                return pc?.CurrentProject?.GetProjectInfo()?.Name ?? "Trados project";
+            }
+            catch { return "Trados project"; }
+        }
+
+        private string SafeGetActiveFileName()
+        {
+            try
+            {
+                var name = _activeDocument?.ActiveFile?.Name;
+                if (!string.IsNullOrEmpty(name)) return name;
+            }
+            catch { }
+            return "";
+        }
+
+        private static string SafeGetPluginVersion()
+        {
+            try
+            {
+                return typeof(AiAssistantViewPart).Assembly.GetName().Version?.ToString() ?? "";
+            }
+            catch { return ""; }
         }
     }
 }

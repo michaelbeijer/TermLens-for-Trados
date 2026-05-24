@@ -5,8 +5,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>Supervertaler.Trados</RootNamespace>
     <AssemblyName>Supervertaler.Trados</AssemblyName>
-    <Version>4.20.5</Version>
-    <InformationalVersion>4.20.5</InformationalVersion>
+    <Version>4.20.7</Version>
+    <InformationalVersion>4.20.7</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Authors>Michael Beijer</Authors>
     <Company>Supervertaler</Company>
@@ -114,6 +114,13 @@
   <ItemGroup>
     <PackageReference Include="iTextSharp" Version="5.5.13.5" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.0" />
+    <!-- OpenXml (DOCX read/write) for the Import / Export tab added in v4.20.7.
+         Pinned at 2.x — the 2.x line targets .NET Framework 4.6+ and ships a
+         single DocumentFormat.OpenXml.dll with no native dependencies, so it
+         drops cleanly into the Trados plugin sandbox alongside the existing
+         iTextSharp / Microsoft.Data.Sqlite stack. 3.x switched to a multi-
+         assembly layout that doesn't fit the .sdlplugin packaging model. -->
+    <PackageReference Include="DocumentFormat.OpenXml" Version="2.20.0" />
     <!-- Explicit System.Memory/System.Buffers references make MSBuild treat
          these as primary instead of transitive, eliminating the v4.0.1.1 vs
          v4.0.1.2 conflict warning between Trados-bundled and Sqlite-required
