@@ -22,7 +22,7 @@ These are the topic constants defined in `HelpSystem.Topics` and the documentati
 | `TermLensPanel` | [/trados/termlens/](https://help.supervertaler.com/trados/termlens/) | MainPanelControl (? button, F1 key) |
 | `AddTermDialog` | [/trados/termlens/adding-terms/](https://help.supervertaler.com/trados/termlens/adding-terms/) | AddTermDialog, BulkAddNTDialog, TermEntryEditorDialog |
 | `TermLensPopup` | [/trados/termlens/termlens-popup/](https://help.supervertaler.com/trados/termlens/termlens-popup/) | – (not yet used in UI) |
-| `TermPickerDialog` | [/trados/termlens/term-picker/](https://help.supervertaler.com/trados/termlens/term-picker/) | TermPickerDialog |
+| `TermPickerDialog` | [/trados/termlens/termpicker/](https://help.supervertaler.com/trados/termlens/termpicker/) | TermPickerDialog |
 | `MultiTermSupport` | [/trados/multiterm-support/](https://help.supervertaler.com/trados/multiterm-support/) | MainPanelControl (MultiTerm help link) |
 | `AiAssistantChat` | [/trados/ai-assistant/](https://help.supervertaler.com/trados/ai-assistant/) | AiAssistantControl (? button when on Chat tab) |
 | `StudioTools` | [/trados/ai-assistant/studio-tools/](https://help.supervertaler.com/trados/ai-assistant/studio-tools/) | – (not yet used in UI) |

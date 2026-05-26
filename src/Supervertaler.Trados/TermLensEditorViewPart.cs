@@ -65,7 +65,7 @@ namespace Supervertaler.Trados
         private static int _pendingAccumulated;    // sequential mode: accumulated number so far
         private static System.Windows.Forms.Timer _chordTimer;
 
-        // --- Ctrl-tap Term Picker (memoQ-style) ---
+        // --- Ctrl-tap TermPicker (memoQ-style) ---
         private static CtrlTapFilter _ctrlTapFilter;
 
         // ───────────────────────────────────────────────────────────────
@@ -2341,7 +2341,7 @@ namespace Supervertaler.Trados
             }
         }
 
-        // ─── Term Picker dialog ─────────────────────────────────────
+        // ─── TermPicker ─────────────────────────────────────────────
 
         /// <summary>
         /// Called by TermPickerAction (Ctrl+Alt+G).

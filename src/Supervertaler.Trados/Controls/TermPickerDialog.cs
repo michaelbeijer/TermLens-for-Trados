@@ -46,7 +46,7 @@ namespace Supervertaler.Trados.Controls
             _matches = matches ?? new List<TermPickerMatch>();
             _settings = settings;
 
-            Text = "TermLens \u2014 Term Picker";
+            Text = "TermPicker";
             Size = new Size(580, 400);
             MinimumSize = new Size(400, 250);
             StartPosition = FormStartPosition.CenterParent;

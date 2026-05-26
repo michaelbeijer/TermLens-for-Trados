@@ -90,7 +90,7 @@ namespace Supervertaler.Trados.Settings
         [DataMember(Name = "disabledMultiTermIds")]
         public List<long> DisabledMultiTermIds { get; set; } = new List<long>();
 
-        // ─── Term Picker dialog layout persistence ────────────────────
+        // ─── TermPicker layout persistence ────────────────────────────
         [DataMember(Name = "termPickerWidth")]
         public int TermPickerWidth { get; set; }
 

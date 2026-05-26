@@ -155,7 +155,7 @@ namespace Supervertaler.Trados.Models
     }
 
     /// <summary>
-    /// A matched source term with all its entries, used by the Term Picker dialog.
+    /// A matched source term with all its entries, used by TermPicker.
     /// </summary>
     public class TermPickerMatch
     {
@@ -166,7 +166,7 @@ namespace Supervertaler.Trados.Models
 
         /// <summary>
         /// True if the user marked this term's termbase as a project termbase.
-        /// Used for pink/blue coloring in the Term Picker dialog.
+        /// Used for pink/blue coloring in TermPicker.
         /// </summary>
         public bool IsProjectTermbase { get; set; }
 

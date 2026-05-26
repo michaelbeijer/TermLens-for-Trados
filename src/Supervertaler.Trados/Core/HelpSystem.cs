@@ -48,7 +48,10 @@ namespace Supervertaler.Trados.Core
             public const string TermLensPanel       = "trados/termlens/";
             public const string AddTermDialog       = "trados/termlens/adding-terms/";
             public const string TermLensPopup       = "trados/termlens/termlens-popup/";
-            public const string TermPickerDialog    = "trados/termlens/term-picker/";
+            // Renamed v4.20.25 to match the brand: page slug term-picker/ → termpicker/.
+            // Old slug 301-redirects to the new one via public/_redirects on the help site.
+            // Field name TermPickerDialog kept unchanged so all C# call sites stay stable.
+            public const string TermPickerDialog    = "trados/termlens/termpicker/";
             public const string MultiTermSupport    = "trados/multiterm-support/";
 
             public const string AiAssistantChat     = "trados/ai-assistant/";

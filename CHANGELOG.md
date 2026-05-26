@@ -1,5 +1,30 @@
 # Changelog
 
+## [4.20.25] – 2026-05-26
+
+### Changed
+
+- **"Term Picker" renamed to "TermPicker"** (one word, Pascal-cased, no hyphen, no space). Pure naming cleanup aligned with Supervertaler Workbench v1.10.205 — both products now use the same name for the same surface.
+- **Architecture clarification.** TermLens and TermPicker are now treated as **sibling surfaces** sitting on top of termbases, rather than the old "TermLens — Term Picker" framing where the picker felt like a sub-mode of TermLens. Underneath both sits the termbase layer; TermLens shows matches *in context* (inline chips anchored to source terms — the invention), TermPicker shows them as a flat sortable list with keyboard-driven Enter-to-insert. Same data, different ergonomics.
+- **Window title** of the modal dialog: `TermLens — Term Picker` → `TermPicker`.
+- **About dialog** keyboard-shortcuts table: "Term Picker (memoQ-style)" / "Term Picker (alternative)" → "TermPicker (memoQ-style)" / "TermPicker (alternative)".
+- **Help URL slug** `trados/termlens/term-picker/` → `trados/termlens/termpicker/`. Old URL 301-redirects to the new one via `public/_redirects` on the help site, so existing bookmarks (and F1 from older installed plugin versions where the old slug is still baked into HelpSystem.cs) keep working. The C# field name `HelpSystem.Topics.TermPickerDialog` is unchanged — only its URL value moved.
+- **README, HELP-LINKS, CLAUDE.md, and internal code comments** updated to use "TermPicker" everywhere.
+
+### Kept (internal, deliberately not renamed to avoid breaking user data/customisations)
+
+- File `Controls/TermPickerDialog.cs` and class `TermPickerDialog` — already correct camelcase
+- File `TermPickerAction.cs` and class `TermPickerAction`
+- Model class `TermPickerMatch`
+- Plugin.xml action ID `TermLens_TermPicker` (the Ctrl+Shift+P binding) — would break custom shortcut remappings if changed
+- Settings property names `TermPickerWidth`, `TermPickerHeight`, `TermPickerColumnWidths` — would wipe persisted layout
+- Historical CHANGELOG entries and RWS AppStore release notes — left as-is, they are historical record
+
+### Notes
+
+The rename is mostly text. No behaviour changes. F1 from the dialog still opens the help page (now under the new slug); existing custom shortcut bindings for the Ctrl+Shift+P action still trigger the same code path; persisted dialog size/column widths still load. If you've been using "Term Picker" verbally, "TermPicker" is what we'll call it from here on.
+
+
 ## [4.20.24] – 2026-05-26
 
 ### Fixed

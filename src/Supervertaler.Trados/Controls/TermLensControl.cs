@@ -556,7 +556,7 @@ namespace Supervertaler.Trados.Controls
         }
 
         /// <summary>
-        /// Returns all current matched term blocks for the term picker dialog.
+        /// Returns all current matched term blocks for TermPicker.
         /// Each item contains: 1-based index, source text, all entries (with synonyms).
         /// Duplicate source terms (same term matched at multiple positions) are merged
         /// into a single entry so each term appears only once in the picker.
