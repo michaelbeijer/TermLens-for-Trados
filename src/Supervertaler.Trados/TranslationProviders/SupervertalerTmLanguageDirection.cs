@@ -125,23 +125,25 @@ namespace Supervertaler.Trados.TranslationProviders
 
         public SearchResults SearchSegment(SearchSettings settings, Segment segment)
         {
-            TmBridgeLog.Info("SearchSegment ENTRY: segment=" + (segment == null ? "(null)" : Truncate(segment.ToPlain() ?? "(empty)", 60)));
+            SafeLog("SearchSegment ENTRY");
             // Defensive: Studio occasionally passes null segments in
             // exploratory pre-flight calls. Returning an empty SearchResults
             // is the documented correct behaviour – throwing here causes
             // Trados to surface "An error has occurred while using the
             // translation provider" and disable the provider for the
             // session.
-            var results = new SearchResults();
-            try
-            {
-                if (segment != null)
-                    results.SourceSegment = segment.Duplicate();
-            }
-            catch (Exception ex)
-            {
-                TmBridgeLog.Error("SearchSegment: failed to Duplicate source segment", ex);
-            }
+            //
+            // v4.20.31 root-cause fix: SearchResults.SourceSegment MUST be
+            // non-null on every code path. Trados' internal
+            // SearchResultsMerged.CopyFromSearchResults does
+            // `base.SourceSegment = other.SourceSegment.Duplicate();` with
+            // no null guard, so handing it a SearchResults with a default
+            // (null) SourceSegment throws NullReferenceException deep
+            // inside Cascade.MergeSearchResults – the cause of every
+            // "Object reference not set to an instance of an object" we
+            // saw in v4.20.26 through v4.20.30. The fix: NewSearchResults
+            // always pre-populates SourceSegment with a real Segment.
+            var results = NewSearchResults(segment);
 
             if (_tmInfo == null)
             {
@@ -206,14 +208,16 @@ namespace Supervertaler.Trados.TranslationProviders
 
         public SearchResults[] SearchSegmentsMasked(SearchSettings settings, Segment[] segments, bool[] mask)
         {
-            TmBridgeLog.Info("LanguageDirection.SearchSegmentsMasked ENTRY (n=" + (segments == null ? 0 : segments.Length) + ", mask=" + (mask == null ? "(null)" : mask.Length.ToString()) + ")");
+            SafeLog("LanguageDirection.SearchSegmentsMasked ENTRY (n=" + (segments == null ? 0 : segments.Length) + ", mask=" + (mask == null ? "(null)" : mask.Length.ToString()) + ")");
             if (segments == null) return new SearchResults[0];
             var output = new SearchResults[segments.Length];
             for (int i = 0; i < segments.Length; i++)
             {
                 if (mask != null && i < mask.Length && !mask[i])
                 {
-                    output[i] = new SearchResults();
+                    // Even masked-out slots must have a non-null SourceSegment
+                    // so Cascade's merger doesn't NRE on them.
+                    output[i] = NewSearchResults(segments[i]);
                     continue;
                 }
                 output[i] = SearchSegment(settings, segments[i]);
@@ -225,7 +229,10 @@ namespace Supervertaler.Trados.TranslationProviders
 
         public SearchResults SearchText(SearchSettings settings, string segment)
         {
-            var results = new SearchResults();
+            SafeLog("LanguageDirection.SearchText ENTRY (len=" + (segment == null ? -1 : segment.Length) + ")");
+            // v4.20.31: always populate SourceSegment so Cascade's merger
+            // (which dereferences it unguarded) never NREs on our return.
+            var results = NewSearchResultsFromText(segment);
             if (_tmInfo == null || string.IsNullOrEmpty(segment)) return results;
 
             // Direction comes from settings.Mode – source-side or target-side
@@ -269,11 +276,15 @@ namespace Supervertaler.Trados.TranslationProviders
 
         public SearchResults SearchTranslationUnit(SearchSettings settings, TranslationUnit translationUnit)
         {
+            SafeLog("LanguageDirection.SearchTranslationUnit ENTRY");
             // Studio uses this for target-side concordance when the user
             // searches for text that should appear in the *target* of an
             // existing TU. Decide which side to search by checking which
             // segment the caller populated.
-            var results = new SearchResults();
+            //
+            // v4.20.31: SourceSegment on the returned SearchResults must
+            // never be null – seed it from the TU's source segment.
+            var results = NewSearchResults(translationUnit?.SourceSegment);
             if (_tmInfo == null || translationUnit == null) return results;
 
             string query = null;
@@ -318,6 +329,7 @@ namespace Supervertaler.Trados.TranslationProviders
 
         public SearchResults[] SearchTranslationUnits(SearchSettings settings, TranslationUnit[] translationUnits)
         {
+            SafeLog("LanguageDirection.SearchTranslationUnits ENTRY (n=" + (translationUnits == null ? 0 : translationUnits.Length) + ")");
             if (translationUnits == null) return new SearchResults[0];
             var output = new SearchResults[translationUnits.Length];
             for (int i = 0; i < translationUnits.Length; i++)
@@ -327,13 +339,16 @@ namespace Supervertaler.Trados.TranslationProviders
 
         public SearchResults[] SearchTranslationUnitsMasked(SearchSettings settings, TranslationUnit[] translationUnits, bool[] mask)
         {
+            SafeLog("LanguageDirection.SearchTranslationUnitsMasked ENTRY (n=" + (translationUnits == null ? 0 : translationUnits.Length) + ", mask=" + (mask == null ? "(null)" : mask.Length.ToString()) + ")");
             if (translationUnits == null) return new SearchResults[0];
             var output = new SearchResults[translationUnits.Length];
             for (int i = 0; i < translationUnits.Length; i++)
             {
                 if (mask != null && i < mask.Length && !mask[i])
                 {
-                    output[i] = new SearchResults();
+                    // Masked-out slots: still must have a non-null
+                    // SourceSegment so Cascade's merger doesn't NRE.
+                    output[i] = NewSearchResults(translationUnits[i]?.SourceSegment);
                     continue;
                 }
                 output[i] = SearchTranslationUnit(settings, translationUnits[i]);
@@ -409,6 +424,93 @@ namespace Supervertaler.Trados.TranslationProviders
         }
 
         // ─── Helpers ──────────────────────────────────────────────────
+
+        /// <summary>
+        /// Constructs a <see cref="SearchResults"/> whose <c>SourceSegment</c>
+        /// is GUARANTEED non-null. Trados' Cascade merger
+        /// (<c>SearchResultsMerged.CopyFromSearchResults</c>) calls
+        /// <c>other.SourceSegment.Duplicate()</c> unguarded – returning a
+        /// SearchResults with a default (null) SourceSegment is what produced
+        /// the "Object reference not set to an instance of an object" NRE
+        /// seen in v4.20.26 through v4.20.30.
+        ///
+        /// When the input segment is available we duplicate it so context is
+        /// preserved; otherwise we fall back to a minimal empty Segment
+        /// stamped with the right SourceLanguage. The duplicate itself is
+        /// also try/catched – Trados' Segment.Duplicate has been observed to
+        /// throw under odd conditions, and a failed duplicate must not let
+        /// us return a null SourceSegment.
+        /// </summary>
+        private SearchResults NewSearchResults(Segment seedSegment)
+        {
+            var results = new SearchResults();
+            try
+            {
+                if (seedSegment != null)
+                {
+                    var dup = seedSegment.Duplicate();
+                    results.SourceSegment = dup ?? new Segment(SafeSourceCulture());
+                }
+                else
+                {
+                    results.SourceSegment = new Segment(SafeSourceCulture());
+                }
+            }
+            catch (Exception ex)
+            {
+                TmBridgeLog.Error("NewSearchResults: Duplicate threw, falling back to empty Segment", ex);
+                try { results.SourceSegment = new Segment(SafeSourceCulture()); }
+                catch { /* truly impossible – Segment(CultureCode) doesn't throw */ }
+            }
+            return results;
+        }
+
+        /// <summary>
+        /// Text-input variant. Wraps the query text in a Segment so Cascade's
+        /// merger has something non-null to duplicate.
+        /// </summary>
+        private SearchResults NewSearchResultsFromText(string text)
+        {
+            var results = new SearchResults();
+            try
+            {
+                var seg = new Segment(SafeSourceCulture());
+                if (!string.IsNullOrEmpty(text)) seg.Add(text);
+                results.SourceSegment = seg;
+            }
+            catch (Exception ex)
+            {
+                TmBridgeLog.Error("NewSearchResultsFromText: Segment ctor threw", ex);
+            }
+            return results;
+        }
+
+        /// <summary>
+        /// Returns the LD's source culture, or the project's source culture
+        /// as a last-ditch fallback. Used only when we have to manufacture a
+        /// Segment from scratch.
+        /// </summary>
+        private CultureCode SafeSourceCulture()
+        {
+            try { return _languagePair.SourceCulture; }
+            catch { return new CultureCode("en"); }
+        }
+
+        /// <summary>
+        /// Log helper that NEVER throws – string concatenation arguments are
+        /// stringified inside the try/catch so a misbehaving Segment.ToPlain
+        /// can't take down the method that's logging. Previously, the entry
+        /// log line in <see cref="SearchSegment"/> evaluated
+        /// <c>segment.ToPlain()</c> eagerly; if that threw, the log line
+        /// never wrote AND the method exited abnormally – explaining why
+        /// v4.20.28/4.20.30 showed Cascade merging null SourceSegments
+        /// without our entry log appearing.
+        /// </summary>
+        private static void SafeLog(string message)
+        {
+            try { TmBridgeLog.Info(message); }
+            catch { /* logging must never throw */ }
+        }
 
         /// <summary>
         /// Wraps <see cref="BuildTranslationUnit"/> + <see cref="SearchResult"/>

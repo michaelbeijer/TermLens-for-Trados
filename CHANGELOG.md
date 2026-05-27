@@ -1,5 +1,20 @@
 # Changelog
 
+## [4.20.31] – 2026-05-27
+
+### Fixed (Shared TM Bridge: ACTUAL root cause of the "Object reference" NRE)
+
+- **`SearchResults.SourceSegment` is now guaranteed non-null on every code path.** That was the bug. Studio's internal `SearchResultsMerged.CopyFromSearchResults(SearchResults other)` does `base.SourceSegment = other.SourceSegment.Duplicate();` with **no null guard** – decompiled from `Sdl.LanguagePlatform.TranslationMemory.dll`. Any provider that returns a default-constructed `new SearchResults()` (which has `SourceSegment = null`) makes Studio's `Cascade.MergeSearchResults` throw NullReferenceException deep inside `SegmentAndSubsegmentSearchResultsMerged..ctor`. v4.20.26 through v4.20.30's `SearchText`, `SearchTranslationUnit`, and (for masked-out slots) `SearchSegmentsMasked` / `SearchTranslationUnitsMasked` all returned such bare SearchResults objects – every concordance call or batch operation that hit those paths bombed Studio with the generic "Object reference not set to an instance of an object." dialog.
+- **New `NewSearchResults` / `NewSearchResultsFromText` helpers** always pre-populate `SourceSegment` with either a duplicate of the input Segment or a fresh empty Segment stamped with the LD's source culture. Every search method on the LanguageDirection now routes through them. Cascade can now merge our results without choking.
+- **`SafeLog` helper for entry logging.** The original `SearchSegment` entry log evaluated `segment.ToPlain()` inside string concatenation – if `ToPlain()` ever threw (it can, on certain tag-only segments), the whole log line threw before writing, the method exited abnormally, and no entry log appeared in `%TEMP%\supervertaler-tm-bridge.log`. `SafeLog` wraps the call in try/catch so a misbehaving stringification can't take down the method that's trying to record it.
+- **Entry logging on the remaining concordance methods** (`SearchText`, `SearchTranslationUnit`, `SearchTranslationUnits`, `SearchTranslationUnitsMasked`) – the v4.20.30 build missed these, which is why the "no entries" log was so confusing. With Studio routing concordance and batch searches through them, the entry logs should now appear when the user looks something up in the Concordance window.
+
+### Investigation notes
+
+- The smoking gun was Studio's own log at `%AppData%\Trados\Trados Studio\Studio18\logs\Trados Studio_*.log`, which contained the full stack trace: `Cascade.ExecuteSearchCommand` → `Cascade.MergeSearchResults` → `SegmentAndSubsegmentSearchResultsMerged..ctor(SegmentAndSubsegmentSearchResults results)` → `SearchResultsMerged.CopyFromSearchResults(SearchResults other)` → NRE at `other.SourceSegment.Duplicate()`. Decompiling `Sdl.LanguagePlatform.TranslationMemory.dll` with ilspycmd confirmed `CopyFromSearchResults` does no null check on `SourceSegment`.
+- Three prior builds attacked the wrong layer: v4.20.27 added defensive null-handling in our own search methods; v4.20.29 wrongly inferred `SupportsTranslation=true` was the problem (it's the gate Trados uses to even call search); v4.20.30 added entry logging that revealed the call patterns but not the offending field.
+
+
 ## [4.20.30] – 2026-05-27
 
 ### Changed (Shared TM Bridge: diagnostic build – reverts v4.20.29's wrong fix)
