@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.20.33] – 2026-05-27
+
+### Changed (Shared TM Bridge: per-hit TM attribution)
+
+- **Each match now identifies which bridged TM produced it.** Previously, every result returned by the bridge stamped `OriginSystem = "Supervertaler"`, so when a user had several bridges attached (e.g. BRANTS + PATENTS), the grey origin strip under each hit in the Translation Results pane just said "Supervertaler" with no way to tell which TM the hit came from. Now the OriginSystem reads e.g. "Supervertaler: BRANTS (URSU-008-BE-EP)" or "Supervertaler: PATENTS", matching the names shown in the project's TM list.
+
+
 ## [4.20.32] – 2026-05-27
 
 ### Fixed (Shared TM Bridge: critical – wrong "100%" matches no longer inserted)
