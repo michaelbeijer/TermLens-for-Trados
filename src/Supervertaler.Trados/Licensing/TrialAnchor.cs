@@ -7,8 +7,7 @@ using Microsoft.Win32;
 namespace Supervertaler.Trados.Licensing
 {
     /// <summary>
-    /// Tamper-resistant, location-independent record of when the 14-day trial
-    /// first started on this machine + Windows user.
+    /// Tamper-resistant, location-independent anchor for the 14-day trial.
     ///
     /// The primary trial timestamp lives in <c>license.json</c> inside the
     /// shared user-data folder. That file is, however, trivially lost: moving
@@ -16,16 +15,28 @@ namespace Supervertaler.Trados.Licensing
     /// <c>license.json</c> all make <see cref="LicenseInfo.Load"/> fall back to
     /// "start a fresh trial", silently handing the user another 14 days.
     ///
-    /// This anchor closes that gap by mirroring the trial start into the
-    /// registry under <c>HKCU\Software\Supervertaler\Trados</c>, which is
-    /// independent of the data-folder location and survives both re-installs
-    /// and deletion of <c>license.json</c>. The stored value is signed with an
-    /// HMAC keyed on the machine fingerprint, so it cannot be hand-edited to a
-    /// different date and still be trusted, and the clock can only ever move
-    /// <em>earlier</em> — never reset to "now".
+    /// This anchor closes that gap by mirroring two timestamps into the registry
+    /// under <c>HKCU\Software\Supervertaler\Trados</c>, independent of the
+    /// data-folder location and surviving both re-installs and deletion of
+    /// <c>license.json</c>:
+    ///
+    ///   • <b>start</b>     – when the trial began. Can only ever move
+    ///                        <em>earlier</em>, so a lost or hand-edited
+    ///                        <c>license.json</c> cannot push it forward.
+    ///   • <b>lastSeen</b>  – the latest wall-clock time the plugin has ever
+    ///                        observed (a high-water mark). Expiry is measured
+    ///                        against <c>max(now, lastSeen)</c>, so winding the
+    ///                        system clock backwards cannot buy more trial time.
+    ///
+    /// The stored value is signed with an HMAC keyed on the machine fingerprint,
+    /// so it cannot be hand-edited and still be trusted, and an anchor copied to
+    /// another machine fails its signature check and is ignored.
     ///
     /// Per-user (HKCU) and fingerprint-bound by design: a genuinely new Windows
-    /// account or a different machine legitimately starts a fresh trial.
+    /// account or a different machine legitimately starts a fresh trial. On any
+    /// registry failure the methods degrade gracefully to the caller's inputs so
+    /// the trial still works (just without the extra protection) and a legitimate
+    /// user is never locked out by a registry hiccup.
     /// </summary>
     internal static class TrialAnchor
     {
@@ -40,64 +51,84 @@ namespace Supervertaler.Trados.Licensing
         private static readonly byte[] Pepper =
             Encoding.UTF8.GetBytes("sv-trados-trial-anchor-v1");
 
-        /// <summary>
-        /// Returns the authoritative trial-start timestamp for this machine,
-        /// seeding the anchor on first use.
-        ///
-        /// If a valid anchor already exists, the <em>earlier</em> of
-        /// (anchor, <paramref name="candidate"/>) is returned and persisted, so
-        /// the clock can only move earlier. This defends against both a lost
-        /// <c>license.json</c> (where the candidate is "now", i.e. later) and a
-        /// hand-edited <c>license.json</c> carrying a future date.
-        ///
-        /// If no anchor exists yet, <paramref name="candidate"/> is written and
-        /// returned. On any failure (registry unavailable, locked-down machine,
-        /// etc.) the candidate is returned unchanged, so behaviour degrades
-        /// gracefully to the pre-anchor logic.
-        /// </summary>
-        /// <param name="fingerprint">
-        /// Live machine fingerprint from <see cref="MachineId.GetFingerprint"/>.
-        /// Used as the HMAC key so an anchor copied to another machine fails its
-        /// signature check and is ignored.
-        /// </param>
-        /// <param name="candidate">
-        /// The trial start the caller would otherwise use (typically the value
-        /// from <c>license.json</c>, or <see cref="DateTime.UtcNow"/> for a
-        /// brand-new trial).
-        /// </param>
-        public static DateTime GetOrSeed(string fingerprint, DateTime candidate)
+        /// <summary>Result of <see cref="Reconcile"/>.</summary>
+        internal struct Anchored
         {
+            /// <summary>Authoritative trial start (earliest known).</summary>
+            public DateTime Start;
+
+            /// <summary>
+            /// Effective "now" to measure expiry against: <c>max(realNow, lastSeen)</c>.
+            /// Equal to the real clock for honest users; ahead of it only when the
+            /// system clock has been wound backwards since a previous launch.
+            /// </summary>
+            public DateTime EffectiveNow;
+        }
+
+        /// <summary>
+        /// Reconciles the caller's candidate trial start and the real clock with
+        /// the persisted anchor, returning the authoritative start plus an
+        /// effective "now" that is immune to a backwards system clock.
+        ///
+        /// • <paramref name="candidateStart"/> is the value the caller would
+        ///   otherwise use (from <c>license.json</c>, or "now" for a brand-new
+        ///   trial). The stored start moves to the earlier of the two.
+        /// • <paramref name="realNow"/> is the current wall clock. The stored
+        ///   high-water mark advances to the later of the two, and the returned
+        ///   <see cref="Anchored.EffectiveNow"/> is never earlier than it.
+        ///
+        /// On any failure the caller's own inputs are echoed back unchanged.
+        /// </summary>
+        public static Anchored Reconcile(string fingerprint, DateTime candidateStart, DateTime realNow)
+        {
+            candidateStart = candidateStart.ToUniversalTime();
+            realNow = realNow.ToUniversalTime();
+
             try
             {
-                var existing = Read(fingerprint);
-                if (existing.HasValue)
-                {
-                    var earliest = existing.Value < candidate ? existing.Value : candidate;
-                    if (earliest != existing.Value)
-                        Write(fingerprint, earliest);
-                    return earliest;
-                }
+                var rec = Read(fingerprint);
 
-                Write(fingerprint, candidate);
-                return candidate;
+                var start = rec.HasValue && rec.Value.Start < candidateStart
+                    ? rec.Value.Start
+                    : candidateStart;
+
+                // High-water mark: never let "now" appear earlier than the
+                // furthest point the clock has ever reached.
+                var lastSeen = rec.HasValue && rec.Value.Seen > realNow
+                    ? rec.Value.Seen
+                    : realNow;
+
+                // Persist if anything changed (or on first write).
+                if (!rec.HasValue || rec.Value.Start != start || rec.Value.Seen != lastSeen)
+                    Write(fingerprint, start, lastSeen);
+
+                return new Anchored { Start = start, EffectiveNow = lastSeen };
             }
             catch
             {
                 // Registry unavailable or access denied – fall back to the
-                // caller's candidate so the trial still works, just without the
-                // extra anti-reset protection.
-                return candidate;
+                // caller's inputs so the trial still works, just without the
+                // extra anti-reset / anti-rollback protection.
+                return new Anchored { Start = candidateStart, EffectiveNow = realNow };
             }
         }
 
-        private static DateTime? Read(string fingerprint)
+        private struct Record
+        {
+            public DateTime Start;
+            public DateTime Seen;
+        }
+
+        private static Record? Read(string fingerprint)
         {
             using (var key = Registry.CurrentUser.OpenSubKey(SubKey))
             {
                 if (!(key?.GetValue(ValueName) is string raw) || string.IsNullOrEmpty(raw))
                     return null;
 
-                var dot = raw.IndexOf('.');
+                // Format: "<payload>.<hmac>" where payload is "start" (legacy,
+                // v4.20.34) or "start|seen" (current).
+                var dot = raw.LastIndexOf('.');
                 if (dot <= 0 || dot >= raw.Length - 1)
                     return null;
 
@@ -109,23 +140,41 @@ namespace Supervertaler.Trados.Licensing
                 if (!ConstantTimeEquals(sig, Sign(payload, fingerprint)))
                     return null;
 
-                if (DateTime.TryParse(payload, CultureInfo.InvariantCulture,
-                        DateTimeStyles.RoundtripKind, out var ts))
-                    return ts.ToUniversalTime();
+                var parts = payload.Split('|');
+                if (!TryParseUtc(parts[0], out var start))
+                    return null;
 
-                return null;
+                // Legacy single-value anchors had no high-water mark; seed it
+                // from the start so older anchors keep working.
+                var seen = parts.Length > 1 && TryParseUtc(parts[1], out var s) ? s : start;
+
+                return new Record { Start = start, Seen = seen };
             }
         }
 
-        private static void Write(string fingerprint, DateTime ts)
+        private static void Write(string fingerprint, DateTime start, DateTime seen)
         {
             using (var key = Registry.CurrentUser.CreateSubKey(SubKey))
             {
                 if (key == null) return;
-                var payload = ts.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
+                var payload =
+                    start.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture) + "|" +
+                    seen.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
                 key.SetValue(ValueName, payload + "." + Sign(payload, fingerprint),
                     RegistryValueKind.String);
             }
+        }
+
+        private static bool TryParseUtc(string s, out DateTime utc)
+        {
+            if (DateTime.TryParse(s, CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind, out var ts))
+            {
+                utc = ts.ToUniversalTime();
+                return true;
+            }
+            utc = default(DateTime);
+            return false;
         }
 
         private static string Sign(string payload, string fingerprint)

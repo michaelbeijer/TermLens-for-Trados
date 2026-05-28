@@ -94,6 +94,18 @@ namespace Supervertaler.Trados.Licensing
         [DataMember(Name = "machineFingerprint")]
         public string MachineFingerprint { get; set; } = "";
 
+        // ─── Anti-rollback ──────────────────────────────────────────
+
+        /// <summary>
+        /// Effective "now" used for all trial-window maths. Set by
+        /// <see cref="Load"/> from the registry anchor's high-water mark, so a
+        /// system clock wound backwards cannot extend the trial. Not persisted –
+        /// it is recomputed on every load. Defaults to the real clock so any
+        /// code path that constructs a <see cref="LicenseInfo"/> directly still
+        /// behaves correctly.
+        /// </summary>
+        public DateTime EffectiveNow { get; set; } = DateTime.UtcNow;
+
         // ─── Helpers ────────────────────────────────────────────────
 
         /// <summary>
@@ -114,7 +126,7 @@ namespace Supervertaler.Trados.Licensing
             get
             {
                 if (TrialStartedAt == DateTime.MinValue) return false;
-                return (DateTime.UtcNow - TrialStartedAt).TotalDays < TrialDays;
+                return (EffectiveNow - TrialStartedAt).TotalDays < TrialDays;
             }
         }
 
@@ -126,7 +138,7 @@ namespace Supervertaler.Trados.Licensing
             get
             {
                 if (TrialStartedAt == DateTime.MinValue) return 0;
-                var remaining = TrialDays - (DateTime.UtcNow - TrialStartedAt).TotalDays;
+                var remaining = TrialDays - (EffectiveNow - TrialStartedAt).TotalDays;
                 return remaining > 0 ? (int)Math.Ceiling(remaining) : 0;
             }
         }
@@ -151,13 +163,15 @@ namespace Supervertaler.Trados.Licensing
                     // No license.json. Normally this is a genuine first launch,
                     // but it is also what we see after a re-install, a moved
                     // data folder, or a deleted file – all of which must NOT
-                    // hand out a fresh 14-day trial. TrialAnchor.GetOrSeed
+                    // hand out a fresh 14-day trial. TrialAnchor.Reconcile
                     // returns the original start when this machine has seen the
                     // trial before, and only "now" for a true first run.
                     var fp = MachineId.GetFingerprint();
+                    var anchor = TrialAnchor.Reconcile(fp, DateTime.UtcNow, DateTime.UtcNow);
                     var fresh = new LicenseInfo
                     {
-                        TrialStartedAt = TrialAnchor.GetOrSeed(fp, DateTime.UtcNow),
+                        TrialStartedAt = anchor.Start,
+                        EffectiveNow = anchor.EffectiveNow,
                         MachineFingerprint = fp
                     };
                     fresh.Save();
@@ -180,16 +194,19 @@ namespace Supervertaler.Trados.Licensing
 
                     // Reconcile against the registry anchor. This seeds the
                     // anchor for existing trial users on first run of an
-                    // anchor-aware build, and pulls TrialStartedAt back to the
+                    // anchor-aware build, pulls TrialStartedAt back to the
                     // earliest known start if license.json was edited to a later
-                    // date. The clock can only move earlier, never reset.
+                    // date, and derives an EffectiveNow that ignores a system
+                    // clock wound backwards. The clock can only move earlier,
+                    // never reset, and the trial can only ever count forward.
                     if (info.TrialStartedAt != DateTime.MinValue)
                     {
-                        var anchored = TrialAnchor.GetOrSeed(
-                            MachineId.GetFingerprint(), info.TrialStartedAt);
-                        if (anchored < info.TrialStartedAt)
+                        var anchored = TrialAnchor.Reconcile(
+                            MachineId.GetFingerprint(), info.TrialStartedAt, DateTime.UtcNow);
+                        info.EffectiveNow = anchored.EffectiveNow;
+                        if (anchored.Start < info.TrialStartedAt)
                         {
-                            info.TrialStartedAt = anchored;
+                            info.TrialStartedAt = anchored.Start;
                             info.Save();
                         }
                     }
@@ -220,9 +237,11 @@ namespace Supervertaler.Trados.Licensing
                 // A corrupt license.json must not reset the trial either – fall
                 // back to the registry anchor for the original start date.
                 var fpFallback = MachineId.GetFingerprint();
+                var anchorFallback = TrialAnchor.Reconcile(fpFallback, DateTime.UtcNow, DateTime.UtcNow);
                 var fresh = new LicenseInfo
                 {
-                    TrialStartedAt = TrialAnchor.GetOrSeed(fpFallback, DateTime.UtcNow),
+                    TrialStartedAt = anchorFallback.Start,
+                    EffectiveNow = anchorFallback.EffectiveNow,
                     MachineFingerprint = fpFallback
                 };
                 fresh.Save();

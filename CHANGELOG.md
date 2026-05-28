@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.20.35] – 2026-05-28
+
+### Changed (Licence)
+
+- Trial-period tracking now also resists system-clock changes.
+
+
 ## [4.20.34] – 2026-05-28
 
 ### Changed (Licence)
