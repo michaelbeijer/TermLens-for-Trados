@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.20.34] – 2026-05-28
+
+### Changed (Licence)
+
+- More reliable trial-period tracking across reinstalls and data-folder moves.
+
+
 ## [4.20.33] – 2026-05-27
 
 ### Changed (Shared TM Bridge: per-hit TM attribution)

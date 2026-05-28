@@ -148,11 +148,17 @@ namespace Supervertaler.Trados.Licensing
             {
                 if (!File.Exists(LicenseFile))
                 {
-                    // First launch – start the trial
+                    // No license.json. Normally this is a genuine first launch,
+                    // but it is also what we see after a re-install, a moved
+                    // data folder, or a deleted file – all of which must NOT
+                    // hand out a fresh 14-day trial. TrialAnchor.GetOrSeed
+                    // returns the original start when this machine has seen the
+                    // trial before, and only "now" for a true first run.
+                    var fp = MachineId.GetFingerprint();
                     var fresh = new LicenseInfo
                     {
-                        TrialStartedAt = DateTime.UtcNow,
-                        MachineFingerprint = MachineId.GetFingerprint()
+                        TrialStartedAt = TrialAnchor.GetOrSeed(fp, DateTime.UtcNow),
+                        MachineFingerprint = fp
                     };
                     fresh.Save();
                     return fresh;
@@ -171,6 +177,22 @@ namespace Supervertaler.Trados.Licensing
                     // Ensure fingerprint is set (migration from older license.json)
                     if (string.IsNullOrWhiteSpace(info.MachineFingerprint))
                         info.MachineFingerprint = MachineId.GetFingerprint();
+
+                    // Reconcile against the registry anchor. This seeds the
+                    // anchor for existing trial users on first run of an
+                    // anchor-aware build, and pulls TrialStartedAt back to the
+                    // earliest known start if license.json was edited to a later
+                    // date. The clock can only move earlier, never reset.
+                    if (info.TrialStartedAt != DateTime.MinValue)
+                    {
+                        var anchored = TrialAnchor.GetOrSeed(
+                            MachineId.GetFingerprint(), info.TrialStartedAt);
+                        if (anchored < info.TrialStartedAt)
+                        {
+                            info.TrialStartedAt = anchored;
+                            info.Save();
+                        }
+                    }
 
                     return info;
                 }
@@ -195,10 +217,13 @@ namespace Supervertaler.Trados.Licensing
                     // UI not available yet – continue silently
                 }
 
+                // A corrupt license.json must not reset the trial either – fall
+                // back to the registry anchor for the original start date.
+                var fpFallback = MachineId.GetFingerprint();
                 var fresh = new LicenseInfo
                 {
-                    TrialStartedAt = DateTime.UtcNow,
-                    MachineFingerprint = MachineId.GetFingerprint()
+                    TrialStartedAt = TrialAnchor.GetOrSeed(fpFallback, DateTime.UtcNow),
+                    MachineFingerprint = fpFallback
                 };
                 fresh.Save();
                 return fresh;
