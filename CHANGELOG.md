@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.20.37] – 2026-05-29
+
+### Changed (Clipboard Mode)
+
+- **Stronger output-format instructions for Clipboard Mode translation.** Some web LLMs (notably DeepSeek's web chat) reformatted the reply into a bare list and dropped the `Segment <n>` headers, so the result couldn't be re-imported into Trados. The clipboard prompt now insists, explicitly, that every `Segment <n>` header be kept in order with both language lines, and that the output not be turned into a list, table, or prose – because the headers are what the importer uses to map translations back to segments.
+
+
 ## [4.20.36] – 2026-05-28
 
 ### Changed (Licence)

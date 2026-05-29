@@ -49,13 +49,24 @@ namespace Supervertaler.Trados.Core
             var srcLabel = LanguageUtils.GetBaseLanguageName(sourceLang);
             var tgtLabel = LanguageUtils.GetBaseLanguageName(targetLang);
 
-            // Instructions for the bilingual format
+            // Instructions for the bilingual format. These are deliberately
+            // emphatic: some web LLMs (notably DeepSeek's web chat) otherwise
+            // reformat the reply into a bare list and drop the "Segment N"
+            // headers, which makes the result impossible to re-import.
             sb.Append("Translate the following segments from ").Append(sourceLang)
               .Append(" into ").Append(targetLang).AppendLine(".");
-            sb.AppendLine("Return each segment in EXACTLY the same format, filling in the "
-                + tgtLabel + " line.");
-            sb.AppendLine("Do NOT add commentary, explanations, or notes.");
-            sb.AppendLine("Preserve ALL tag placeholders (<t1>, </t1>, <t2/>, etc.) exactly as they appear.");
+            sb.AppendLine();
+            sb.AppendLine("OUTPUT FORMAT — follow EXACTLY; this is critical:");
+            sb.AppendLine("- Reproduce every block in the SAME structure shown below, in the SAME order.");
+            sb.AppendLine("- Keep the literal \"Segment <n>\" header line for EVERY segment, with the SAME "
+                + "number. Do NOT renumber, merge, split, omit, or reorder segments.");
+            sb.AppendLine("- Keep the \"" + srcLabel + ":\" line unchanged and put your translation on the \""
+                + tgtLabel + ":\" line.");
+            sb.AppendLine("- Do NOT reformat the output into a plain list, a table, or prose, and do NOT drop "
+                + "the segment numbers. The result is parsed by its \"Segment <n>\" headers to import it back "
+                + "into the CAT tool, so losing them breaks re-import.");
+            sb.AppendLine("- Do NOT add commentary, explanations, or notes.");
+            sb.AppendLine("- Preserve ALL tag placeholders (<t1>, </t1>, <t2/>, etc.) exactly as they appear.");
             sb.AppendLine();
 
             // Numbered bilingual segments
