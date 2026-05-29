@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.20.39] – 2026-05-29
+
+### Added (SuperSearch: live filter)
+
+- **New "Live" toggle in SuperSearch.** When ticked, typing in the Src/Tgt boxes narrows the *current* results in place (instantly, in memory) instead of re-running a full file/TM search on every keystroke — useful for drilling into a large result set. Press Enter / Search to run a fresh full search and refresh the set. The status bar shows "N of M result(s) (live filter)". Honours the Case/Regex/Word toggles; an incomplete regex while typing simply matches nothing until it's valid.
+
+
 ## [4.20.38] – 2026-05-29
 
 ### Changed (SuperSearch: separate Source and Target boxes)

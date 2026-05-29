@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using Sdl.Desktop.IntegrationApi.Interfaces;
 using Supervertaler.Trados.Core;
@@ -28,6 +29,7 @@ namespace Supervertaler.Trados.Controls
         private CheckBox _chkCaseSensitive;
         private CheckBox _chkRegex;
         private CheckBox _chkWholeWord;
+        private CheckBox _chkLiveFilter;
         private CheckBox _chkShowReplace;
         private Button _btnFiles;
         private Button _btnTms;
@@ -62,6 +64,12 @@ namespace Supervertaler.Trados.Controls
         private string _highlightSource;
         private string _highlightTarget;
         private bool _highlightCaseSensitive;
+
+        // ─── Live-filter state ───────────────────────────────────
+        // The last full backend result set; live filtering narrows this
+        // in-memory rather than re-querying files/TMs on every keystroke.
+        private List<SearchResult> _unfilteredResults;
+        private System.Windows.Forms.Timer _liveFilterTimer;
 
         // ─── Styling ─────────────────────────────────────────────
         private static readonly Color HeaderBg = Color.FromArgb(245, 245, 245);
@@ -255,6 +263,25 @@ namespace Supervertaler.Trados.Controls
                 _replacePanel.Visible = _chkShowReplace.Checked;
             };
             _searchPanel.Controls.Add(_chkShowReplace);
+
+            _chkLiveFilter = new CheckBox
+            {
+                Text = "Live",
+                Font = smallFont,
+                AutoSize = true,
+                ForeColor = SubtleColor
+            };
+            var ttLive = new ToolTip();
+            ttLive.SetToolTip(_chkLiveFilter,
+                "Live filter: narrow the current results as you type instead of " +
+                "re-searching each time. Press Enter / Search to run a fresh full search.");
+            _searchPanel.Controls.Add(_chkLiveFilter);
+
+            // Debounced live filtering of the loaded result set.
+            _liveFilterTimer = new System.Windows.Forms.Timer { Interval = 200 };
+            _liveFilterTimer.Tick += (s, e) => { _liveFilterTimer.Stop(); ApplyLiveFilter(); };
+            _txtSearch.TextChanged += (s, e) => OnLiveFilterTextChanged();
+            _txtSearchTarget.TextChanged += (s, e) => OnLiveFilterTextChanged();
 
             _btnFiles = CreateButton("Files", bodyFont, 56, 26);
             var ttFiles = new ToolTip();
@@ -610,7 +637,8 @@ namespace Supervertaler.Trados.Controls
             int fixedLeft = _btnFiles.Left;
 
             // Position from right: chkShowReplace, chkWholeWord, chkRegex, chkCaseSensitive, cboMode, btnStop, btnSearch
-            _chkShowReplace.Location = new Point(fixedLeft - _chkShowReplace.Width - 4, chkY);
+            _chkLiveFilter.Location = new Point(fixedLeft - _chkLiveFilter.Width - 4, chkY);
+            _chkShowReplace.Location = new Point(_chkLiveFilter.Left - _chkShowReplace.Width - 4, chkY);
             _chkWholeWord.Location = new Point(_chkShowReplace.Left - _chkWholeWord.Width - 2, chkY);
             _chkRegex.Location = new Point(_chkWholeWord.Left - _chkRegex.Width - 2, chkY);
             _chkCaseSensitive.Location = new Point(_chkRegex.Left - _chkCaseSensitive.Width - 2, chkY);
@@ -932,6 +960,8 @@ namespace Supervertaler.Trados.Controls
         /// </summary>
         public void SetResults(List<SearchResult> results)
         {
+            // Snapshot the full set so the Live filter can narrow it in-memory.
+            _unfilteredResults = results;
             // Highlight each box's term in its own column/preview.
             _highlightSource = _txtSearch.Text;
             _highlightTarget = _txtSearchTarget.Text;
@@ -1285,6 +1315,55 @@ namespace Supervertaler.Trados.Controls
         }
 
         // ─── Private Helpers ─────────────────────────────────────
+
+        private void OnLiveFilterTextChanged()
+        {
+            // Only narrows an existing result set; a fresh full search still
+            // happens on Enter / Search. Debounced so it doesn't run per keystroke.
+            if (_chkLiveFilter == null || !_chkLiveFilter.Checked) return;
+            if (_unfilteredResults == null) return;
+            _liveFilterTimer.Stop();
+            _liveFilterTimer.Start();
+        }
+
+        private void ApplyLiveFilter()
+        {
+            if (_unfilteredResults == null) return;
+
+            string src = _txtSearch.Text, tgt = _txtSearchTarget.Text;
+            bool cs = _chkCaseSensitive.Checked, rx = _chkRegex.Checked, ww = _chkWholeWord.Checked;
+
+            var filtered = _unfilteredResults.Where(r =>
+                LiveMatches(r.SourceText, src, cs, rx, ww) &&
+                LiveMatches(r.TargetText, tgt, cs, rx, ww)).ToList();
+
+            _highlightSource = src;
+            _highlightTarget = tgt;
+            _highlightCaseSensitive = cs;
+            PopulateGrid(filtered);
+            SetStatus($"{filtered.Count} of {_unfilteredResults.Count} result(s) (live filter)");
+        }
+
+        /// <summary>Client-side match used only by the live filter. An empty
+        /// query is no constraint; an invalid regex (while typing) matches nothing.</summary>
+        private static bool LiveMatches(string text, string query,
+            bool caseSensitive, bool useRegex, bool wholeWord)
+        {
+            if (string.IsNullOrEmpty(query)) return true;
+            if (string.IsNullOrEmpty(text)) return false;
+            try
+            {
+                if (useRegex)
+                    return Regex.IsMatch(text, query,
+                        caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase);
+                if (wholeWord)
+                    return Regex.IsMatch(text, @"\b" + Regex.Escape(query) + @"\b",
+                        caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase);
+                return text.IndexOf(query,
+                    caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+            catch { return false; }
+        }
 
         private void FireSearch()
         {
